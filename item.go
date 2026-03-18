@@ -57,18 +57,18 @@ type Event struct {
 	// Convention: "user:<id>", "agent:<name>", "workflow:<id>", "system".
 	Actor string `json:"actor"`
 
-	// What happened: created, claimed, released, commented, tagged,
-	// responded, escalated, expired, cancelled, reassigned.
-	Action string `json:"action"`
+	// Type is the fully qualified proto message name that identifies
+	// what happened. Derived from the proto message, e.g.:
+	//   "inbox.v1.ItemClaimed"
+	//   "inbox.v1.CommentAppended"
+	//   "compliance.v1.ScreeningResolved"
+	Type string `json:"type"`
 
 	// Human-readable detail or comment body.
 	Detail string `json:"detail,omitempty"`
 
-	// DataType is the fully qualified proto message name of the event data.
-	// Example: "type.googleapis.com/inbox.v1.ResponseEvent"
-	DataType string `json:"data_type,omitempty"`
-
-	// Structured event-specific data. Use PackEventData / UnpackEventData.
+	// Structured event data serialized as JSON from the proto message.
+	// Use UnpackEventData to deserialize into the concrete proto type.
 	Data json.RawMessage `json:"data,omitempty"`
 }
 

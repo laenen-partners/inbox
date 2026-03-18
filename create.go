@@ -26,7 +26,7 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 		actor = "system"
 	}
 
-	createdEvt := newTypedEvent(actor, "created", "", &inboxv1.ItemCreated{PayloadType: meta.PayloadType})
+	createdEvt := newTypedEvent(actor, &inboxv1.ItemCreated{PayloadType: meta.PayloadType})
 	createdEvt.At = now
 
 	item := Item{

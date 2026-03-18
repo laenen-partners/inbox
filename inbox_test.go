@@ -170,11 +170,11 @@ func TestCustomerMissingDocuments(t *testing.T) {
 	if len(item.Events) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(item.Events))
 	}
-	if item.Events[0].DataType != "inbox.v1.ItemCreated" {
-		t.Errorf("expected ItemCreated event, got %s", item.Events[0].DataType)
+	if item.Events[0].Type != "inbox.v1.ItemCreated" {
+		t.Errorf("expected ItemCreated event, got %s", item.Events[0].Type)
 	}
-	if item.Events[1].DataType != "inbox.v1.ItemResponded" {
-		t.Errorf("expected ItemResponded event, got %s", item.Events[1].DataType)
+	if item.Events[1].Type != "inbox.v1.ItemResponded" {
+		t.Errorf("expected ItemResponded event, got %s", item.Events[1].Type)
 	}
 	if item.Events[1].Actor != "user:customer:CUST-1234" {
 		t.Errorf("expected customer actor, got %s", item.Events[1].Actor)
@@ -288,19 +288,19 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 		t.Fatalf("expected 5 events, got %d", len(item.Events))
 	}
 
-	expectedActions := []string{"created", "claimed", "commented", "responded", "completed"}
-	for i, action := range expectedActions {
-		if item.Events[i].Action != action {
-			t.Errorf("event %d: expected action %s, got %s", i, action, item.Events[i].Action)
+	expectedTypes := []string{"inbox.v1.ItemCreated", "inbox.v1.ItemClaimed", "inbox.v1.CommentAppended", "inbox.v1.ItemResponded", "inbox.v1.ItemCompleted"}
+	for i, typ := range expectedTypes {
+		if item.Events[i].Type != typ {
+			t.Errorf("event %d: expected %s, got %s", i, typ, item.Events[i].Type)
 		}
 	}
 
 	// Verify typed event data.
-	if item.Events[1].DataType != "inbox.v1.ItemClaimed" {
-		t.Errorf("expected ItemClaimed, got %s", item.Events[1].DataType)
+	if item.Events[1].Type != "inbox.v1.ItemClaimed" {
+		t.Errorf("expected ItemClaimed, got %s", item.Events[1].Type)
 	}
-	if item.Events[2].DataType != "inbox.v1.CommentAppended" {
-		t.Errorf("expected CommentAppended, got %s", item.Events[2].DataType)
+	if item.Events[2].Type != "inbox.v1.CommentAppended" {
+		t.Errorf("expected CommentAppended, got %s", item.Events[2].Type)
 	}
 }
 
@@ -382,7 +382,7 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 	// 6. Verify the override is captured in the event trail.
 	var respondEvt inbox.Event
 	for _, evt := range item.Events {
-		if evt.Action == "responded" {
+		if evt.Type == "inbox.v1.ItemResponded" {
 			respondEvt = evt
 		}
 	}
@@ -475,12 +475,12 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 	// 5. Verify escalation event.
 	var escalationEvt inbox.Event
 	for _, evt := range item.Events {
-		if evt.Action == "escalated" {
+		if evt.Type == "inbox.v1.ItemEscalated" {
 			escalationEvt = evt
 		}
 	}
-	if escalationEvt.DataType != "inbox.v1.ItemEscalated" {
-		t.Errorf("expected ItemEscalated, got %s", escalationEvt.DataType)
+	if escalationEvt.Type != "inbox.v1.ItemEscalated" {
+		t.Errorf("expected ItemEscalated, got %s", escalationEvt.Type)
 	}
 
 	var escData inboxv1.ItemEscalated
@@ -517,17 +517,17 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 		t.Fatalf("complete: %v", err)
 	}
 
-	// 7. Full event trail: created → claimed → commented → escalated → released → claimed → responded → completed
+	// 7. Full event trail.
 	if len(item.Events) != 8 {
 		t.Fatalf("expected 8 events, got %d", len(item.Events))
 	}
-	expectedActions := []string{
-		"created", "claimed", "commented", "escalated",
-		"released", "claimed", "responded", "completed",
+	expectedTypes := []string{
+		"inbox.v1.ItemCreated", "inbox.v1.ItemClaimed", "inbox.v1.CommentAppended", "inbox.v1.ItemEscalated",
+		"inbox.v1.ItemReleased", "inbox.v1.ItemClaimed", "inbox.v1.ItemResponded", "inbox.v1.ItemCompleted",
 	}
-	for i, action := range expectedActions {
-		if item.Events[i].Action != action {
-			t.Errorf("event %d: expected %s, got %s", i, action, item.Events[i].Action)
+	for i, typ := range expectedTypes {
+		if item.Events[i].Type != typ {
+			t.Errorf("event %d: expected %s, got %s", i, typ, item.Events[i].Type)
 		}
 	}
 }
@@ -624,8 +624,8 @@ func TestCancelDuplicateItem(t *testing.T) {
 
 	// Verify cancellation event has reason.
 	lastEvt := item.Events[len(item.Events)-1]
-	if lastEvt.DataType != "inbox.v1.ItemCancelled" {
-		t.Errorf("expected ItemCancelled, got %s", lastEvt.DataType)
+	if lastEvt.Type != "inbox.v1.ItemCancelled" {
+		t.Errorf("expected ItemCancelled, got %s", lastEvt.Type)
 	}
 
 	var cancelData inboxv1.ItemCancelled
@@ -826,24 +826,16 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 	}
 
 	// Verify event order matches the builder call order.
-	expectedEvents := []struct {
-		action   string
-		dataType string
-	}{
-		{"created", "inbox.v1.ItemCreated"},
-		{"responded", "inbox.v1.ItemResponded"},
-		{"payload_updated", "inbox.v1.PayloadUpdated"},
-		{"commented", "inbox.v1.CommentAppended"},
-		{"completed", "inbox.v1.ItemCompleted"},
+	expectedTypes2 := []string{
+		"inbox.v1.ItemCreated",
+		"inbox.v1.ItemResponded",
+		"inbox.v1.PayloadUpdated",
+		"inbox.v1.CommentAppended",
+		"inbox.v1.ItemCompleted",
 	}
-
-	for i, expected := range expectedEvents {
-		evt := item.Events[i]
-		if evt.Action != expected.action {
-			t.Errorf("event %d: expected action %s, got %s", i, expected.action, evt.Action)
-		}
-		if evt.DataType != expected.dataType {
-			t.Errorf("event %d: expected data_type %s, got %s", i, expected.dataType, evt.DataType)
+	for i, typ := range expectedTypes2 {
+		if item.Events[i].Type != typ {
+			t.Errorf("event %d: expected %s, got %s", i, typ, item.Events[i].Type)
 		}
 	}
 }
@@ -886,8 +878,8 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 
 	// Agent emits multiple check results as proto events.
 	item, err = ib.On(ctx, item.ID, "agent:kyc-bot").
-		WithEvent("idv_completed", idvResult).
-		WithEvent("address_verified", addressResult).
+		WithEvent(idvResult).
+		WithEvent(addressResult).
 		Comment("All automated checks passed. Ready for final review.").
 		Apply()
 
@@ -900,22 +892,16 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 		t.Fatalf("expected 4 events, got %d", len(item.Events))
 	}
 
-	// WithEvent derives the type URL from the proto message.
-	// google.protobuf.Struct → "type.googleapis.com/google.protobuf.Struct"
-	expectedTypeURL := "type.googleapis.com/google.protobuf.Struct"
-	if item.Events[1].DataType != expectedTypeURL {
-		t.Errorf("expected %s, got %s", expectedTypeURL, item.Events[1].DataType)
+	// WithEvent derives the type from proto.MessageName.
+	// google.protobuf.Struct is used as a stand-in for domain protos.
+	expectedType := "google.protobuf.Struct"
+	if item.Events[1].Type != expectedType {
+		t.Errorf("expected %s, got %s", expectedType, item.Events[1].Type)
 	}
-	if item.Events[2].DataType != expectedTypeURL {
-		t.Errorf("expected %s, got %s", expectedTypeURL, item.Events[2].DataType)
+	if item.Events[2].Type != expectedType {
+		t.Errorf("expected %s, got %s", expectedType, item.Events[2].Type)
 	}
 	if item.Events[1].Actor != "agent:kyc-bot" {
 		t.Errorf("expected agent:kyc-bot, got %s", item.Events[1].Actor)
-	}
-	if item.Events[1].Action != "idv_completed" {
-		t.Errorf("expected idv_completed, got %s", item.Events[1].Action)
-	}
-	if item.Events[2].Action != "address_verified" {
-		t.Errorf("expected address_verified, got %s", item.Events[2].Action)
 	}
 }

@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
+
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 )
 
 // Tag adds tags to an item and records a tag change event.
@@ -14,12 +15,9 @@ func (ib *Inbox) Tag(ctx context.Context, itemID string, actor string, tags ...s
 		return fmt.Errorf("inbox: add tags: %w", err)
 	}
 
-	_, _ = ib.AddEvent(ctx, itemID, Event{
-		At:     time.Now().UTC(),
-		Actor:  actor,
-		Action: "tagged",
-		Detail: "+" + strings.Join(tags, ", +"),
-	})
+	_, _ = ib.AddEvent(ctx, itemID, newTypedEventWithDetail(actor, "+"+strings.Join(tags, ", +"), &inboxv1.TagsChanged{
+		Added: tags,
+	}))
 
 	return nil
 }
@@ -30,12 +28,9 @@ func (ib *Inbox) Untag(ctx context.Context, itemID string, actor string, tag str
 		return fmt.Errorf("inbox: remove tag: %w", err)
 	}
 
-	_, _ = ib.AddEvent(ctx, itemID, Event{
-		At:     time.Now().UTC(),
-		Actor:  actor,
-		Action: "tagged",
-		Detail: "-" + tag,
-	})
+	_, _ = ib.AddEvent(ctx, itemID, newTypedEventWithDetail(actor, "-"+tag, &inboxv1.TagsChanged{
+		Removed: []string{tag},
+	}))
 
 	return nil
 }

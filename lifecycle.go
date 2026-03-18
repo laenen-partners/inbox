@@ -14,13 +14,13 @@ import (
 // status "open" can be claimed. Returns the updated item.
 func (ib *Inbox) Claim(ctx context.Context, itemID string, actor string) (Item, error) {
 	return ib.transition(ctx, itemID, StatusOpen, StatusClaimed,
-		newTypedEvent(actor, "claimed", "", &inboxv1.ItemClaimed{ClaimedBy: actor}))
+		newTypedEvent(actor, &inboxv1.ItemClaimed{ClaimedBy: actor}))
 }
 
 // Release returns a claimed item to "open" status.
 func (ib *Inbox) Release(ctx context.Context, itemID string, actor string) (Item, error) {
 	return ib.transition(ctx, itemID, StatusClaimed, StatusOpen,
-		newTypedEvent(actor, "released", "", &inboxv1.ItemReleased{ReleasedBy: actor}))
+		newTypedEvent(actor, &inboxv1.ItemReleased{ReleasedBy: actor}))
 }
 
 // Respond records a response on an item. This does NOT automatically
@@ -39,7 +39,7 @@ func (ib *Inbox) Respond(ctx context.Context, itemID string, resp Response) (Ite
 		Action:  resp.Action,
 		Comment: resp.Comment,
 	}
-	evt := newTypedEvent(resp.Actor, "responded", resp.Action, evtData)
+	evt := newTypedEventWithDetail(resp.Actor, resp.Action, evtData)
 	if len(resp.Data) > 0 {
 		evt.Data = resp.Data
 	}
@@ -86,7 +86,7 @@ func (ib *Inbox) Complete(ctx context.Context, itemID string, actor string) (Ite
 		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Status)
 	}
 	return ib.doTransition(ctx, item, StatusCompleted,
-		newTypedEvent(actor, "completed", "", &inboxv1.ItemCompleted{CompletedBy: actor}))
+		newTypedEvent(actor, &inboxv1.ItemCompleted{CompletedBy: actor}))
 }
 
 // Cancel marks an item as cancelled.
@@ -99,7 +99,7 @@ func (ib *Inbox) Cancel(ctx context.Context, itemID string, actor string, reason
 		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Status)
 	}
 	return ib.doTransition(ctx, item, StatusCancelled,
-		newTypedEvent(actor, "cancelled", reason, &inboxv1.ItemCancelled{CancelledBy: actor, Reason: reason}))
+		newTypedEventWithDetail(actor, reason, &inboxv1.ItemCancelled{CancelledBy: actor, Reason: reason}))
 }
 
 // Expire marks an item as expired. Typically called by a background
@@ -113,7 +113,7 @@ func (ib *Inbox) Expire(ctx context.Context, itemID string) (Item, error) {
 		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Status)
 	}
 	return ib.doTransition(ctx, item, StatusExpired,
-		newTypedEvent("system", "expired", "", &inboxv1.ItemExpired{}))
+		newTypedEvent("system", &inboxv1.ItemExpired{}))
 }
 
 // UpdatePayload replaces the payload on an item and records a
@@ -127,7 +127,7 @@ func (ib *Inbox) UpdatePayload(ctx context.Context, itemID string, payloadType s
 	item.PayloadType = payloadType
 	item.Payload = payload
 
-	evt := newTypedEvent(actor, "payload_updated", "", &inboxv1.PayloadUpdated{PayloadType: payloadType})
+	evt := newTypedEvent(actor, &inboxv1.PayloadUpdated{PayloadType: payloadType})
 	item.Events = append(item.Events, evt)
 
 	data, err := marshalItemData(item)

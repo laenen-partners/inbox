@@ -71,7 +71,7 @@ func (ib *Inbox) Comment(ctx context.Context, itemID string, actor string, body 
 		evtData.Refs = opts.Refs
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, "commented", body, evtData))
+	return ib.AddEvent(ctx, itemID, newTypedEventWithDetail(actor, body, evtData))
 }
 
 // Escalate moves an item from one team to another with a reason.
@@ -84,7 +84,7 @@ func (ib *Inbox) Escalate(ctx context.Context, itemID string, actor string, from
 		_ = ib.es.AddTags(ctx, itemID, []string{"team:" + toTeam})
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, "escalated", reason, &inboxv1.ItemEscalated{
+	return ib.AddEvent(ctx, itemID, newTypedEventWithDetail(actor, reason, &inboxv1.ItemEscalated{
 		FromTeam: fromTeam,
 		ToTeam:   toTeam,
 		Reason:   reason,
@@ -101,7 +101,7 @@ func (ib *Inbox) Reassign(ctx context.Context, itemID string, actor string, from
 		_ = ib.es.AddTags(ctx, itemID, []string{"assignee:" + toActor})
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, "reassigned", reason, &inboxv1.ItemReassigned{
+	return ib.AddEvent(ctx, itemID, newTypedEventWithDetail(actor, reason, &inboxv1.ItemReassigned{
 		FromActor: fromActor,
 		ToActor:   toActor,
 		Reason:    reason,
@@ -110,17 +110,20 @@ func (ib *Inbox) Reassign(ctx context.Context, itemID string, actor string, from
 
 // ─── Internal ───
 
-// newTypedEvent creates an event with a proto message as typed data.
-// The data_type is derived automatically from the proto message's
-// fully qualified name. Uses encoding/json for serialization so field
-// names match the proto generated json struct tags (snake_case).
-func newTypedEvent(actor, action, detail string, msg proto.Message) Event {
+// newTypedEvent creates an event from a proto message. The Type field
+// is derived automatically from the proto message's fully qualified name.
+func newTypedEvent(actor string, msg proto.Message) Event {
 	raw, _ := json.Marshal(msg)
 	return Event{
-		Actor:    actor,
-		Action:   action,
-		Detail:   detail,
-		DataType: string(proto.MessageName(msg)),
-		Data:     raw,
+		Actor: actor,
+		Type:  string(proto.MessageName(msg)),
+		Data:  raw,
 	}
+}
+
+// newTypedEventWithDetail creates an event with an additional detail string.
+func newTypedEventWithDetail(actor, detail string, msg proto.Message) Event {
+	evt := newTypedEvent(actor, msg)
+	evt.Detail = detail
+	return evt
 }

@@ -35,9 +35,9 @@ This gives you:
 
 ### Typed events
 
-Every state change, comment, and action on an item produces a typed event with a `data_type` and structured `data`. Events are append-only and form a lightweight thread on each item.
+Every state change, comment, and action on an item produces a typed event. Each event has a `type` field set to the fully qualified proto message name (e.g. `inbox.v1.ItemClaimed`), derived automatically from the proto message — never set manually. Events are append-only and form a lightweight thread on each item.
 
-All events are proto messages. Custom domain events are emitted via `WithEvent(action, proto.Message)` — the type URL is derived automatically from the proto registry.
+Custom domain events are emitted via `WithEvent(proto.Message)` on the Op builder.
 
 Standard event types:
 
@@ -197,16 +197,16 @@ item, err := ib.On(ctx, itemID, "user:compliance:fatima").
 
 #### Custom domain events
 
-Use `WithEvent` to emit custom proto events alongside standard operations. The type URL is derived automatically from the proto message.
+Use `WithEvent` to emit custom proto events alongside standard operations. The `Event.Type` is derived automatically from the proto message name.
 
 ```go
 item, err := ib.On(ctx, itemID, "agent:kyc-bot").
-    WithEvent("idv_completed", &kycpb.IDVCompleted{
+    WithEvent(&kycpb.IDVCompleted{
         LivenessPassed:    true,
         FacialMatchPassed: true,
         Confidence:        0.98,
     }).
-    WithEvent("address_verified", &kycpb.AddressVerified{
+    WithEvent(&kycpb.AddressVerified{
         Validated: true,
         Method:    "utility_bill",
     }).
@@ -214,9 +214,9 @@ item, err := ib.On(ctx, itemID, "agent:kyc-bot").
     Apply()
 ```
 
-Every event emitted via `WithEvent` gets:
-- `data_type` set to the fully qualified proto message name (e.g. `type.googleapis.com/kyc.v1.IDVCompleted`)
-- `data` set to the proto message serialized as JSON via protobuf's Any encoding
+Every event gets:
+- `type` set to the fully qualified proto message name (e.g. `kyc.v1.IDVCompleted`)
+- `data` set to the proto message serialized as JSON
 - `actor` inherited from the `On()` call
 - `at` timestamped at `Apply()` time
 
@@ -225,7 +225,7 @@ Every event emitted via `WithEvent` gets:
 | Method | Purpose |
 |---|---|
 | `Respond(action, comment)` | Record a response |
-| `WithEvent(action, proto.Message)` | Emit a typed domain event |
+| `WithEvent(proto.Message)` | Emit a typed domain event |
 | `UpdatePayload(typeURL, data)` | Replace the item payload |
 | `Comment(body)` | Add a comment |
 | `CommentWith(body, opts)` | Add a comment with visibility/refs |
@@ -310,23 +310,23 @@ fmt.Println(review.RequirementName) // "pep_screening_clear"
 
 ```go
 for _, evt := range item.Events {
-    fmt.Printf("[%s] %s by %s\n", evt.Action, evt.Detail, evt.Actor)
+    fmt.Printf("[%s] %s\n", evt.Type, evt.Actor)
 
-    // Typed event data.
-    switch evt.DataType {
-    case inbox.TypeCommentAppended:
-        var comment inbox.CommentAppended
+    // Switch on the proto message name.
+    switch evt.Type {
+    case "inbox.v1.CommentAppended":
+        var comment inboxv1.CommentAppended
         json.Unmarshal(evt.Data, &comment)
         fmt.Printf("  comment: %s (visibility: %v)\n", comment.Body, comment.Visibility)
 
-    case inbox.TypeItemEscalated:
-        var esc inbox.ItemEscalated
+    case "inbox.v1.ItemEscalated":
+        var esc inboxv1.ItemEscalated
         json.Unmarshal(evt.Data, &esc)
         fmt.Printf("  escalated: %s → %s\n", esc.FromTeam, esc.ToTeam)
 
-    case "type.googleapis.com/kyc.v1.IDVCompleted":
+    case "kyc.v1.IDVCompleted":
         var idv kycpb.IDVCompleted
-        inbox.UnpackEventData(evt.Data, &idv)
+        json.Unmarshal(evt.Data, &idv)
         fmt.Printf("  IDV: liveness=%v confidence=%.2f\n", idv.LivenessPassed, idv.Confidence)
     }
 }
@@ -337,7 +337,7 @@ for _, evt := range item.Events {
 An inbox item maps to a single row in the entity store's `entities` table:
 
 ```
-entity_type: "inbox.item"
+entity_type: "inbox.v1.Item"
 tags:        ["type:review", "team:compliance", "status:open", "priority:high"]
 data (JSONB): {
   "title": "PEP screening review — Ahmed K.",
@@ -353,19 +353,16 @@ data (JSONB): {
     {
       "at": "2026-03-18T10:00:00Z",
       "actor": "workflow:onboarding-456",
-      "action": "created",
-      "data_type": "inbox.v1.ItemCreated",
+      "type": "inbox.v1.ItemCreated",
       "data": {"payload_type": "type.googleapis.com/eligibility.v1.EligibilityReviewPayload"}
     },
     {
       "at": "2026-03-18T14:30:00Z",
       "actor": "agent:kyc-bot",
-      "action": "idv_completed",
-      "data_type": "type.googleapis.com/kyc.v1.IDVCompleted",
+      "type": "kyc.v1.IDVCompleted",
       "data": {
-        "@type": "type.googleapis.com/kyc.v1.IDVCompleted",
-        "livenessPassed": true,
-        "facialMatchPassed": true,
+        "liveness_passed": true,
+        "facial_match_passed": true,
         "confidence": 0.98
       }
     }

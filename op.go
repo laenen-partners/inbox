@@ -71,7 +71,7 @@ func (op *Op) Respond(action string, comment string) *Op {
 		Action:  action,
 		Comment: comment,
 	}
-	op.events = append(op.events, newTypedEvent(op.actor, "responded", action, &inboxv1.ItemResponded{
+	op.events = append(op.events, newTypedEventWithDetail(op.actor, action, &inboxv1.ItemResponded{
 		Action:  action,
 		Comment: comment,
 	}))
@@ -83,7 +83,7 @@ func (op *Op) Comment(body string) *Op {
 	if op.err != nil {
 		return op
 	}
-	op.events = append(op.events, newTypedEvent(op.actor, "commented", body, &inboxv1.CommentAppended{
+	op.events = append(op.events, newTypedEventWithDetail(op.actor, body, &inboxv1.CommentAppended{
 		Body: body,
 	}))
 	return op
@@ -94,7 +94,7 @@ func (op *Op) CommentWith(body string, opts CommentOpts) *Op {
 	if op.err != nil {
 		return op
 	}
-	op.events = append(op.events, newTypedEvent(op.actor, "commented", body, &inboxv1.CommentAppended{
+	op.events = append(op.events, newTypedEventWithDetail(op.actor, body, &inboxv1.CommentAppended{
 		Body:       body,
 		Visibility: opts.Visibility,
 		Refs:       opts.Refs,
@@ -108,7 +108,7 @@ func (op *Op) UpdatePayload(payloadType string, payload json.RawMessage) *Op {
 		return op
 	}
 	op.newPayload = &payloadUpdate{payloadType: payloadType, payload: payload}
-	op.events = append(op.events, newTypedEvent(op.actor, "payload_updated", "", &inboxv1.PayloadUpdated{
+	op.events = append(op.events, newTypedEvent(op.actor, &inboxv1.PayloadUpdated{
 		PayloadType: payloadType,
 	}))
 	return op
@@ -158,34 +158,22 @@ func (op *Op) TransitionTo(status string) *Op {
 		msg = &inboxv1.ItemReleased{ReleasedBy: op.actor}
 	}
 	if msg != nil {
-		op.events = append(op.events, newTypedEvent(op.actor, status, "", msg))
+		op.events = append(op.events, newTypedEvent(op.actor, msg))
 	}
 	return op
 }
 
 // ─── Events ───
 
-// WithEvent appends a typed event from a proto message. The data_type
-// is derived automatically from the proto message's fully qualified
-// name, and the message is marshaled to JSON via protobuf's Any
-// encoding.
+// WithEvent appends a typed event from a proto message. The Type is
+// derived automatically from the proto message's fully qualified name.
 //
-//	op.WithEvent("screening_resolved", &compliancepb.ScreeningResolved{...})
-func (op *Op) WithEvent(action string, msg proto.Message) *Op {
+//	op.WithEvent(&compliancepb.ScreeningResolved{...})
+func (op *Op) WithEvent(msg proto.Message) *Op {
 	if op.err != nil {
 		return op
 	}
-	typeURL, raw, err := PackEventData(msg)
-	if err != nil {
-		op.err = fmt.Errorf("inbox: marshal event proto: %w", err)
-		return op
-	}
-	op.events = append(op.events, Event{
-		Actor:    op.actor,
-		Action:   action,
-		DataType: typeURL,
-		Data:     raw,
-	})
+	op.events = append(op.events, newTypedEvent(op.actor, msg))
 	return op
 }
 
