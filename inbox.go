@@ -20,10 +20,12 @@ package inbox
 
 import (
 	"github.com/laenen-partners/entitystore"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 )
 
 // EntityType is the entity store type for all inbox items.
-const EntityType = "inbox.item"
+// Derived from the proto-generated match config.
+var EntityType = inboxv1.ItemMatchConfig().EntityType
 
 // Inbox provides operations on inbox items backed by an entity store.
 type Inbox struct {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/laenen-partners/entitystore/store"
+	"google.golang.org/protobuf/proto"
 )
 
 // Well-known event actions (past tense — events are facts).
@@ -78,7 +79,7 @@ type CommentOpts struct {
 // Comment adds a comment to an item. Comments are the primary way
 // humans and agents add context without changing item state.
 func (ib *Inbox) Comment(ctx context.Context, itemID string, actor string, body string, opts *CommentOpts) (Item, error) {
-	evtData := CommentAppended{Body: body}
+	evtData := &CommentAppended{Body: body}
 	if opts != nil {
 		evtData.Visibility = opts.Visibility
 		evtData.Refs = opts.Refs
@@ -97,7 +98,7 @@ func (ib *Inbox) Escalate(ctx context.Context, itemID string, actor string, from
 		_ = ib.es.AddTags(ctx, itemID, []string{"team:" + toTeam})
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, ActionEscalated, reason, TypeItemEscalated, ItemEscalated{
+	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, ActionEscalated, reason, TypeItemEscalated, &ItemEscalated{
 		FromTeam: fromTeam,
 		ToTeam:   toTeam,
 		Reason:   reason,
@@ -114,7 +115,7 @@ func (ib *Inbox) Reassign(ctx context.Context, itemID string, actor string, from
 		_ = ib.es.AddTags(ctx, itemID, []string{"assignee:" + toActor})
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, ActionReassigned, reason, TypeItemReassigned, ItemReassigned{
+	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, ActionReassigned, reason, TypeItemReassigned, &ItemReassigned{
 		FromActor: fromActor,
 		ToActor:   toActor,
 		Reason:    reason,
@@ -123,9 +124,12 @@ func (ib *Inbox) Reassign(ctx context.Context, itemID string, actor string, from
 
 // ─── Internal ───
 
-// newTypedEvent creates an event with typed data.
-func newTypedEvent(actor, action, detail, dataType string, data any) Event {
-	raw, _ := json.Marshal(data)
+// newTypedEvent creates an event with a proto message as typed data.
+// Uses encoding/json (not protojson) so field names match the proto
+// generated json struct tags (snake_case), which is consistent with
+// how the entity store serializes JSONB data.
+func newTypedEvent(actor, action, detail, dataType string, msg proto.Message) Event {
+	raw, _ := json.Marshal(msg)
 	return Event{
 		Actor:    actor,
 		Action:   action,

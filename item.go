@@ -17,6 +17,11 @@ type Item struct {
 	// ID is the entity store entity ID.
 	ID string `json:"id"`
 
+	// Optional idempotency key. When set, prevents duplicate creation
+	// via entity store anchors. Derived from source context, e.g.
+	// "workflow:onboarding-456:pep_screening".
+	IdempotencyKey string `json:"idempotency_key,omitempty"`
+
 	// Core fields (stored in entity data).
 	Title       string     `json:"title"`
 	Description string     `json:"description"`
@@ -69,13 +74,14 @@ type Event struct {
 
 // Meta describes an inbox item to be created.
 type Meta struct {
-	Title       string          `json:"title"`
-	Description string          `json:"description"`
-	Deadline    *time.Time      `json:"deadline,omitempty"`
-	Payload     json.RawMessage `json:"payload,omitempty"`
-	PayloadType string          `json:"payload_type,omitempty"`
-	Tags        []string        `json:"tags,omitempty"`
-	Actor       string          `json:"actor"`
+	Title          string          `json:"title"`
+	Description    string          `json:"description"`
+	Deadline       *time.Time      `json:"deadline,omitempty"`
+	Payload        json.RawMessage `json:"payload,omitempty"`
+	PayloadType    string          `json:"payload_type,omitempty"`
+	Tags           []string        `json:"tags,omitempty"`
+	Actor          string          `json:"actor"`
+	IdempotencyKey string          `json:"idempotency_key,omitempty"`
 }
 
 // Response is the data sent when responding to an item.

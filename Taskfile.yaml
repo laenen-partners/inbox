@@ -1,0 +1,38 @@
+version: "3"
+
+tasks:
+  generate:
+    desc: Generate Go code from proto definitions
+    cmds:
+      - buf dep update
+      - buf generate
+
+  build:
+    desc: Build all packages
+    deps: [generate]
+    cmds:
+      - go build ./...
+
+  test:
+    desc: Run all tests
+    deps: [build]
+    cmds:
+      - go test -v -count=1 -timeout 120s ./...
+
+  lint:
+    desc: Run go vet and buf lint
+    deps: [build]
+    cmds:
+      - go vet ./...
+      - buf lint
+
+  tidy:
+    desc: Tidy go modules and buf deps
+    cmds:
+      - go mod tidy
+      - buf dep update
+
+  clean:
+    desc: Remove generated code
+    cmds:
+      - rm -rf gen/

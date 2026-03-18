@@ -49,42 +49,57 @@ message Item {
     extraction_display_name: "Inbox Item"
   };
 
+  // Optional idempotency key. When set, acts as an entity store anchor
+  // to prevent duplicate item creation. Callers should set this to a
+  // stable identifier derived from the source context, e.g.:
+  //   "workflow:onboarding-456:pep_screening"
+  //   "classifier:batch-789:invoice:INV-1234"
+  //
+  // If empty, no deduplication is enforced — each Create produces a
+  // new item. This is the default for most use cases.
+  string idempotency_key = 1 [(entitystore.v1.field) = {
+    anchor: true
+    similarity: SIMILARITY_FUNCTION_EXACT
+    weight: 0.0
+    extract: false
+  }];
+
   // Human-readable summary of what needs to be done.
-  string title = 1 [(entitystore.v1.field) = {
+  string title = 2 [(entitystore.v1.field) = {
     embed: true
     token_field: true
   }];
 
   // Detailed context, instructions, or background for the resolver.
-  string description = 2 [(entitystore.v1.field) = {
+  string description = 3 [(entitystore.v1.field) = {
     embed: true
     token_field: true
   }];
 
   // Lifecycle status: open, claimed, completed, expired, cancelled.
   // Also mirrored as a "status:<value>" tag for filtering.
-  string status = 3;
+  string status = 4;
 
   // Optional expiry. After this time, a background process may
   // transition the item to "expired". Also mirrored as a
   // "deadline:<RFC3339>" tag.
-  google.protobuf.Timestamp deadline = 4;
+  google.protobuf.Timestamp deadline = 5;
 
   // Fully qualified proto message name of the payload.
   // Stored as a top-level field for queryability — consumers can
   // filter by payload type without deserializing the payload.
   // Example: "type.googleapis.com/forms.v1.ActionForm"
-  string payload_type = 5;
+  string payload_type = 6;
 
   // Typed payload as a proto Any. The inbox stores and delivers it
   // without interpretation. Payload proto definitions are owned by
   // the packages that create and render items.
-  google.protobuf.Any payload = 6;
+  google.protobuf.Any payload = 7;
 
   // Append-only activity log. Every state change, comment, or
   // action is recorded here, giving each item a lightweight
   // thread of context.
-  repeated Event events = 7;
+  repeated Event events = 8;
 }
 
 // Event records a single thing that happened on an inbox item.

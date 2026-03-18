@@ -70,7 +70,7 @@ func (op *Op) Respond(action string, comment string) *Op {
 		Action:  action,
 		Comment: comment,
 	}
-	op.events = append(op.events, newTypedEvent(op.actor, ActionResponded, action, TypeItemResponded, ItemResponded{
+	op.events = append(op.events, newTypedEvent(op.actor, ActionResponded, action, TypeItemResponded, &ItemResponded{
 		Action:  action,
 		Comment: comment,
 	}))
@@ -82,7 +82,7 @@ func (op *Op) Comment(body string) *Op {
 	if op.err != nil {
 		return op
 	}
-	op.events = append(op.events, newTypedEvent(op.actor, ActionCommented, body, TypeCommentAppended, CommentAppended{
+	op.events = append(op.events, newTypedEvent(op.actor, ActionCommented, body, TypeCommentAppended, &CommentAppended{
 		Body: body,
 	}))
 	return op
@@ -93,7 +93,7 @@ func (op *Op) CommentWith(body string, opts CommentOpts) *Op {
 	if op.err != nil {
 		return op
 	}
-	op.events = append(op.events, newTypedEvent(op.actor, ActionCommented, body, TypeCommentAppended, CommentAppended{
+	op.events = append(op.events, newTypedEvent(op.actor, ActionCommented, body, TypeCommentAppended, &CommentAppended{
 		Body:       body,
 		Visibility: opts.Visibility,
 		Refs:       opts.Refs,
@@ -107,7 +107,7 @@ func (op *Op) UpdatePayload(payloadType string, payload json.RawMessage) *Op {
 		return op
 	}
 	op.newPayload = &payloadUpdate{payloadType: payloadType, payload: payload}
-	op.events = append(op.events, newTypedEvent(op.actor, "payload_updated", "", TypePayloadUpdated, PayloadUpdated{
+	op.events = append(op.events, newTypedEvent(op.actor, "payload_updated", "", TypePayloadUpdated, &PayloadUpdated{
 		PayloadType: payloadType,
 	}))
 	return op
@@ -144,26 +144,26 @@ func (op *Op) TransitionTo(status string) *Op {
 	op.newStatus = status
 
 	var dataType string
-	var data any
+	var msg proto.Message
 	switch status {
 	case StatusCompleted:
 		dataType = TypeItemCompleted
-		data = ItemCompleted{CompletedBy: op.actor}
+		msg = &ItemCompleted{CompletedBy: op.actor}
 	case StatusCancelled:
 		dataType = TypeItemCancelled
-		data = ItemCancelled{CancelledBy: op.actor}
+		msg = &ItemCancelled{CancelledBy: op.actor}
 	case StatusExpired:
 		dataType = TypeItemExpired
-		data = ItemExpired{}
+		msg = &ItemExpired{}
 	case StatusClaimed:
 		dataType = TypeItemClaimed
-		data = ItemClaimed{ClaimedBy: op.actor}
+		msg = &ItemClaimed{ClaimedBy: op.actor}
 	case StatusOpen:
 		dataType = TypeItemReleased
-		data = ItemReleased{ReleasedBy: op.actor}
+		msg = &ItemReleased{ReleasedBy: op.actor}
 	}
 	if dataType != "" {
-		op.events = append(op.events, newTypedEvent(op.actor, status, "", dataType, data))
+		op.events = append(op.events, newTypedEvent(op.actor, status, "", dataType, msg))
 	}
 	return op
 }
