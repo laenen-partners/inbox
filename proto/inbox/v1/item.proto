@@ -1,0 +1,107 @@
+// Inbox item entity definition with entitystore annotations.
+//
+// Design principle: the proto defines content and state — the minimum
+// structured data needed to display and mutate an item. Everything else
+// (type, priority, team, assignee, source) lives in entity store tags
+// so items can be routed, filtered, and classified without schema changes.
+//
+// The inbox is payload-agnostic. It does not interpret or own payload
+// schemas. Payloads are proto messages serialized into google.protobuf.Any.
+// The Any's type_url carries the fully qualified proto message name,
+// giving consumers type-safe deserialization and schema versioning for free.
+//
+// Tag conventions (key:value strings):
+//
+//   type:<subtype>        — item kind, e.g. "type:approval", "type:review", "type:conflict"
+//   priority:<level>      — "priority:urgent", "priority:high", "priority:normal", "priority:low"
+//   team:<name>           — owning team, e.g. "team:finance", "team:engineering"
+//   assignee:<actor>      — assigned human or agent, e.g. "assignee:pascal", "assignee:agent:triage-bot"
+//   source:<urn>          — creator, e.g. "source:workflow:inv-123", "source:classifier:v2"
+//   workflow:<id>         — parent workflow, e.g. "workflow:invoice-approval-456"
+//   callback:<address>    — response delivery, e.g. "callback:https://...", "callback:dbos:wf-id:topic"
+//   status:<state>        — mirrored from the status field for tag-based queries
+//   deadline:<RFC3339>    — mirrored from deadline field for background job queries
+//
+// This means adding a new priority level, team, or item type is just
+// a new tag value — zero proto changes, zero migrations.
+syntax = "proto3";
+package inbox.v1;
+
+option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+import "entitystore/v1/options.proto";
+
+// Item is the core inbox entity. It represents a unit of work to be
+// resolved by a human or AI agent.
+//
+// Linking to other items, workflows, or external entities is done
+// entirely via tags (e.g. "workflow:inv-456", "ref:invoice:789",
+// "blocks:item:abc"). This avoids the need for entity store relations
+// in v1 and keeps the model simple. Relations can be introduced later
+// if graph traversal becomes a real requirement.
+message Item {
+  option (entitystore.v1.message) = {
+    extraction_display_name: "Inbox Item"
+  };
+
+  // Human-readable summary of what needs to be done.
+  string title = 1 [(entitystore.v1.field) = {
+    embed: true
+    token_field: true
+  }];
+
+  // Detailed context, instructions, or background for the resolver.
+  string description = 2 [(entitystore.v1.field) = {
+    embed: true
+    token_field: true
+  }];
+
+  // Lifecycle status: open, claimed, completed, expired, cancelled.
+  // Also mirrored as a "status:<value>" tag for filtering.
+  string status = 3;
+
+  // Optional expiry. After this time, a background process may
+  // transition the item to "expired". Also mirrored as a
+  // "deadline:<RFC3339>" tag.
+  google.protobuf.Timestamp deadline = 4;
+
+  // Typed payload. The Any's type_url is the fully qualified proto
+  // message name (e.g. "type.googleapis.com/forms.v1.ActionForm").
+  // Consumers use it to select the right handler and deserialize
+  // the payload with full type safety and schema versioning.
+  //
+  // The inbox does not interpret the payload — it stores and
+  // delivers it. Payload proto definitions are owned by the
+  // packages that create and render items.
+  google.protobuf.Any payload = 5;
+
+  // Append-only activity log. Every state change, comment, or
+  // action is recorded here, giving each item a lightweight
+  // thread of context.
+  repeated Event events = 6;
+}
+
+// Event records a single thing that happened on an inbox item.
+// Events are append-only — never modified or deleted.
+message Event {
+  // When this event occurred.
+  google.protobuf.Timestamp at = 1;
+
+  // Who or what triggered this event.
+  // Convention: "user:<id>", "agent:<name>", "workflow:<id>", "system".
+  string actor = 2;
+
+  // What happened. Well-known actions:
+  //   created, claimed, released, commented, tagged,
+  //   responded, escalated, expired, cancelled, reassigned.
+  string action = 3;
+
+  // Human-readable detail or comment body. Optional.
+  string detail = 4;
+
+  // Structured event-specific data (e.g. response payload,
+  // tag changes, escalation reason). Optional.
+  google.protobuf.Any data = 5;
+}

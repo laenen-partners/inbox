@@ -1,0 +1,70 @@
+// Common event data protos for inbox item events.
+//
+// These are the well-known event data types shipped with the inbox package.
+// Domains can define their own event data protos and use them in Event.data
+// via google.protobuf.Any — the inbox does not restrict what goes in there.
+syntax = "proto3";
+package inbox.v1;
+
+option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
+
+import "google/protobuf/any.proto";
+
+// ResponseEvent is recorded when someone responds to an item.
+message ResponseEvent {
+  // The action taken (e.g. "approve", "reject", "submit").
+  string action = 1;
+
+  // Free-text comment from the responder.
+  string comment = 2;
+
+  // Set when an RM or agent acts on behalf of another actor
+  // (e.g. "customer:CUST-1234").
+  string on_behalf_of = 3;
+
+  // Justification when overriding normal flow.
+  string override_reason = 4;
+
+  // Response-specific typed data. The workflow defines what
+  // goes here (e.g. form field values, review decision details).
+  google.protobuf.Any payload = 5;
+}
+
+// TagChangeEvent is recorded when tags are added or removed.
+message TagChangeEvent {
+  repeated string added = 1;
+  repeated string removed = 2;
+}
+
+// EscalationEvent is recorded when an item is escalated.
+message EscalationEvent {
+  string from_team = 1;
+  string to_team = 2;
+  string reason = 3;
+}
+
+// ReassignmentEvent is recorded when an item is reassigned.
+message ReassignmentEvent {
+  string from_actor = 1;
+  string to_actor = 2;
+  string reason = 3;
+}
+
+// CommentEvent is recorded when someone leaves a comment on an item.
+// Comments are the primary way humans and agents add context to an
+// item without changing its state. They form the conversational
+// thread on the item's event log.
+message CommentEvent {
+  // The comment body. Supports plain text; renderers may choose
+  // to interpret markdown.
+  string body = 1;
+
+  // Optional: who this comment is visible to. Empty means visible
+  // to all. Use for internal notes (e.g. ["team:compliance"]) that
+  // should not be shown to the client.
+  repeated string visibility = 2;
+
+  // Optional: references to other entities or items relevant to
+  // this comment (e.g. "ref:document:DOC-123").
+  repeated string refs = 3;
+}
