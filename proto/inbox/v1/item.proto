@@ -5,10 +5,13 @@
 // (type, priority, team, assignee, source) lives in entity store tags
 // so items can be routed, filtered, and classified without schema changes.
 //
-// The inbox is payload-agnostic. It does not interpret or own payload
-// schemas. Payloads are proto messages serialized into google.protobuf.Any.
-// The Any's type_url carries the fully qualified proto message name,
-// giving consumers type-safe deserialization and schema versioning for free.
+// Payloads and event data are typed proto messages. Each carries a
+// payload_type / data_type field with the fully qualified proto message
+// name (e.g. "type.googleapis.com/forms.v1.ActionForm"). This allows:
+//   - Queryable type discrimination without parsing the payload blob
+//   - Type-safe deserialization via the proto registry
+//   - Schema versioning via proto's backwards-compatible evolution
+//   - Analytics aggregation by type across the entire inbox
 //
 // Tag conventions (key:value strings):
 //
@@ -67,20 +70,21 @@ message Item {
   // "deadline:<RFC3339>" tag.
   google.protobuf.Timestamp deadline = 4;
 
-  // Typed payload. The Any's type_url is the fully qualified proto
-  // message name (e.g. "type.googleapis.com/forms.v1.ActionForm").
-  // Consumers use it to select the right handler and deserialize
-  // the payload with full type safety and schema versioning.
-  //
-  // The inbox does not interpret the payload — it stores and
-  // delivers it. Payload proto definitions are owned by the
-  // packages that create and render items.
-  google.protobuf.Any payload = 5;
+  // Fully qualified proto message name of the payload.
+  // Stored as a top-level field for queryability — consumers can
+  // filter by payload type without deserializing the payload.
+  // Example: "type.googleapis.com/forms.v1.ActionForm"
+  string payload_type = 5;
+
+  // Typed payload as a proto Any. The inbox stores and delivers it
+  // without interpretation. Payload proto definitions are owned by
+  // the packages that create and render items.
+  google.protobuf.Any payload = 6;
 
   // Append-only activity log. Every state change, comment, or
   // action is recorded here, giving each item a lightweight
   // thread of context.
-  repeated Event events = 6;
+  repeated Event events = 7;
 }
 
 // Event records a single thing that happened on an inbox item.
@@ -101,7 +105,10 @@ message Event {
   // Human-readable detail or comment body. Optional.
   string detail = 4;
 
-  // Structured event-specific data (e.g. response payload,
-  // tag changes, escalation reason). Optional.
-  google.protobuf.Any data = 5;
+  // Fully qualified proto message name of the event data.
+  // Example: "type.googleapis.com/inbox.v1.ResponseEvent"
+  string data_type = 5;
+
+  // Structured event-specific data as a proto Any. Optional.
+  google.protobuf.Any data = 6;
 }
