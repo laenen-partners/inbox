@@ -6,23 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/entitystore/store"
 	"google.golang.org/protobuf/proto"
-)
-
-// Well-known event actions (past tense — events are facts).
-const (
-	ActionCreated    = "created"
-	ActionClaimed    = "claimed"
-	ActionReleased   = "released"
-	ActionCommented  = "commented"
-	ActionTagged     = "tagged"
-	ActionResponded  = "responded"
-	ActionEscalated  = "escalated"
-	ActionExpired    = "expired"
-	ActionCancelled  = "cancelled"
-	ActionReassigned = "reassigned"
-	ActionCompleted  = "completed"
 )
 
 // AddEvent appends an event to an item's event log.
@@ -79,13 +65,13 @@ type CommentOpts struct {
 // Comment adds a comment to an item. Comments are the primary way
 // humans and agents add context without changing item state.
 func (ib *Inbox) Comment(ctx context.Context, itemID string, actor string, body string, opts *CommentOpts) (Item, error) {
-	evtData := &CommentAppended{Body: body}
+	evtData := &inboxv1.CommentAppended{Body: body}
 	if opts != nil {
 		evtData.Visibility = opts.Visibility
 		evtData.Refs = opts.Refs
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, ActionCommented, body, TypeCommentAppended, evtData))
+	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, "commented", body, evtData))
 }
 
 // Escalate moves an item from one team to another with a reason.
@@ -98,7 +84,7 @@ func (ib *Inbox) Escalate(ctx context.Context, itemID string, actor string, from
 		_ = ib.es.AddTags(ctx, itemID, []string{"team:" + toTeam})
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, ActionEscalated, reason, TypeItemEscalated, &ItemEscalated{
+	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, "escalated", reason, &inboxv1.ItemEscalated{
 		FromTeam: fromTeam,
 		ToTeam:   toTeam,
 		Reason:   reason,
@@ -115,7 +101,7 @@ func (ib *Inbox) Reassign(ctx context.Context, itemID string, actor string, from
 		_ = ib.es.AddTags(ctx, itemID, []string{"assignee:" + toActor})
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, ActionReassigned, reason, TypeItemReassigned, &ItemReassigned{
+	return ib.AddEvent(ctx, itemID, newTypedEvent(actor, "reassigned", reason, &inboxv1.ItemReassigned{
 		FromActor: fromActor,
 		ToActor:   toActor,
 		Reason:    reason,
@@ -125,16 +111,16 @@ func (ib *Inbox) Reassign(ctx context.Context, itemID string, actor string, from
 // ─── Internal ───
 
 // newTypedEvent creates an event with a proto message as typed data.
-// Uses encoding/json (not protojson) so field names match the proto
-// generated json struct tags (snake_case), which is consistent with
-// how the entity store serializes JSONB data.
-func newTypedEvent(actor, action, detail, dataType string, msg proto.Message) Event {
+// The data_type is derived automatically from the proto message's
+// fully qualified name. Uses encoding/json for serialization so field
+// names match the proto generated json struct tags (snake_case).
+func newTypedEvent(actor, action, detail string, msg proto.Message) Event {
 	raw, _ := json.Marshal(msg)
 	return Event{
 		Actor:    actor,
 		Action:   action,
 		Detail:   detail,
-		DataType: dataType,
+		DataType: string(proto.MessageName(msg)),
 		Data:     raw,
 	}
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/laenen-partners/entitystore"
 	"github.com/laenen-partners/entitystore/store"
 	"github.com/laenen-partners/inbox"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 )
 
 // ─── Test infrastructure ───
@@ -169,10 +170,10 @@ func TestCustomerMissingDocuments(t *testing.T) {
 	if len(item.Events) != 2 {
 		t.Fatalf("expected 2 events, got %d", len(item.Events))
 	}
-	if item.Events[0].DataType != inbox.TypeItemCreated {
+	if item.Events[0].DataType != "inbox.v1.ItemCreated" {
 		t.Errorf("expected ItemCreated event, got %s", item.Events[0].DataType)
 	}
-	if item.Events[1].DataType != inbox.TypeItemResponded {
+	if item.Events[1].DataType != "inbox.v1.ItemResponded" {
 		t.Errorf("expected ItemResponded event, got %s", item.Events[1].DataType)
 	}
 	if item.Events[1].Actor != "user:customer:CUST-1234" {
@@ -295,10 +296,10 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	}
 
 	// Verify typed event data.
-	if item.Events[1].DataType != inbox.TypeItemClaimed {
+	if item.Events[1].DataType != "inbox.v1.ItemClaimed" {
 		t.Errorf("expected ItemClaimed, got %s", item.Events[1].DataType)
 	}
-	if item.Events[2].DataType != inbox.TypeCommentAppended {
+	if item.Events[2].DataType != "inbox.v1.CommentAppended" {
 		t.Errorf("expected CommentAppended, got %s", item.Events[2].DataType)
 	}
 }
@@ -478,11 +479,11 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 			escalationEvt = evt
 		}
 	}
-	if escalationEvt.DataType != inbox.TypeItemEscalated {
+	if escalationEvt.DataType != "inbox.v1.ItemEscalated" {
 		t.Errorf("expected ItemEscalated, got %s", escalationEvt.DataType)
 	}
 
-	var escData inbox.ItemEscalated
+	var escData inboxv1.ItemEscalated
 	if err := json.Unmarshal(escalationEvt.Data, &escData); err != nil {
 		t.Fatalf("unmarshal escalation: %v", err)
 	}
@@ -623,11 +624,11 @@ func TestCancelDuplicateItem(t *testing.T) {
 
 	// Verify cancellation event has reason.
 	lastEvt := item.Events[len(item.Events)-1]
-	if lastEvt.DataType != inbox.TypeItemCancelled {
+	if lastEvt.DataType != "inbox.v1.ItemCancelled" {
 		t.Errorf("expected ItemCancelled, got %s", lastEvt.DataType)
 	}
 
-	var cancelData inbox.ItemCancelled
+	var cancelData inboxv1.ItemCancelled
 	if err := json.Unmarshal(lastEvt.Data, &cancelData); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -829,11 +830,11 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 		action   string
 		dataType string
 	}{
-		{"created", inbox.TypeItemCreated},
-		{"responded", inbox.TypeItemResponded},
-		{"payload_updated", inbox.TypePayloadUpdated},
-		{"commented", inbox.TypeCommentAppended},
-		{"completed", inbox.TypeItemCompleted},
+		{"created", "inbox.v1.ItemCreated"},
+		{"responded", "inbox.v1.ItemResponded"},
+		{"payload_updated", "inbox.v1.PayloadUpdated"},
+		{"commented", "inbox.v1.CommentAppended"},
+		{"completed", "inbox.v1.ItemCompleted"},
 	}
 
 	for i, expected := range expectedEvents {

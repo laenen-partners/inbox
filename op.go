@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/entitystore/store"
 	"google.golang.org/protobuf/proto"
 )
@@ -70,7 +71,7 @@ func (op *Op) Respond(action string, comment string) *Op {
 		Action:  action,
 		Comment: comment,
 	}
-	op.events = append(op.events, newTypedEvent(op.actor, ActionResponded, action, TypeItemResponded, &ItemResponded{
+	op.events = append(op.events, newTypedEvent(op.actor, "responded", action, &inboxv1.ItemResponded{
 		Action:  action,
 		Comment: comment,
 	}))
@@ -82,7 +83,7 @@ func (op *Op) Comment(body string) *Op {
 	if op.err != nil {
 		return op
 	}
-	op.events = append(op.events, newTypedEvent(op.actor, ActionCommented, body, TypeCommentAppended, &CommentAppended{
+	op.events = append(op.events, newTypedEvent(op.actor, "commented", body, &inboxv1.CommentAppended{
 		Body: body,
 	}))
 	return op
@@ -93,7 +94,7 @@ func (op *Op) CommentWith(body string, opts CommentOpts) *Op {
 	if op.err != nil {
 		return op
 	}
-	op.events = append(op.events, newTypedEvent(op.actor, ActionCommented, body, TypeCommentAppended, &CommentAppended{
+	op.events = append(op.events, newTypedEvent(op.actor, "commented", body, &inboxv1.CommentAppended{
 		Body:       body,
 		Visibility: opts.Visibility,
 		Refs:       opts.Refs,
@@ -107,7 +108,7 @@ func (op *Op) UpdatePayload(payloadType string, payload json.RawMessage) *Op {
 		return op
 	}
 	op.newPayload = &payloadUpdate{payloadType: payloadType, payload: payload}
-	op.events = append(op.events, newTypedEvent(op.actor, "payload_updated", "", TypePayloadUpdated, &PayloadUpdated{
+	op.events = append(op.events, newTypedEvent(op.actor, "payload_updated", "", &inboxv1.PayloadUpdated{
 		PayloadType: payloadType,
 	}))
 	return op
@@ -143,27 +144,21 @@ func (op *Op) TransitionTo(status string) *Op {
 	}
 	op.newStatus = status
 
-	var dataType string
 	var msg proto.Message
 	switch status {
 	case StatusCompleted:
-		dataType = TypeItemCompleted
-		msg = &ItemCompleted{CompletedBy: op.actor}
+		msg = &inboxv1.ItemCompleted{CompletedBy: op.actor}
 	case StatusCancelled:
-		dataType = TypeItemCancelled
-		msg = &ItemCancelled{CancelledBy: op.actor}
+		msg = &inboxv1.ItemCancelled{CancelledBy: op.actor}
 	case StatusExpired:
-		dataType = TypeItemExpired
-		msg = &ItemExpired{}
+		msg = &inboxv1.ItemExpired{}
 	case StatusClaimed:
-		dataType = TypeItemClaimed
-		msg = &ItemClaimed{ClaimedBy: op.actor}
+		msg = &inboxv1.ItemClaimed{ClaimedBy: op.actor}
 	case StatusOpen:
-		dataType = TypeItemReleased
-		msg = &ItemReleased{ReleasedBy: op.actor}
+		msg = &inboxv1.ItemReleased{ReleasedBy: op.actor}
 	}
-	if dataType != "" {
-		op.events = append(op.events, newTypedEvent(op.actor, status, "", dataType, msg))
+	if msg != nil {
+		op.events = append(op.events, newTypedEvent(op.actor, status, "", msg))
 	}
 	return op
 }

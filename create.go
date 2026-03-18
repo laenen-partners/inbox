@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/entitystore/matching"
 	"github.com/laenen-partners/entitystore/store"
 )
@@ -25,7 +26,7 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 		actor = "system"
 	}
 
-	createdEvt := newTypedEvent(actor, ActionCreated, "", TypeItemCreated, &ItemCreated{PayloadType: meta.PayloadType})
+	createdEvt := newTypedEvent(actor, "created", "", &inboxv1.ItemCreated{PayloadType: meta.PayloadType})
 	createdEvt.At = now
 
 	item := Item{

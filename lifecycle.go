@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/entitystore/store"
 )
 
@@ -13,13 +14,13 @@ import (
 // status "open" can be claimed. Returns the updated item.
 func (ib *Inbox) Claim(ctx context.Context, itemID string, actor string) (Item, error) {
 	return ib.transition(ctx, itemID, StatusOpen, StatusClaimed,
-		newTypedEvent(actor, ActionClaimed, "", TypeItemClaimed, &ItemClaimed{ClaimedBy: actor}))
+		newTypedEvent(actor, "claimed", "", &inboxv1.ItemClaimed{ClaimedBy: actor}))
 }
 
 // Release returns a claimed item to "open" status.
 func (ib *Inbox) Release(ctx context.Context, itemID string, actor string) (Item, error) {
 	return ib.transition(ctx, itemID, StatusClaimed, StatusOpen,
-		newTypedEvent(actor, ActionReleased, "", TypeItemReleased, &ItemReleased{ReleasedBy: actor}))
+		newTypedEvent(actor, "released", "", &inboxv1.ItemReleased{ReleasedBy: actor}))
 }
 
 // Respond records a response on an item. This does NOT automatically
@@ -34,14 +35,13 @@ func (ib *Inbox) Respond(ctx context.Context, itemID string, resp Response) (Ite
 		return Item{}, fmt.Errorf("inbox: item %s is in terminal status %s", itemID, item.Status)
 	}
 
-	evtData := &ItemResponded{
+	evtData := &inboxv1.ItemResponded{
 		Action:  resp.Action,
 		Comment: resp.Comment,
 	}
-	evt := newTypedEvent(resp.Actor, ActionResponded, resp.Action, TypeItemResponded, evtData)
+	evt := newTypedEvent(resp.Actor, "responded", resp.Action, evtData)
 	if len(resp.Data) > 0 {
 		evt.Data = resp.Data
-		evt.DataType = TypeItemResponded
 	}
 
 	item.Events = append(item.Events, evt)
@@ -86,7 +86,7 @@ func (ib *Inbox) Complete(ctx context.Context, itemID string, actor string) (Ite
 		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Status)
 	}
 	return ib.doTransition(ctx, item, StatusCompleted,
-		newTypedEvent(actor, ActionCompleted, "", TypeItemCompleted, &ItemCompleted{CompletedBy: actor}))
+		newTypedEvent(actor, "completed", "", &inboxv1.ItemCompleted{CompletedBy: actor}))
 }
 
 // Cancel marks an item as cancelled.
@@ -99,7 +99,7 @@ func (ib *Inbox) Cancel(ctx context.Context, itemID string, actor string, reason
 		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Status)
 	}
 	return ib.doTransition(ctx, item, StatusCancelled,
-		newTypedEvent(actor, ActionCancelled, reason, TypeItemCancelled, &ItemCancelled{CancelledBy: actor, Reason: reason}))
+		newTypedEvent(actor, "cancelled", reason, &inboxv1.ItemCancelled{CancelledBy: actor, Reason: reason}))
 }
 
 // Expire marks an item as expired. Typically called by a background
@@ -113,7 +113,7 @@ func (ib *Inbox) Expire(ctx context.Context, itemID string) (Item, error) {
 		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Status)
 	}
 	return ib.doTransition(ctx, item, StatusExpired,
-		newTypedEvent("system", ActionExpired, "", TypeItemExpired, &ItemExpired{}))
+		newTypedEvent("system", "expired", "", &inboxv1.ItemExpired{}))
 }
 
 // UpdatePayload replaces the payload on an item and records a
@@ -127,7 +127,7 @@ func (ib *Inbox) UpdatePayload(ctx context.Context, itemID string, payloadType s
 	item.PayloadType = payloadType
 	item.Payload = payload
 
-	evt := newTypedEvent(actor, "payload_updated", "", TypePayloadUpdated, &PayloadUpdated{PayloadType: payloadType})
+	evt := newTypedEvent(actor, "payload_updated", "", &inboxv1.PayloadUpdated{PayloadType: payloadType})
 	item.Events = append(item.Events, evt)
 
 	data, err := marshalItemData(item)
