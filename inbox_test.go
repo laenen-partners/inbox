@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/laenen-partners/entitystore"
 	"github.com/laenen-partners/entitystore/store"
@@ -781,31 +782,17 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 
 	// Compliance officer does everything in one operation:
 	// - Responds with approve
-	// - Emits a custom domain event (screening result)
 	// - Updates the payload with the resolution
 	// - Adds a comment
 	// - Transitions to completed
 
-	type screeningResult struct {
-		MatchType  string  `json:"match_type"`
-		Confidence float64 `json:"confidence"`
-		Verdict    string  `json:"verdict"`
-		ListRef    string  `json:"list_ref"`
-	}
-
 	item, err = ib.On(ctx, item.ID, "user:compliance:fatima").
 		Respond("approve", "False positive — name similarity only, different DOB and nationality.").
-		Emit("screening_resolved", "compliance.v1.ScreeningResolved", screeningResult{
-			MatchType:  "false_positive",
-			Confidence: 0.92,
-			Verdict:    "cleared",
-			ListRef:    "OFAC-2026-03-18",
-		}).
 		UpdatePayload("eligibility.v1.ResolvedReviewPayload", mustJSON(t, map[string]any{
-			"@type":             "type.googleapis.com/eligibility.v1.ResolvedReviewPayload",
+			"@type":                "type.googleapis.com/eligibility.v1.ResolvedReviewPayload",
 			"original_requirement": "sanctions_screening_clear",
-			"resolution":        "cleared",
-			"resolved_by":       "user:compliance:fatima",
+			"resolution":           "cleared",
+			"resolved_by":          "user:compliance:fatima",
 		})).
 		Comment("Checked DOB and nationality against OFAC list. No match.").
 		Tag("resolved:cleared").
@@ -831,10 +818,10 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 	}
 
 	// Verify all events were written in one batch.
-	// created + responded + screening_resolved + payload_updated + commented + completed = 6
+	// created + responded + payload_updated + commented + completed = 5
 	// (Tag() is a silent mutation — no event emitted)
-	if len(item.Events) != 6 {
-		t.Fatalf("expected 6 events, got %d", len(item.Events))
+	if len(item.Events) != 5 {
+		t.Fatalf("expected 5 events, got %d", len(item.Events))
 	}
 
 	// Verify event order matches the builder call order.
@@ -844,7 +831,6 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 	}{
 		{"created", inbox.TypeItemCreated},
 		{"responded", inbox.TypeItemResponded},
-		{"screening_resolved", "compliance.v1.ScreeningResolved"},
 		{"payload_updated", inbox.TypePayloadUpdated},
 		{"commented", inbox.TypeCommentAppended},
 		{"completed", inbox.TypeItemCompleted},
@@ -859,27 +845,12 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 			t.Errorf("event %d: expected data_type %s, got %s", i, expected.dataType, evt.DataType)
 		}
 	}
-
-	// Verify the custom event data is deserializable.
-	var screening screeningResult
-	for _, evt := range item.Events {
-		if evt.DataType == "compliance.v1.ScreeningResolved" {
-			if err := json.Unmarshal(evt.Data, &screening); err != nil {
-				t.Fatalf("unmarshal screening: %v", err)
-			}
-		}
-	}
-	if screening.MatchType != "false_positive" {
-		t.Errorf("expected false_positive, got %s", screening.MatchType)
-	}
-	if screening.Verdict != "cleared" {
-		t.Errorf("expected cleared, got %s", screening.Verdict)
-	}
 }
 
-// TestOpBuilderCustomEventsOnly demonstrates using the Op builder
-// to emit multiple custom domain events without any standard operations.
-func TestOpBuilderCustomEventsOnly(t *testing.T) {
+// TestOpBuilderWithProtoEvents demonstrates using WithEvent to emit
+// custom domain events as proto messages, with type URLs derived
+// automatically from the proto registry.
+func TestOpBuilderWithProtoEvents(t *testing.T) {
 	ib := sharedInbox(t)
 	ctx := context.Background()
 
@@ -892,28 +863,30 @@ func TestOpBuilderCustomEventsOnly(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	type idvResult struct {
-		LivenessPassed    bool    `json:"liveness_passed"`
-		FacialMatchPassed bool    `json:"facial_match_passed"`
-		Confidence        float64 `json:"confidence"`
+	// Use google.protobuf.Struct as a stand-in for domain proto messages.
+	// In production these would be your own proto definitions like
+	// kyc.v1.IDVCompleted, compliance.v1.ScreeningResolved, etc.
+	idvResult, err := structpb.NewStruct(map[string]any{
+		"liveness_passed":     true,
+		"facial_match_passed": true,
+		"confidence":          0.98,
+	})
+	if err != nil {
+		t.Fatalf("new struct: %v", err)
 	}
 
-	type addressResult struct {
-		Validated bool   `json:"validated"`
-		Method    string `json:"method"`
+	addressResult, err := structpb.NewStruct(map[string]any{
+		"validated": true,
+		"method":    "utility_bill",
+	})
+	if err != nil {
+		t.Fatalf("new struct: %v", err)
 	}
 
-	// System emits multiple check results as custom events.
+	// Agent emits multiple check results as proto events.
 	item, err = ib.On(ctx, item.ID, "agent:kyc-bot").
-		Emit("idv_completed", "kyc.v1.IDVCompleted", idvResult{
-			LivenessPassed:    true,
-			FacialMatchPassed: true,
-			Confidence:        0.98,
-		}).
-		Emit("address_verified", "kyc.v1.AddressVerified", addressResult{
-			Validated: true,
-			Method:    "utility_bill",
-		}).
+		WithEvent("idv_completed", idvResult).
+		WithEvent("address_verified", addressResult).
 		Comment("All automated checks passed. Ready for final review.").
 		Apply()
 
@@ -926,13 +899,22 @@ func TestOpBuilderCustomEventsOnly(t *testing.T) {
 		t.Fatalf("expected 4 events, got %d", len(item.Events))
 	}
 
-	if item.Events[1].DataType != "kyc.v1.IDVCompleted" {
-		t.Errorf("expected kyc.v1.IDVCompleted, got %s", item.Events[1].DataType)
+	// WithEvent derives the type URL from the proto message.
+	// google.protobuf.Struct → "type.googleapis.com/google.protobuf.Struct"
+	expectedTypeURL := "type.googleapis.com/google.protobuf.Struct"
+	if item.Events[1].DataType != expectedTypeURL {
+		t.Errorf("expected %s, got %s", expectedTypeURL, item.Events[1].DataType)
 	}
-	if item.Events[2].DataType != "kyc.v1.AddressVerified" {
-		t.Errorf("expected kyc.v1.AddressVerified, got %s", item.Events[2].DataType)
+	if item.Events[2].DataType != expectedTypeURL {
+		t.Errorf("expected %s, got %s", expectedTypeURL, item.Events[2].DataType)
 	}
 	if item.Events[1].Actor != "agent:kyc-bot" {
 		t.Errorf("expected agent:kyc-bot, got %s", item.Events[1].Actor)
+	}
+	if item.Events[1].Action != "idv_completed" {
+		t.Errorf("expected idv_completed, got %s", item.Events[1].Action)
+	}
+	if item.Events[2].Action != "address_verified" {
+		t.Errorf("expected address_verified, got %s", item.Events[2].Action)
 	}
 }

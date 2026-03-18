@@ -17,10 +17,11 @@ import (
 //
 //	item, err := ib.On(ctx, itemID, "user:sarah").
 //	    Respond("approve", "Verified against PO.").
+//	    WithEvent("screening_resolved", &compliancepb.ScreeningResolved{...}).
 //	    UpdatePayload(typeURL, data).
-//	    Tag("priority:resolved").
-//	    Emit("acme.v1.CreditCheckCompleted", creditCheckResult).
 //	    Comment("All checks passed.").
+//	    Tag("priority:resolved").
+//	    TransitionTo(inbox.StatusCompleted).
 //	    Apply()
 type Op struct {
 	ib    *Inbox
@@ -59,7 +60,7 @@ func (ib *Inbox) On(ctx context.Context, itemID string, actor string) *Op {
 // ─── Standard operations ───
 
 // Respond records a response. Does not transition status — call
-// Complete() separately or use TransitionTo().
+// TransitionTo() to complete the item in the same operation.
 func (op *Op) Respond(action string, comment string) *Op {
 	if op.err != nil {
 		return op
@@ -73,28 +74,6 @@ func (op *Op) Respond(action string, comment string) *Op {
 		Action:  action,
 		Comment: comment,
 	}))
-	return op
-}
-
-// RespondWith records a response with custom typed data.
-func (op *Op) RespondWith(action string, comment string, dataType string, data any) *Op {
-	if op.err != nil {
-		return op
-	}
-	raw, _ := json.Marshal(data)
-	op.response = &Response{
-		Actor:   op.actor,
-		Action:  action,
-		Comment: comment,
-		Data:    raw,
-	}
-	op.events = append(op.events, Event{
-		Actor:    op.actor,
-		Action:   ActionResponded,
-		Detail:   action,
-		DataType: dataType,
-		Data:     raw,
-	})
 	return op
 }
 
@@ -189,12 +168,12 @@ func (op *Op) TransitionTo(status string) *Op {
 	return op
 }
 
-// ─── Custom events ───
+// ─── Events ───
 
 // WithEvent appends a typed event from a proto message. The data_type
 // is derived automatically from the proto message's fully qualified
 // name, and the message is marshaled to JSON via protobuf's Any
-// encoding. This is the primary way to emit custom domain events.
+// encoding.
 //
 //	op.WithEvent("screening_resolved", &compliancepb.ScreeningResolved{...})
 func (op *Op) WithEvent(action string, msg proto.Message) *Op {
@@ -211,41 +190,6 @@ func (op *Op) WithEvent(action string, msg proto.Message) *Op {
 		Action:   action,
 		DataType: typeURL,
 		Data:     raw,
-	})
-	return op
-}
-
-// Emit appends a custom typed event with a plain Go struct.
-// The dataType is your fully qualified type name and data is
-// any JSON-serializable struct.
-func (op *Op) Emit(action string, dataType string, data any) *Op {
-	if op.err != nil {
-		return op
-	}
-	raw, err := json.Marshal(data)
-	if err != nil {
-		op.err = fmt.Errorf("inbox: marshal event data: %w", err)
-		return op
-	}
-	op.events = append(op.events, Event{
-		Actor:    op.actor,
-		Action:   action,
-		DataType: dataType,
-		Data:     raw,
-	})
-	return op
-}
-
-// EmitRaw appends a custom event with pre-serialized JSON data.
-func (op *Op) EmitRaw(action string, dataType string, data json.RawMessage) *Op {
-	if op.err != nil {
-		return op
-	}
-	op.events = append(op.events, Event{
-		Actor:    op.actor,
-		Action:   action,
-		DataType: dataType,
-		Data:     data,
 	})
 	return op
 }
@@ -274,7 +218,7 @@ func (op *Op) Apply() (Item, error) {
 		item.Status = op.newStatus
 	}
 
-	// Apply tag changes to the local copy for the entity store write.
+	// Apply tag changes.
 	for _, t := range op.tagsAdd {
 		if !hasTagInSlice(item.Tags, t) {
 			item.Tags = append(item.Tags, t)
