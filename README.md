@@ -37,6 +37,8 @@ This gives you:
 
 Every state change, comment, and action on an item produces a typed event with a `data_type` and structured `data`. Events are append-only and form a lightweight thread on each item.
 
+All events are proto messages. Custom domain events are emitted via `WithEvent(action, proto.Message)` — the type URL is derived automatically from the proto registry.
+
 Standard event types:
 
 | Type | Emitted by |
@@ -53,8 +55,6 @@ Standard event types:
 | `inbox.v1.ItemReassigned` | `Reassign()` |
 | `inbox.v1.TagsChanged` | `Tag()` / `Untag()` |
 | `inbox.v1.PayloadUpdated` | `UpdatePayload()` |
-
-Domains can define their own event data protos — the inbox doesn't restrict what goes in `Event.Data`.
 
 ### State is not derived from events
 
@@ -180,6 +180,60 @@ item, err := ib.Cancel(ctx, itemID, "user:sarah", "Duplicate item")
 item, err := ib.Expire(ctx, itemID)
 ```
 
+### Batch operations with Op builder
+
+The `Op` builder collects multiple mutations and events on an item and flushes them in a single entity store write. This is the recommended way to perform compound operations.
+
+```go
+// Compliance officer responds, updates payload, comments, and completes — one write.
+item, err := ib.On(ctx, itemID, "user:compliance:fatima").
+    Respond("approve", "False positive — name similarity only.").
+    UpdatePayload(typeURL, resolvedPayload).
+    Comment("Checked DOB and nationality against OFAC list. No match.").
+    Tag("resolved:cleared").
+    TransitionTo(inbox.StatusCompleted).
+    Apply()
+```
+
+#### Custom domain events
+
+Use `WithEvent` to emit custom proto events alongside standard operations. The type URL is derived automatically from the proto message.
+
+```go
+item, err := ib.On(ctx, itemID, "agent:kyc-bot").
+    WithEvent("idv_completed", &kycpb.IDVCompleted{
+        LivenessPassed:    true,
+        FacialMatchPassed: true,
+        Confidence:        0.98,
+    }).
+    WithEvent("address_verified", &kycpb.AddressVerified{
+        Validated: true,
+        Method:    "utility_bill",
+    }).
+    Comment("All automated checks passed. Ready for final review.").
+    Apply()
+```
+
+Every event emitted via `WithEvent` gets:
+- `data_type` set to the fully qualified proto message name (e.g. `type.googleapis.com/kyc.v1.IDVCompleted`)
+- `data` set to the proto message serialized as JSON via protobuf's Any encoding
+- `actor` inherited from the `On()` call
+- `at` timestamped at `Apply()` time
+
+#### Op builder methods
+
+| Method | Purpose |
+|---|---|
+| `Respond(action, comment)` | Record a response |
+| `WithEvent(action, proto.Message)` | Emit a typed domain event |
+| `UpdatePayload(typeURL, data)` | Replace the item payload |
+| `Comment(body)` | Add a comment |
+| `CommentWith(body, opts)` | Add a comment with visibility/refs |
+| `Tag(tags...)` | Add tags |
+| `Untag(tags...)` | Remove tags |
+| `TransitionTo(status)` | Change status (completed, cancelled, etc.) |
+| `Apply()` | Flush all mutations in one write |
+
 ### Comments
 
 ```go
@@ -269,6 +323,11 @@ for _, evt := range item.Events {
         var esc inbox.ItemEscalated
         json.Unmarshal(evt.Data, &esc)
         fmt.Printf("  escalated: %s → %s\n", esc.FromTeam, esc.ToTeam)
+
+    case "type.googleapis.com/kyc.v1.IDVCompleted":
+        var idv kycpb.IDVCompleted
+        inbox.UnpackEventData(evt.Data, &idv)
+        fmt.Printf("  IDV: liveness=%v confidence=%.2f\n", idv.LivenessPassed, idv.Confidence)
     }
 }
 ```
@@ -297,6 +356,18 @@ data (JSONB): {
       "action": "created",
       "data_type": "inbox.v1.ItemCreated",
       "data": {"payload_type": "type.googleapis.com/eligibility.v1.EligibilityReviewPayload"}
+    },
+    {
+      "at": "2026-03-18T14:30:00Z",
+      "actor": "agent:kyc-bot",
+      "action": "idv_completed",
+      "data_type": "type.googleapis.com/kyc.v1.IDVCompleted",
+      "data": {
+        "@type": "type.googleapis.com/kyc.v1.IDVCompleted",
+        "livenessPassed": true,
+        "facialMatchPassed": true,
+        "confidence": 0.98
+      }
     }
   ]
 }
