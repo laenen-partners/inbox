@@ -745,3 +745,194 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 		t.Errorf("expected at least 3 workflow items, got %d", len(workflowItems))
 	}
 }
+
+// ─── Op builder tests ───
+
+// TestOpBuilderRespondAndComplete demonstrates using the Op builder
+// to respond, emit a custom domain event, update the payload, and
+// complete the item — all in a single write.
+func TestOpBuilderRespondAndComplete(t *testing.T) {
+	ib := sharedInbox(t)
+	ctx := context.Background()
+
+	// Create a compliance review item.
+	item, err := ib.Create(ctx, inbox.Meta{
+		Title:       "Sanctions screening — Customer Z",
+		Description: "Automated screening flagged a potential match.",
+		PayloadType: "eligibility.v1.EligibilityReviewPayload",
+		Payload: mustJSON(t, eligibilityReviewPayload{
+			SubscriptionID:  "SUB-OP-001",
+			ProductID:       "casa-aed",
+			RequirementName: "sanctions_screening_clear",
+			FailureMode:     "manual_review",
+			CustomerID:      "CUST-OP-001",
+		}),
+		Actor: "workflow:onboarding-op",
+		Tags: []string{
+			"type:review",
+			"team:compliance",
+			"priority:high",
+			"workflow:onboarding-op",
+		},
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	// Compliance officer does everything in one operation:
+	// - Responds with approve
+	// - Emits a custom domain event (screening result)
+	// - Updates the payload with the resolution
+	// - Adds a comment
+	// - Transitions to completed
+
+	type screeningResult struct {
+		MatchType  string  `json:"match_type"`
+		Confidence float64 `json:"confidence"`
+		Verdict    string  `json:"verdict"`
+		ListRef    string  `json:"list_ref"`
+	}
+
+	item, err = ib.On(ctx, item.ID, "user:compliance:fatima").
+		Respond("approve", "False positive — name similarity only, different DOB and nationality.").
+		Emit("screening_resolved", "compliance.v1.ScreeningResolved", screeningResult{
+			MatchType:  "false_positive",
+			Confidence: 0.92,
+			Verdict:    "cleared",
+			ListRef:    "OFAC-2026-03-18",
+		}).
+		UpdatePayload("eligibility.v1.ResolvedReviewPayload", mustJSON(t, map[string]any{
+			"@type":             "type.googleapis.com/eligibility.v1.ResolvedReviewPayload",
+			"original_requirement": "sanctions_screening_clear",
+			"resolution":        "cleared",
+			"resolved_by":       "user:compliance:fatima",
+		})).
+		Comment("Checked DOB and nationality against OFAC list. No match.").
+		Tag("resolved:cleared").
+		TransitionTo(inbox.StatusCompleted).
+		Apply()
+
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	// Verify final state.
+	if item.Status != inbox.StatusCompleted {
+		t.Errorf("expected completed, got %s", item.Status)
+	}
+	if item.PayloadType != "eligibility.v1.ResolvedReviewPayload" {
+		t.Errorf("expected updated payload type, got %s", item.PayloadType)
+	}
+	if !inbox.HasTag(item, "resolved:cleared") {
+		t.Error("expected resolved:cleared tag")
+	}
+	if !inbox.HasTag(item, "status:completed") {
+		t.Error("expected status:completed tag")
+	}
+
+	// Verify all events were written in one batch.
+	// created + responded + screening_resolved + payload_updated + commented + completed = 6
+	// (Tag() is a silent mutation — no event emitted)
+	if len(item.Events) != 6 {
+		t.Fatalf("expected 6 events, got %d", len(item.Events))
+	}
+
+	// Verify event order matches the builder call order.
+	expectedEvents := []struct {
+		action   string
+		dataType string
+	}{
+		{"created", inbox.TypeItemCreated},
+		{"responded", inbox.TypeItemResponded},
+		{"screening_resolved", "compliance.v1.ScreeningResolved"},
+		{"payload_updated", inbox.TypePayloadUpdated},
+		{"commented", inbox.TypeCommentAppended},
+		{"completed", inbox.TypeItemCompleted},
+	}
+
+	for i, expected := range expectedEvents {
+		evt := item.Events[i]
+		if evt.Action != expected.action {
+			t.Errorf("event %d: expected action %s, got %s", i, expected.action, evt.Action)
+		}
+		if evt.DataType != expected.dataType {
+			t.Errorf("event %d: expected data_type %s, got %s", i, expected.dataType, evt.DataType)
+		}
+	}
+
+	// Verify the custom event data is deserializable.
+	var screening screeningResult
+	for _, evt := range item.Events {
+		if evt.DataType == "compliance.v1.ScreeningResolved" {
+			if err := json.Unmarshal(evt.Data, &screening); err != nil {
+				t.Fatalf("unmarshal screening: %v", err)
+			}
+		}
+	}
+	if screening.MatchType != "false_positive" {
+		t.Errorf("expected false_positive, got %s", screening.MatchType)
+	}
+	if screening.Verdict != "cleared" {
+		t.Errorf("expected cleared, got %s", screening.Verdict)
+	}
+}
+
+// TestOpBuilderCustomEventsOnly demonstrates using the Op builder
+// to emit multiple custom domain events without any standard operations.
+func TestOpBuilderCustomEventsOnly(t *testing.T) {
+	ib := sharedInbox(t)
+	ctx := context.Background()
+
+	item, err := ib.Create(ctx, inbox.Meta{
+		Title: "KYC verification — Customer Y",
+		Actor: "workflow:kyc-001",
+		Tags:  []string{"type:review", "team:ops"},
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	type idvResult struct {
+		LivenessPassed    bool    `json:"liveness_passed"`
+		FacialMatchPassed bool    `json:"facial_match_passed"`
+		Confidence        float64 `json:"confidence"`
+	}
+
+	type addressResult struct {
+		Validated bool   `json:"validated"`
+		Method    string `json:"method"`
+	}
+
+	// System emits multiple check results as custom events.
+	item, err = ib.On(ctx, item.ID, "agent:kyc-bot").
+		Emit("idv_completed", "kyc.v1.IDVCompleted", idvResult{
+			LivenessPassed:    true,
+			FacialMatchPassed: true,
+			Confidence:        0.98,
+		}).
+		Emit("address_verified", "kyc.v1.AddressVerified", addressResult{
+			Validated: true,
+			Method:    "utility_bill",
+		}).
+		Comment("All automated checks passed. Ready for final review.").
+		Apply()
+
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	// created + idv_completed + address_verified + commented = 4
+	if len(item.Events) != 4 {
+		t.Fatalf("expected 4 events, got %d", len(item.Events))
+	}
+
+	if item.Events[1].DataType != "kyc.v1.IDVCompleted" {
+		t.Errorf("expected kyc.v1.IDVCompleted, got %s", item.Events[1].DataType)
+	}
+	if item.Events[2].DataType != "kyc.v1.AddressVerified" {
+		t.Errorf("expected kyc.v1.AddressVerified, got %s", item.Events[2].DataType)
+	}
+	if item.Events[1].Actor != "agent:kyc-bot" {
+		t.Errorf("expected agent:kyc-bot, got %s", item.Events[1].Actor)
+	}
+}
