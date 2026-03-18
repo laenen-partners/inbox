@@ -20,7 +20,6 @@ Items are routed and filtered entirely via tags — free-form `key:value` string
 | `assignee:user:sarah` | Assigned human or agent |
 | `source:workflow:inv-123` | What created this item |
 | `workflow:onboarding-456` | Parent workflow |
-| `callback:https://...` | Where to deliver the response |
 | `ref:invoice:789` | Link to a related entity |
 | `status:open` | Mirrored from the status field |
 
@@ -56,6 +55,23 @@ Standard event types:
 | `inbox.v1.PayloadUpdated` | `UpdatePayload()` |
 
 Domains can define their own event data protos — the inbox doesn't restrict what goes in `Event.Data`.
+
+### State is not derived from events
+
+The inbox is **not** event-sourced. The item's current state — `status`, `payload`, `tags` — is the source of truth, stored directly in the entity store as a mutable document. You never replay events to reconstruct state.
+
+| To answer... | Read... |
+|---|---|
+| What form should I render? | `item.Payload` + `item.PayloadType` |
+| Who is this assigned to? | `item.Tags` (`assignee:...`) |
+| Is this item still open? | `item.Status` |
+| What happened on this item? | `item.Events` |
+| Who approved it and when? | `item.Events` (audit trail) |
+| Average time-to-response? | `item.Events` (analytics) |
+
+When a workflow updates the payload (e.g. after re-evaluating eligibility rules), it calls `UpdatePayload()` and the item reflects the latest state immediately. Consumers always read current state, never reconstruct it.
+
+Events are an **audit log**, not a projection source. They tell you what happened, not what the current state is.
 
 ### Workflow integration
 
@@ -104,7 +120,6 @@ item, err := ib.Create(ctx, inbox.Meta{
         "priority:normal",
         "ref:invoice:INV-1234",
         "workflow:invoice-processing-456",
-        "callback:https://api.internal/webhooks/inbox",
     },
 })
 ```

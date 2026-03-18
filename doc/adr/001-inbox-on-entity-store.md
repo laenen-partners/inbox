@@ -310,6 +310,22 @@ self-contained and queryable without joins.
 Events are written via **merge** (JSONB `||` with array append), not full
 replacement, to avoid lost-update races.
 
+**Events are an audit log, not a projection source.** The inbox is not
+event-sourced. The item's current state — `status`, `payload`, `tags` —
+is the source of truth, stored directly as a mutable entity store document.
+Consumers read current state; they never replay events to reconstruct it.
+
+When a workflow needs to update item data (e.g. after re-evaluating
+eligibility rules with new input), it calls `UpdatePayload()` and the
+item reflects the latest state immediately. The `PayloadUpdated` event
+records that this happened, but the event is not the source of the new
+payload — the item is.
+
+Events serve three purposes:
+1. **Activity timeline** — display what happened on the item.
+2. **Audit trail** — who did what, when, with what justification.
+3. **Analytics** — time-to-response, escalation rates, comment volume.
+
 ### API Surface (Go package)
 
 The `inbox` package wraps the entity store and exposes a focused API:
