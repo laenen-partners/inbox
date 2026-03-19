@@ -23,12 +23,10 @@ templ searchContent(data searchData) {
 			<button type="submit" class="btn btn-primary">Search</button>
 		</form>
 		if data.Query != "" {
-			<div id="queue-table">
-				@queueTable(queueData{
-					Items:    data.Items,
-					BasePath: data.BasePath,
-				})
-			</div>
+			@queueTable(queueData{
+				Items:    data.Items,
+				BasePath: data.BasePath,
+			})
 		}
 	</div>
 }

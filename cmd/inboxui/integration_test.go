@@ -68,6 +68,109 @@ func testInbox(t *testing.T) *inbox.Inbox {
 	return inbox.New(es)
 }
 
+func TestFilterDropdowns(t *testing.T) {
+	ib := testInbox(t)
+	ctx := context.Background()
+
+	handler := inboxui.Handler(ib,
+		inboxui.WithActor(func(r *http.Request) string { return "test" }),
+		inboxui.WithFilter(inboxui.FilterConfig{
+			Label: "Priority", TagPrefix: "priority:",
+			Options: []string{"urgent", "high", "normal", "low"},
+		}),
+		inboxui.WithFilter(inboxui.FilterConfig{
+			Label: "Team", TagPrefix: "team:",
+			Options: []string{"compliance", "ops", "finance"},
+		}),
+	)
+
+	// Seed items with different priorities
+	for _, p := range []string{"urgent", "normal"} {
+		_, err := ib.Create(ctx, inbox.Meta{
+			Title: "Item " + p,
+			Actor: "test",
+			Tags:  []string{"type:review", "priority:" + p, "team:compliance"},
+		})
+		if err != nil {
+			t.Fatalf("create: %v", err)
+		}
+	}
+
+	t.Run("full_page_no_filter", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		body := rec.Body.String()
+		t.Logf("Status: %d, Body len: %d", rec.Code, len(body))
+		if !strings.Contains(body, "Item urgent") {
+			t.Error("missing 'Item urgent'")
+		}
+		if !strings.Contains(body, "Item normal") {
+			t.Error("missing 'Item normal'")
+		}
+		// Check that data-signals and data-bind are rendered
+		if !strings.Contains(body, "data-signals") {
+			t.Error("missing data-signals attribute on filter container")
+		}
+		if !strings.Contains(body, "data-bind") {
+			t.Error("missing data-bind attribute on select")
+		}
+		t.Logf("data-signals present: %v", strings.Contains(body, "data-signals"))
+		t.Logf("data-bind present: %v", strings.Contains(body, "data-bind"))
+
+		// Log the actual filter HTML for debugging
+		idx := strings.Index(body, "queue-filters")
+		if idx > 0 {
+			end := idx + 500
+			if end > len(body) {
+				end = len(body)
+			}
+			t.Logf("Filter HTML: ...%s...", body[idx:end])
+		}
+	})
+
+	t.Run("sse_with_priority_filter", func(t *testing.T) {
+		// Simulate what Datastar @get sends: SSE request with filter as query param
+		req := httptest.NewRequest("GET", "/?priority=urgent", nil)
+		req.Header.Set("Accept", "text/event-stream")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		body := rec.Body.String()
+		t.Logf("SSE Status: %d, Content-Type: %s", rec.Code, rec.Header().Get("Content-Type"))
+		t.Logf("SSE Body:\n%s", body)
+
+		if rec.Code != 200 {
+			t.Fatalf("expected 200, got %d", rec.Code)
+		}
+		if !strings.Contains(body, "Item urgent") {
+			t.Error("SSE response missing 'Item urgent'")
+		}
+		if strings.Contains(body, "Item normal") {
+			t.Error("SSE response should NOT contain 'Item normal' (filtered out)")
+		}
+	})
+
+	t.Run("sse_with_team_filter", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/?team=finance", nil)
+		req.Header.Set("Accept", "text/event-stream")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		body := rec.Body.String()
+		t.Logf("SSE Body:\n%s", body)
+
+		// No items have team:finance, so should be empty
+		if strings.Contains(body, "Item urgent") || strings.Contains(body, "Item normal") {
+			t.Error("SSE response should have no items for team:finance")
+		}
+		if !strings.Contains(body, "No items found") {
+			t.Error("SSE response missing 'No items found' empty state")
+		}
+	})
+}
+
 func TestPayloadRendererIntegration(t *testing.T) {
 	ib := testInbox(t)
 	ctx := context.Background()
