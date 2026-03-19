@@ -5,7 +5,7 @@ go 1.25.6
 require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
-	github.com/laenen-partners/entitystore v0.7.0
+	github.com/laenen-partners/entitystore v0.10.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.41.0
 	google.golang.org/protobuf v1.36.11
 )

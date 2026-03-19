@@ -17,7 +17,7 @@ func (ib *Inbox) Get(ctx context.Context, itemID string) (Item, error) {
 	if e.EntityType != EntityType {
 		return Item{}, fmt.Errorf("inbox: entity %s is not an inbox item", itemID)
 	}
-	return unmarshalItem(e)
+	return itemFromEntity(e)
 }
 
 // ListByTags returns inbox items matching all given tags.
@@ -36,7 +36,7 @@ func (ib *Inbox) ListByTags(ctx context.Context, tags []string, opts ListOpts) (
 	if len(tags) > 0 {
 		entities = filterByTags(entities, tags)
 	}
-	return unmarshalItems(entities)
+	return itemsFromEntities(entities)
 }
 
 // Search performs fuzzy text search across item titles and descriptions.
@@ -53,7 +53,7 @@ func (ib *Inbox) Search(ctx context.Context, query string, opts ListOpts) ([]Ite
 	if err != nil {
 		return nil, fmt.Errorf("inbox: search items: %w", err)
 	}
-	return unmarshalItems(entities)
+	return itemsFromEntities(entities)
 }
 
 // SemanticSearch finds items by vector similarity on title + description embeddings.
@@ -65,7 +65,7 @@ func (ib *Inbox) SemanticSearch(ctx context.Context, vec []float32, topK int) ([
 	if err != nil {
 		return nil, fmt.Errorf("inbox: semantic search: %w", err)
 	}
-	return unmarshalItems(entities)
+	return itemsFromEntities(entities)
 }
 
 // Stale returns items matching tags where the last event is older than age.
@@ -111,9 +111,13 @@ func hasAllTags(entityTags, required []string) bool {
 }
 
 func lastEventBefore(item Item, cutoff time.Time) bool {
-	if len(item.Events) == 0 {
+	events := item.Proto.GetEvents()
+	if len(events) == 0 {
 		return item.CreatedAt.Before(cutoff)
 	}
-	last := item.Events[len(item.Events)-1]
-	return last.At.Before(cutoff)
+	last := events[len(events)-1]
+	if last.GetAt() == nil {
+		return item.CreatedAt.Before(cutoff)
+	}
+	return last.GetAt().AsTime().Before(cutoff)
 }

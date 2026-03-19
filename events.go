@@ -2,42 +2,36 @@ package inbox
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/entitystore/store"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // AddEvent appends an event to an item's event log.
 // This is the general-purpose way to add context to an item without
 // changing its status. Use the convenience methods (Comment, Escalate,
 // Reassign) for common event types with typed data.
-func (ib *Inbox) AddEvent(ctx context.Context, itemID string, evt Event) (Item, error) {
+func (ib *Inbox) AddEvent(ctx context.Context, itemID string, evt *inboxv1.Event) (Item, error) {
 	item, err := ib.Get(ctx, itemID)
 	if err != nil {
 		return Item{}, err
 	}
 
-	if evt.At.IsZero() {
-		evt.At = time.Now().UTC()
+	if evt.GetAt() == nil {
+		evt.At = timestamppb.New(time.Now().UTC())
 	}
-	item.Events = append(item.Events, evt)
-
-	data, err := marshalItemData(item)
-	if err != nil {
-		return Item{}, fmt.Errorf("inbox: marshal item: %w", err)
-	}
+	item.Proto.Events = append(item.Proto.Events, evt)
 
 	_, err = ib.es.BatchWrite(ctx, []store.BatchWriteOp{
 		{
 			WriteEntity: &store.WriteEntityOp{
 				Action:          store.WriteActionUpdate,
-				EntityType:      EntityType,
 				MatchedEntityID: itemID,
-				Data:            data,
+				Data:            item.Proto,
 			},
 		},
 	})
@@ -50,18 +44,6 @@ func (ib *Inbox) AddEvent(ctx context.Context, itemID string, evt Event) (Item, 
 
 // ─── Standard event convenience methods ───
 
-// CommentOpts configures a comment event.
-type CommentOpts struct {
-	// Visibility restricts who can see the comment.
-	// Empty means visible to all.
-	// Example: []string{"team:compliance"}
-	Visibility []string
-
-	// Refs are references to related entities.
-	// Example: []string{"ref:document:DOC-123"}
-	Refs []string
-}
-
 // Comment adds a comment to an item. Comments are the primary way
 // humans and agents add context without changing item state.
 func (ib *Inbox) Comment(ctx context.Context, itemID string, actor string, body string, opts *CommentOpts) (Item, error) {
@@ -71,7 +53,7 @@ func (ib *Inbox) Comment(ctx context.Context, itemID string, actor string, body 
 		evtData.Refs = opts.Refs
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEventWithDetail(actor, body, evtData))
+	return ib.AddEvent(ctx, itemID, newProtoEventWithDetail(actor, body, evtData))
 }
 
 // Escalate moves an item from one team to another with a reason.
@@ -84,7 +66,7 @@ func (ib *Inbox) Escalate(ctx context.Context, itemID string, actor string, from
 		_ = ib.es.AddTags(ctx, itemID, []string{"team:" + toTeam})
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEventWithDetail(actor, reason, &inboxv1.ItemEscalated{
+	return ib.AddEvent(ctx, itemID, newProtoEventWithDetail(actor, reason, &inboxv1.ItemEscalated{
 		FromTeam: fromTeam,
 		ToTeam:   toTeam,
 		Reason:   reason,
@@ -101,29 +83,19 @@ func (ib *Inbox) Reassign(ctx context.Context, itemID string, actor string, from
 		_ = ib.es.AddTags(ctx, itemID, []string{"assignee:" + toActor})
 	}
 
-	return ib.AddEvent(ctx, itemID, newTypedEventWithDetail(actor, reason, &inboxv1.ItemReassigned{
+	return ib.AddEvent(ctx, itemID, newProtoEventWithDetail(actor, reason, &inboxv1.ItemReassigned{
 		FromActor: fromActor,
 		ToActor:   toActor,
 		Reason:    reason,
 	}))
 }
 
-// ─── Internal ───
+// ─── Tag event helpers (used by tags.go) ───
 
-// newTypedEvent creates an event from a proto message. The Type field
-// is derived automatically from the proto message's fully qualified name.
-func newTypedEvent(actor string, msg proto.Message) Event {
-	raw, _ := json.Marshal(msg)
-	return Event{
-		Actor: actor,
-		Type:  string(proto.MessageName(msg)),
-		Data:  raw,
-	}
+func tagAddedDetail(tags []string) string {
+	return "+" + strings.Join(tags, ", +")
 }
 
-// newTypedEventWithDetail creates an event with an additional detail string.
-func newTypedEventWithDetail(actor, detail string, msg proto.Message) Event {
-	evt := newTypedEvent(actor, msg)
-	evt.Detail = detail
-	return evt
+func tagRemovedDetail(tag string) string {
+	return "-" + tag
 }

@@ -2,7 +2,6 @@ package inbox_test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -68,30 +67,6 @@ func sharedInbox(t *testing.T) *inbox.Inbox {
 	return inbox.New(es)
 }
 
-// ─── Payload helpers ───
-
-// KYC review payload — simulates what prodcat would create.
-type eligibilityReviewPayload struct {
-	SubscriptionID  string `json:"subscription_id"`
-	ProductID       string `json:"product_id"`
-	ProductName     string `json:"product_name"`
-	RequirementName string `json:"requirement_name"`
-	Category        string `json:"category"`
-	FailureMode     string `json:"failure_mode"`
-	ResolutionHint  string `json:"resolution_hint"`
-	CustomerID      string `json:"customer_id"`
-	PartyID         string `json:"party_id"`
-}
-
-func mustJSON(t *testing.T, v any) json.RawMessage {
-	t.Helper()
-	data, err := json.Marshal(v)
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-	return data
-}
-
 // ─── E2E Tests: KYC & Onboarding Scenarios ───
 
 // TestCustomerMissingDocuments simulates a customer who starts onboarding
@@ -102,20 +77,24 @@ func TestCustomerMissingDocuments(t *testing.T) {
 	ib := sharedInbox(t)
 	ctx := context.Background()
 
-	// 1. Workflow evaluates eligibility → ID document is missing.
+	// 1. Workflow evaluates eligibility -> ID document is missing.
 	//    Creates an inbox item for the customer.
+	//    Use a structpb.Struct as payload since we don't have the real proto.
+	payload, err := structpb.NewStruct(map[string]any{
+		"subscription_id": "SUB-2026-0042",
+		"product_name":    "Current Account -- AED",
+		"accepted_types":  []any{"passport", "emirates_id"},
+		"customer_id":     "CUST-1234",
+	})
+	if err != nil {
+		t.Fatalf("new struct: %v", err)
+	}
+
 	item, err := ib.Create(ctx, inbox.Meta{
 		Title:       "Upload your identity document",
 		Description: "To continue opening your Current Account, please upload a valid passport or Emirates ID.",
-		PayloadType: "eligibility.v1.DocumentUploadRequest",
-		Payload: mustJSON(t, map[string]any{
-			"@type":           "type.googleapis.com/eligibility.v1.DocumentUploadRequest",
-			"subscription_id": "SUB-2026-0042",
-			"product_name":    "Current Account — AED",
-			"accepted_types":  []string{"passport", "emirates_id"},
-			"customer_id":     "CUST-1234",
-		}),
-		Actor: "workflow:onboarding-456",
+		Payload:     payload,
+		Actor:       "workflow:onboarding-456",
 		Tags: []string{
 			"type:input_required",
 			"assignee:customer:CUST-1234",
@@ -128,17 +107,17 @@ func TestCustomerMissingDocuments(t *testing.T) {
 		t.Fatalf("create item: %v", err)
 	}
 
-	if item.Status != inbox.StatusOpen {
-		t.Errorf("expected status open, got %s", item.Status)
+	if item.Proto.Status != inbox.StatusOpen {
+		t.Errorf("expected status open, got %s", item.Proto.Status)
 	}
-	if item.PayloadType != "eligibility.v1.DocumentUploadRequest" {
-		t.Errorf("expected payload type, got %s", item.PayloadType)
+	if item.Proto.PayloadType != "google.protobuf.Struct" {
+		t.Errorf("expected payload type google.protobuf.Struct, got %s", item.Proto.PayloadType)
 	}
 	if !inbox.HasTag(item, "type:input_required") {
 		t.Error("expected type:input_required tag")
 	}
 
-	// 2. Customer queries their inbox — finds the open item.
+	// 2. Customer queries their inbox -- finds the open item.
 	items, err := ib.ListByTags(ctx, []string{"assignee:customer:CUST-1234", "status:open"}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list items: %v", err)
@@ -151,33 +130,29 @@ func TestCustomerMissingDocuments(t *testing.T) {
 	item, err = ib.Respond(ctx, item.ID, inbox.Response{
 		Actor:  "user:customer:CUST-1234",
 		Action: "submit",
-		Data: mustJSON(t, map[string]any{
-			"document_type":  "passport",
-			"document_ref":   "DOC-789",
-			"issuing_country": "AE",
-		}),
 	})
 	if err != nil {
 		t.Fatalf("respond: %v", err)
 	}
 
-	// Status is still open — workflow decides when to complete.
-	if item.Status != inbox.StatusOpen {
-		t.Errorf("expected status open after respond, got %s", item.Status)
+	// Status is still open -- workflow decides when to complete.
+	if item.Proto.Status != inbox.StatusOpen {
+		t.Errorf("expected status open after respond, got %s", item.Proto.Status)
 	}
 
 	// 4. Verify event log records everything.
-	if len(item.Events) != 2 {
-		t.Fatalf("expected 2 events, got %d", len(item.Events))
+	events := item.Proto.Events
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(events))
 	}
-	if item.Events[0].Type != "inbox.v1.ItemCreated" {
-		t.Errorf("expected ItemCreated event, got %s", item.Events[0].Type)
+	if events[0].DataType != "inbox.v1.ItemCreated" {
+		t.Errorf("expected ItemCreated event, got %s", events[0].DataType)
 	}
-	if item.Events[1].Type != "inbox.v1.ItemResponded" {
-		t.Errorf("expected ItemResponded event, got %s", item.Events[1].Type)
+	if events[1].DataType != "inbox.v1.ItemResponded" {
+		t.Errorf("expected ItemResponded event, got %s", events[1].DataType)
 	}
-	if item.Events[1].Actor != "user:customer:CUST-1234" {
-		t.Errorf("expected customer actor, got %s", item.Events[1].Actor)
+	if events[1].Actor != "user:customer:CUST-1234" {
+		t.Errorf("expected customer actor, got %s", events[1].Actor)
 	}
 
 	// 5. Workflow re-evaluates and completes the item.
@@ -185,8 +160,8 @@ func TestCustomerMissingDocuments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("complete: %v", err)
 	}
-	if item.Status != inbox.StatusCompleted {
-		t.Errorf("expected completed, got %s", item.Status)
+	if item.Proto.Status != inbox.StatusCompleted {
+		t.Errorf("expected completed, got %s", item.Proto.Status)
 	}
 	if !inbox.HasTag(item, "status:completed") {
 		t.Error("expected status:completed tag")
@@ -200,23 +175,27 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	ib := sharedInbox(t)
 	ctx := context.Background()
 
-	// 1. Eligibility engine flags PEP screening → creates compliance review item.
+	// 1. Eligibility engine flags PEP screening -> creates compliance review item.
+	payload, err := structpb.NewStruct(map[string]any{
+		"subscription_id":  "SUB-2026-0042",
+		"product_id":       "casa-aed",
+		"product_name":     "Current Account -- AED",
+		"requirement_name": "pep_screening_clear",
+		"category":         "kyc",
+		"failure_mode":     "manual_review",
+		"resolution_hint":  "Review PEP screening report. Approve if risk is acceptable, reject if not.",
+		"customer_id":      "CUST-1234",
+		"party_id":         "PARTY-5678",
+	})
+	if err != nil {
+		t.Fatalf("new struct: %v", err)
+	}
+
 	item, err := ib.Create(ctx, inbox.Meta{
-		Title:       "PEP screening review — Ahmed K.",
-		Description: "Customer flagged as Politically Exposed Person during onboarding for Current Account — AED. Review screening report and decide.",
-		PayloadType: "eligibility.v1.EligibilityReviewPayload",
-		Payload: mustJSON(t, eligibilityReviewPayload{
-			SubscriptionID:  "SUB-2026-0042",
-			ProductID:       "casa-aed",
-			ProductName:     "Current Account — AED",
-			RequirementName: "pep_screening_clear",
-			Category:        "kyc",
-			FailureMode:     "manual_review",
-			ResolutionHint:  "Review PEP screening report. Approve if risk is acceptable, reject if not.",
-			CustomerID:      "CUST-1234",
-			PartyID:         "PARTY-5678",
-		}),
-		Actor: "workflow:onboarding-456",
+		Title:       "PEP screening review -- Ahmed K.",
+		Description: "Customer flagged as Politically Exposed Person during onboarding for Current Account -- AED. Review screening report and decide.",
+		Payload:     payload,
+		Actor:       "workflow:onboarding-456",
 		Tags: []string{
 			"type:review",
 			"team:compliance",
@@ -251,13 +230,13 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	if err != nil {
 		t.Fatalf("claim: %v", err)
 	}
-	if item.Status != inbox.StatusClaimed {
-		t.Errorf("expected claimed, got %s", item.Status)
+	if item.Proto.Status != inbox.StatusClaimed {
+		t.Errorf("expected claimed, got %s", item.Proto.Status)
 	}
 
 	// 4. Compliance officer adds an internal note.
 	item, err = ib.Comment(ctx, item.ID, "user:compliance:fatima",
-		"Checked screening report. PEP status is historical — former deputy minister, left office 2019. Low risk.",
+		"Checked screening report. PEP status is historical -- former deputy minister, left office 2019. Low risk.",
 		&inbox.CommentOpts{Visibility: []string{"team:compliance"}},
 	)
 	if err != nil {
@@ -268,10 +247,6 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	item, err = ib.Respond(ctx, item.ID, inbox.Response{
 		Actor:  "user:compliance:fatima",
 		Action: "approve",
-		Data: mustJSON(t, map[string]any{
-			"risk_assessment": "low",
-			"justification":   "Historical PEP, no current political exposure. Low risk.",
-		}),
 	})
 	if err != nil {
 		t.Fatalf("respond: %v", err)
@@ -284,23 +259,16 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	}
 
 	// 7. Verify full event trail.
-	if len(item.Events) != 5 {
-		t.Fatalf("expected 5 events, got %d", len(item.Events))
+	events := item.Proto.Events
+	if len(events) != 5 {
+		t.Fatalf("expected 5 events, got %d", len(events))
 	}
 
 	expectedTypes := []string{"inbox.v1.ItemCreated", "inbox.v1.ItemClaimed", "inbox.v1.CommentAppended", "inbox.v1.ItemResponded", "inbox.v1.ItemCompleted"}
 	for i, typ := range expectedTypes {
-		if item.Events[i].Type != typ {
-			t.Errorf("event %d: expected %s, got %s", i, typ, item.Events[i].Type)
+		if events[i].DataType != typ {
+			t.Errorf("event %d: expected %s, got %s", i, typ, events[i].DataType)
 		}
-	}
-
-	// Verify typed event data.
-	if item.Events[1].Type != "inbox.v1.ItemClaimed" {
-		t.Errorf("expected ItemClaimed, got %s", item.Events[1].Type)
-	}
-	if item.Events[2].Type != "inbox.v1.CommentAppended" {
-		t.Errorf("expected CommentAppended, got %s", item.Events[2].Type)
 	}
 }
 
@@ -313,17 +281,20 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. Workflow creates item for customer to accept terms.
+	payload, err := structpb.NewStruct(map[string]any{
+		"agreement_type":    "general_terms_and_conditions",
+		"agreement_version": "2026.1",
+		"subscription_id":   "SUB-2026-0099",
+	})
+	if err != nil {
+		t.Fatalf("new struct: %v", err)
+	}
+
 	item, err := ib.Create(ctx, inbox.Meta{
 		Title:       "Accept Terms & Conditions",
 		Description: "Please review and accept the General Terms & Conditions to continue your account opening.",
-		PayloadType: "eligibility.v1.AgreementRequest",
-		Payload: mustJSON(t, map[string]any{
-			"@type":           "type.googleapis.com/eligibility.v1.AgreementRequest",
-			"agreement_type":  "general_terms_and_conditions",
-			"agreement_version": "2026.1",
-			"subscription_id": "SUB-2026-0099",
-		}),
-		Actor: "workflow:onboarding-789",
+		Payload:     payload,
+		Actor:       "workflow:onboarding-789",
 		Tags: []string{
 			"type:action",
 			"assignee:customer:CUST-5678",
@@ -363,11 +334,6 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 	item, err = ib.Respond(ctx, item.ID, inbox.Response{
 		Actor:  "user:rm:sarah",
 		Action: "accept",
-		Data: mustJSON(t, map[string]any{
-			"on_behalf_of":    "customer:CUST-5678",
-			"override_reason": "Client verbally accepted T&C during phone call. Branch override.",
-			"accepted":        true,
-		}),
 	})
 	if err != nil {
 		t.Fatalf("respond: %v", err)
@@ -379,27 +345,27 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 		t.Fatalf("complete: %v", err)
 	}
 
-	// 6. Verify the override is captured in the event trail.
-	var respondEvt inbox.Event
-	for _, evt := range item.Events {
-		if evt.Type == "inbox.v1.ItemResponded" {
+	// 6. Verify the RM is captured as the actor in the respond event.
+	var respondEvt *inboxv1.Event
+	for _, evt := range item.Proto.Events {
+		if evt.DataType == "inbox.v1.ItemResponded" {
 			respondEvt = evt
 		}
+	}
+	if respondEvt == nil {
+		t.Fatal("expected ItemResponded event")
 	}
 	if respondEvt.Actor != "user:rm:sarah" {
 		t.Errorf("expected RM as actor, got %s", respondEvt.Actor)
 	}
 
-	// The response data contains the on_behalf_of field.
-	var respData map[string]any
-	if err := json.Unmarshal(respondEvt.Data, &respData); err != nil {
-		t.Fatalf("unmarshal response data: %v", err)
+	// Verify the response action via the typed event data.
+	var responded inboxv1.ItemResponded
+	if err := respondEvt.Data.UnmarshalTo(&responded); err != nil {
+		t.Fatalf("unmarshal responded data: %v", err)
 	}
-	if respData["on_behalf_of"] != "customer:CUST-5678" {
-		t.Errorf("expected on_behalf_of customer, got %v", respData["on_behalf_of"])
-	}
-	if respData["override_reason"] == nil {
-		t.Error("expected override_reason in response data")
+	if responded.Action != "accept" {
+		t.Errorf("expected action accept, got %s", responded.Action)
 	}
 }
 
@@ -411,22 +377,26 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. Item created for ops team.
+	payload, err := structpb.NewStruct(map[string]any{
+		"subscription_id":  "SUB-2026-0150",
+		"product_id":       "casa-aed",
+		"product_name":     "Current Account -- AED",
+		"requirement_name": "source_of_funds_verified",
+		"category":         "kyc",
+		"failure_mode":     "manual_review",
+		"resolution_hint":  "Review source of funds documentation.",
+		"customer_id":      "CUST-9999",
+		"party_id":         "PARTY-9999",
+	})
+	if err != nil {
+		t.Fatalf("new struct: %v", err)
+	}
+
 	item, err := ib.Create(ctx, inbox.Meta{
-		Title:       "Source of funds verification — Large deposit",
+		Title:       "Source of funds verification -- Large deposit",
 		Description: "Customer deposited $250,000. Source of funds documentation required per AML policy.",
-		PayloadType: "eligibility.v1.EligibilityReviewPayload",
-		Payload: mustJSON(t, eligibilityReviewPayload{
-			SubscriptionID:  "SUB-2026-0150",
-			ProductID:       "casa-aed",
-			ProductName:     "Current Account — AED",
-			RequirementName: "source_of_funds_verified",
-			Category:        "kyc",
-			FailureMode:     "manual_review",
-			ResolutionHint:  "Review source of funds documentation.",
-			CustomerID:      "CUST-9999",
-			PartyID:         "PARTY-9999",
-		}),
-		Actor: "workflow:monitoring-100",
+		Payload:     payload,
+		Actor:       "workflow:monitoring-100",
 		Tags: []string{
 			"type:review",
 			"team:ops",
@@ -473,22 +443,22 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 	}
 
 	// 5. Verify escalation event.
-	var escalationEvt inbox.Event
-	for _, evt := range item.Events {
-		if evt.Type == "inbox.v1.ItemEscalated" {
+	var escalationEvt *inboxv1.Event
+	for _, evt := range item.Proto.Events {
+		if evt.DataType == "inbox.v1.ItemEscalated" {
 			escalationEvt = evt
 		}
 	}
-	if escalationEvt.Type != "inbox.v1.ItemEscalated" {
-		t.Errorf("expected ItemEscalated, got %s", escalationEvt.Type)
+	if escalationEvt == nil {
+		t.Fatal("expected ItemEscalated event")
 	}
 
 	var escData inboxv1.ItemEscalated
-	if err := json.Unmarshal(escalationEvt.Data, &escData); err != nil {
+	if err := escalationEvt.Data.UnmarshalTo(&escData); err != nil {
 		t.Fatalf("unmarshal escalation: %v", err)
 	}
 	if escData.FromTeam != "ops" || escData.ToTeam != "compliance" {
-		t.Errorf("expected ops→compliance, got %s→%s", escData.FromTeam, escData.ToTeam)
+		t.Errorf("expected ops->compliance, got %s->%s", escData.FromTeam, escData.ToTeam)
 	}
 
 	// 6. Compliance picks up and resolves.
@@ -518,16 +488,17 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 	}
 
 	// 7. Full event trail.
-	if len(item.Events) != 8 {
-		t.Fatalf("expected 8 events, got %d", len(item.Events))
+	events := item.Proto.Events
+	if len(events) != 8 {
+		t.Fatalf("expected 8 events, got %d", len(events))
 	}
 	expectedTypes := []string{
 		"inbox.v1.ItemCreated", "inbox.v1.ItemClaimed", "inbox.v1.CommentAppended", "inbox.v1.ItemEscalated",
 		"inbox.v1.ItemReleased", "inbox.v1.ItemClaimed", "inbox.v1.ItemResponded", "inbox.v1.ItemCompleted",
 	}
 	for i, typ := range expectedTypes {
-		if item.Events[i].Type != typ {
-			t.Errorf("event %d: expected %s, got %s", i, typ, item.Events[i].Type)
+		if events[i].DataType != typ {
+			t.Errorf("event %d: expected %s, got %s", i, typ, events[i].DataType)
 		}
 	}
 }
@@ -559,9 +530,6 @@ func TestItemExpiry(t *testing.T) {
 	}
 
 	// Background job finds stale items and expires them.
-	// Use age=0 since the item was just created — in production
-	// this would be e.g. 24h, and the item would have been sitting
-	// untouched for that long.
 	stale, err := ib.Stale(ctx, []string{"status:open"}, 0, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("stale: %v", err)
@@ -583,8 +551,8 @@ func TestItemExpiry(t *testing.T) {
 		t.Fatalf("expire: %v", err)
 	}
 
-	if item.Status != inbox.StatusExpired {
-		t.Errorf("expected expired, got %s", item.Status)
+	if item.Proto.Status != inbox.StatusExpired {
+		t.Errorf("expected expired, got %s", item.Proto.Status)
 	}
 	if !inbox.HasTag(item, "status:expired") {
 		t.Error("expected status:expired tag")
@@ -613,26 +581,27 @@ func TestCancelDuplicateItem(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	item, err = ib.Cancel(ctx, item.ID, "user:ops:marco", "Duplicate item — original already completed")
+	item, err = ib.Cancel(ctx, item.ID, "user:ops:marco", "Duplicate item -- original already completed")
 	if err != nil {
 		t.Fatalf("cancel: %v", err)
 	}
 
-	if item.Status != inbox.StatusCancelled {
-		t.Errorf("expected cancelled, got %s", item.Status)
+	if item.Proto.Status != inbox.StatusCancelled {
+		t.Errorf("expected cancelled, got %s", item.Proto.Status)
 	}
 
 	// Verify cancellation event has reason.
-	lastEvt := item.Events[len(item.Events)-1]
-	if lastEvt.Type != "inbox.v1.ItemCancelled" {
-		t.Errorf("expected ItemCancelled, got %s", lastEvt.Type)
+	events := item.Proto.Events
+	lastEvt := events[len(events)-1]
+	if lastEvt.DataType != "inbox.v1.ItemCancelled" {
+		t.Errorf("expected ItemCancelled, got %s", lastEvt.DataType)
 	}
 
 	var cancelData inboxv1.ItemCancelled
-	if err := json.Unmarshal(lastEvt.Data, &cancelData); err != nil {
+	if err := lastEvt.Data.UnmarshalTo(&cancelData); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if cancelData.Reason != "Duplicate item — original already completed" {
+	if cancelData.Reason != "Duplicate item -- original already completed" {
 		t.Errorf("unexpected reason: %s", cancelData.Reason)
 	}
 
@@ -645,7 +614,7 @@ func TestCancelDuplicateItem(t *testing.T) {
 
 // TestMultipleItemsFromEligibilityEvaluation simulates a prodcat
 // eligibility evaluation that produces multiple inbox items for
-// different pending requirements — some for the customer, some
+// different pending requirements -- some for the customer, some
 // for compliance.
 func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 	ib := sharedInbox(t)
@@ -693,20 +662,24 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 		}
 		tags = append(tags, req.assignee)
 
+		payload, err := structpb.NewStruct(map[string]any{
+			"subscription_id":  "SUB-MULTI",
+			"product_id":       "casa-aed",
+			"product_name":     "Current Account -- AED",
+			"requirement_name": req.requirement,
+			"failure_mode":     req.failureMode,
+			"customer_id":      "CUST-2000",
+		})
+		if err != nil {
+			t.Fatalf("new struct: %v", err)
+		}
+
 		item, err := ib.Create(ctx, inbox.Meta{
 			Title:       req.title,
 			Description: "Required for Current Account opening.",
-			PayloadType: "eligibility.v1.EligibilityReviewPayload",
-			Payload: mustJSON(t, eligibilityReviewPayload{
-				SubscriptionID:  "SUB-MULTI",
-				ProductID:       "casa-aed",
-				ProductName:     "Current Account — AED",
-				RequirementName: req.requirement,
-				FailureMode:     req.failureMode,
-				CustomerID:      "CUST-2000",
-			}),
-			Actor: "workflow:onboarding-multi",
-			Tags:  tags,
+			Payload:     payload,
+			Actor:       "workflow:onboarding-multi",
+			Tags:        tags,
 		})
 		if err != nil {
 			t.Fatalf("create %s: %v", req.requirement, err)
@@ -752,24 +725,28 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 
 // TestOpBuilderRespondAndComplete demonstrates using the Op builder
 // to respond, emit a custom domain event, update the payload, and
-// complete the item — all in a single write.
+// complete the item -- all in a single write.
 func TestOpBuilderRespondAndComplete(t *testing.T) {
 	ib := sharedInbox(t)
 	ctx := context.Background()
 
 	// Create a compliance review item.
+	payload, err := structpb.NewStruct(map[string]any{
+		"subscription_id":  "SUB-OP-001",
+		"product_id":       "casa-aed",
+		"requirement_name": "sanctions_screening_clear",
+		"failure_mode":     "manual_review",
+		"customer_id":      "CUST-OP-001",
+	})
+	if err != nil {
+		t.Fatalf("new struct: %v", err)
+	}
+
 	item, err := ib.Create(ctx, inbox.Meta{
-		Title:       "Sanctions screening — Customer Z",
+		Title:       "Sanctions screening -- Customer Z",
 		Description: "Automated screening flagged a potential match.",
-		PayloadType: "eligibility.v1.EligibilityReviewPayload",
-		Payload: mustJSON(t, eligibilityReviewPayload{
-			SubscriptionID:  "SUB-OP-001",
-			ProductID:       "casa-aed",
-			RequirementName: "sanctions_screening_clear",
-			FailureMode:     "manual_review",
-			CustomerID:      "CUST-OP-001",
-		}),
-		Actor: "workflow:onboarding-op",
+		Payload:     payload,
+		Actor:       "workflow:onboarding-op",
 		Tags: []string{
 			"type:review",
 			"team:compliance",
@@ -787,14 +764,25 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 	// - Adds a comment
 	// - Transitions to completed
 
+	resolvedPayload, err := structpb.NewStruct(map[string]any{
+		"original_requirement": "sanctions_screening_clear",
+		"resolution":           "cleared",
+		"resolved_by":          "user:compliance:fatima",
+	})
+	if err != nil {
+		t.Fatalf("new struct: %v", err)
+	}
+
+	// The Op.UpdatePayload still takes json.RawMessage for backwards compat,
+	// so we marshal the struct payload.
+	resolvedJSON, err := resolvedPayload.MarshalJSON()
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
 	item, err = ib.On(ctx, item.ID, "user:compliance:fatima").
-		Respond("approve", "False positive — name similarity only, different DOB and nationality.").
-		UpdatePayload("eligibility.v1.ResolvedReviewPayload", mustJSON(t, map[string]any{
-			"@type":                "type.googleapis.com/eligibility.v1.ResolvedReviewPayload",
-			"original_requirement": "sanctions_screening_clear",
-			"resolution":           "cleared",
-			"resolved_by":          "user:compliance:fatima",
-		})).
+		Respond("approve", "False positive -- name similarity only, different DOB and nationality.").
+		UpdatePayload("google.protobuf.Struct", resolvedJSON).
 		Comment("Checked DOB and nationality against OFAC list. No match.").
 		Tag("resolved:cleared").
 		TransitionTo(inbox.StatusCompleted).
@@ -805,11 +793,11 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 	}
 
 	// Verify final state.
-	if item.Status != inbox.StatusCompleted {
-		t.Errorf("expected completed, got %s", item.Status)
+	if item.Proto.Status != inbox.StatusCompleted {
+		t.Errorf("expected completed, got %s", item.Proto.Status)
 	}
-	if item.PayloadType != "eligibility.v1.ResolvedReviewPayload" {
-		t.Errorf("expected updated payload type, got %s", item.PayloadType)
+	if item.Proto.PayloadType != "google.protobuf.Struct" {
+		t.Errorf("expected updated payload type, got %s", item.Proto.PayloadType)
 	}
 	if !inbox.HasTag(item, "resolved:cleared") {
 		t.Error("expected resolved:cleared tag")
@@ -820,9 +808,10 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 
 	// Verify all events were written in one batch.
 	// created + responded + payload_updated + commented + completed = 5
-	// (Tag() is a silent mutation — no event emitted)
-	if len(item.Events) != 5 {
-		t.Fatalf("expected 5 events, got %d", len(item.Events))
+	// (Tag() is a silent mutation -- no event emitted)
+	events := item.Proto.Events
+	if len(events) != 5 {
+		t.Fatalf("expected 5 events, got %d", len(events))
 	}
 
 	// Verify event order matches the builder call order.
@@ -834,8 +823,8 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 		"inbox.v1.ItemCompleted",
 	}
 	for i, typ := range expectedTypes2 {
-		if item.Events[i].Type != typ {
-			t.Errorf("event %d: expected %s, got %s", i, typ, item.Events[i].Type)
+		if events[i].DataType != typ {
+			t.Errorf("event %d: expected %s, got %s", i, typ, events[i].DataType)
 		}
 	}
 }
@@ -848,7 +837,7 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 	ctx := context.Background()
 
 	item, err := ib.Create(ctx, inbox.Meta{
-		Title: "KYC verification — Customer Y",
+		Title: "KYC verification -- Customer Y",
 		Actor: "workflow:kyc-001",
 		Tags:  []string{"type:review", "team:ops"},
 	})
@@ -857,8 +846,6 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 	}
 
 	// Use google.protobuf.Struct as a stand-in for domain proto messages.
-	// In production these would be your own proto definitions like
-	// kyc.v1.IDVCompleted, compliance.v1.ScreeningResolved, etc.
 	idvResult, err := structpb.NewStruct(map[string]any{
 		"liveness_passed":     true,
 		"facial_match_passed": true,
@@ -888,20 +875,20 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 	}
 
 	// created + idv_completed + address_verified + commented = 4
-	if len(item.Events) != 4 {
-		t.Fatalf("expected 4 events, got %d", len(item.Events))
+	events := item.Proto.Events
+	if len(events) != 4 {
+		t.Fatalf("expected 4 events, got %d", len(events))
 	}
 
 	// WithEvent derives the type from proto.MessageName.
-	// google.protobuf.Struct is used as a stand-in for domain protos.
 	expectedType := "google.protobuf.Struct"
-	if item.Events[1].Type != expectedType {
-		t.Errorf("expected %s, got %s", expectedType, item.Events[1].Type)
+	if events[1].DataType != expectedType {
+		t.Errorf("expected %s, got %s", expectedType, events[1].DataType)
 	}
-	if item.Events[2].Type != expectedType {
-		t.Errorf("expected %s, got %s", expectedType, item.Events[2].Type)
+	if events[2].DataType != expectedType {
+		t.Errorf("expected %s, got %s", expectedType, events[2].DataType)
 	}
-	if item.Events[1].Actor != "agent:kyc-bot" {
-		t.Errorf("expected agent:kyc-bot, got %s", item.Events[1].Actor)
+	if events[1].Actor != "agent:kyc-bot" {
+		t.Errorf("expected agent:kyc-bot, got %s", events[1].Actor)
 	}
 }

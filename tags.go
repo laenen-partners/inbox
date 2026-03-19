@@ -2,7 +2,6 @@ package inbox
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -15,7 +14,7 @@ func (ib *Inbox) Tag(ctx context.Context, itemID string, actor string, tags ...s
 		return fmt.Errorf("inbox: add tags: %w", err)
 	}
 
-	_, _ = ib.AddEvent(ctx, itemID, newTypedEventWithDetail(actor, "+"+strings.Join(tags, ", +"), &inboxv1.TagsChanged{
+	_, _ = ib.AddEvent(ctx, itemID, newProtoEventWithDetail(actor, "+"+strings.Join(tags, ", +"), &inboxv1.TagsChanged{
 		Added: tags,
 	}))
 
@@ -28,7 +27,7 @@ func (ib *Inbox) Untag(ctx context.Context, itemID string, actor string, tag str
 		return fmt.Errorf("inbox: remove tag: %w", err)
 	}
 
-	_, _ = ib.AddEvent(ctx, itemID, newTypedEventWithDetail(actor, "-"+tag, &inboxv1.TagsChanged{
+	_, _ = ib.AddEvent(ctx, itemID, newProtoEventWithDetail(actor, "-"+tag, &inboxv1.TagsChanged{
 		Removed: []string{tag},
 	}))
 
@@ -67,15 +66,4 @@ func HasTag(item Item, tag string) bool {
 		}
 	}
 	return false
-}
-
-// MarshalTagChangeEvent creates event data JSON for a tag change.
-// Use this when you want structured event data instead of the
-// simple detail string that Tag/Untag use.
-func MarshalTagChangeEvent(added, removed []string) json.RawMessage {
-	data, _ := json.Marshal(struct {
-		Added   []string `json:"added,omitempty"`
-		Removed []string `json:"removed,omitempty"`
-	}{Added: added, Removed: removed})
-	return data
 }

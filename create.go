@@ -2,7 +2,6 @@ package inbox
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -10,6 +9,9 @@ import (
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/entitystore/matching"
 	"github.com/laenen-partners/entitystore/store"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Create inserts a new inbox item into the entity store and returns the created item.
@@ -26,42 +28,33 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 		actor = "system"
 	}
 
-	createdEvt := newTypedEvent(actor, &inboxv1.ItemCreated{PayloadType: meta.PayloadType})
-	createdEvt.At = now
+	createdEvt := newProtoEvent(actor, &inboxv1.ItemCreated{PayloadType: payloadTypeFromMsg(meta.Payload)})
+	createdEvt.At = timestamppb.New(now)
 
-	item := Item{
-		ID:             id,
+	tags := appendStatusTag(meta.Tags, StatusOpen)
+	if meta.Deadline != nil {
+		tags = append(tags, "deadline:"+meta.Deadline.Format(time.RFC3339))
+	}
+
+	p := &inboxv1.Item{
 		IdempotencyKey: meta.IdempotencyKey,
 		Title:          meta.Title,
 		Description:    meta.Description,
 		Status:         StatusOpen,
-		Deadline:       meta.Deadline,
-		PayloadType:    meta.PayloadType,
-		Payload:        meta.Payload,
-		Events:         []Event{createdEvt},
-		Tags:           appendStatusTag(meta.Tags, StatusOpen),
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		Deadline:       deadlineToProto(meta.Deadline),
+		PayloadType:    payloadTypeFromMsg(meta.Payload),
+		Payload:        packPayloadAny(meta.Payload),
+		Events:         []*inboxv1.Event{createdEvt},
 	}
 
-	if meta.Deadline != nil {
-		item.Tags = append(item.Tags, "deadline:"+meta.Deadline.Format(time.RFC3339))
-	}
-
-	data, err := marshalItemData(item)
-	if err != nil {
-		return Item{}, fmt.Errorf("inbox: marshal item: %w", err)
-	}
-
-	tokens := buildTokens(item.Title, item.Description)
+	tokens := buildTokens(p.Title, p.Description)
 
 	writeOp := store.WriteEntityOp{
-		Action:     store.WriteActionCreate,
-		ID:         id,
-		EntityType: EntityType,
-		Data:       data,
-		Tags:       item.Tags,
-		Tokens:     tokens,
+		Action: store.WriteActionCreate,
+		ID:     id,
+		Data:   p,
+		Tags:   tags,
+		Tokens: tokens,
 	}
 
 	// Set anchor for idempotency if key is provided.
@@ -71,76 +64,43 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 		}
 	}
 
-	_, err = ib.es.BatchWrite(ctx, []store.BatchWriteOp{
+	_, err := ib.es.BatchWrite(ctx, []store.BatchWriteOp{
 		{WriteEntity: &writeOp},
 	})
 	if err != nil {
 		return Item{}, fmt.Errorf("inbox: create item: %w", err)
 	}
 
-	return item, nil
-}
-
-// ─── Internal helpers ───
-
-// itemData is the JSONB data shape stored in the entity store.
-// Tags and ID live outside JSONB (entity store columns).
-type itemData struct {
-	IdempotencyKey string          `json:"idempotency_key,omitempty"`
-	Title          string          `json:"title"`
-	Description    string          `json:"description"`
-	Status         string          `json:"status"`
-	Deadline       *time.Time      `json:"deadline,omitempty"`
-	PayloadType    string          `json:"payload_type,omitempty"`
-	Payload        json.RawMessage `json:"payload,omitempty"`
-	Events         []Event         `json:"events,omitempty"`
-}
-
-func marshalItemData(item Item) (json.RawMessage, error) {
-	return json.Marshal(itemData{
-		IdempotencyKey: item.IdempotencyKey,
-		Title:          item.Title,
-		Description:    item.Description,
-		Status:         item.Status,
-		Deadline:       item.Deadline,
-		PayloadType:    item.PayloadType,
-		Payload:        item.Payload,
-		Events:         item.Events,
-	})
-}
-
-func unmarshalItem(e matching.StoredEntity) (Item, error) {
-	var d itemData
-	if err := json.Unmarshal(e.Data, &d); err != nil {
-		return Item{}, fmt.Errorf("inbox: unmarshal item data: %w", err)
-	}
 	return Item{
-		ID:             e.ID,
-		IdempotencyKey: d.IdempotencyKey,
-		Title:          d.Title,
-		Description:    d.Description,
-		Status:         d.Status,
-		Deadline:       d.Deadline,
-		PayloadType:    d.PayloadType,
-		Payload:        d.Payload,
-		Events:         d.Events,
-		Tags:        e.Tags,
-		CreatedAt:   e.CreatedAt,
-		UpdatedAt:   e.UpdatedAt,
+		ID:        id,
+		Proto:     p,
+		Tags:      tags,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}, nil
 }
 
-func unmarshalItems(entities []matching.StoredEntity) ([]Item, error) {
-	items := make([]Item, 0, len(entities))
-	for _, e := range entities {
-		item, err := unmarshalItem(e)
-		if err != nil {
-			return nil, err
-		}
-		items = append(items, item)
+// ─── Proto event helpers ───
+
+// newProtoEvent creates an *inboxv1.Event from a proto message. The DataType
+// field is derived automatically from the proto message's fully qualified name.
+func newProtoEvent(actor string, msg proto.Message) *inboxv1.Event {
+	a, _ := anypb.New(msg)
+	return &inboxv1.Event{
+		Actor:    actor,
+		DataType: string(proto.MessageName(msg)),
+		Data:     a,
 	}
-	return items, nil
 }
+
+// newProtoEventWithDetail creates an event with an additional detail string.
+func newProtoEventWithDetail(actor, detail string, msg proto.Message) *inboxv1.Event {
+	evt := newProtoEvent(actor, msg)
+	evt.Detail = detail
+	return evt
+}
+
+// ─── Internal helpers ───
 
 // appendStatusTag ensures a "status:<s>" tag is present.
 func appendStatusTag(tags []string, s string) []string {

@@ -3,6 +3,7 @@
 package inboxv1
 
 import (
+	extraction "github.com/laenen-partners/entitystore/extraction"
 	matching "github.com/laenen-partners/entitystore/matching"
 )
 
@@ -24,45 +25,45 @@ func ItemMatchConfig() matching.EntityMatchConfig {
 
 // ItemExtractionSchema returns the proto-annotation-derived extraction
 // schema for inbox.v1.Item.
-func ItemExtractionSchema() matching.ExtractionSchema {
-	return matching.ExtractionSchema{
+func ItemExtractionSchema() extraction.ExtractionSchema {
+	return extraction.ExtractionSchema{
 		EntityType:  "inbox.v1.Item",
 		DisplayName: "Inbox Item",
-		Fields: []matching.ExtractionField{
+		Fields: []extraction.ExtractionField{
 			{
 				Name:        "title",
 				Description: "Human-readable summary of what needs to be done",
-				Type:        matching.ExtractionFieldTypeString,
+				Type:        extraction.ExtractionFieldTypeString,
 			},
 			{
 				Name:        "description",
 				Description: "Detailed context, instructions, or background for the resolver",
-				Type:        matching.ExtractionFieldTypeString,
+				Type:        extraction.ExtractionFieldTypeString,
 			},
 			{
 				Name:        "status",
 				Description: "Lifecycle status: open, claimed, completed, expired, cancelled. Also mirrored as a \"status:<value>\" tag for filtering",
-				Type:        matching.ExtractionFieldTypeString,
+				Type:        extraction.ExtractionFieldTypeString,
 			},
 			{
 				Name:        "deadline",
 				Description: "Optional expiry. After this time, a background process may transition the item to \"expired\". Also mirrored as a \"deadline:<RFC3339>\" tag",
-				Type:        matching.ExtractionFieldTypeString,
+				Type:        extraction.ExtractionFieldTypeString,
 			},
 			{
 				Name:        "payload_type",
 				Description: "Fully qualified proto message name of the payload. Stored as a top-level field for queryability — consumers can filter by payload type without deserializing the payload. Example: \"type.googleapis.com/forms.v1.ActionForm\"",
-				Type:        matching.ExtractionFieldTypeString,
+				Type:        extraction.ExtractionFieldTypeString,
 			},
 			{
 				Name:        "payload",
 				Description: "Typed payload as a proto Any. The inbox stores and delivers it without interpretation. Payload proto definitions are owned by the packages that create and render items",
-				Type:        matching.ExtractionFieldTypeString,
+				Type:        extraction.ExtractionFieldTypeString,
 			},
 			{
 				Name:        "events",
 				Description: "Append-only activity log. Every state change, comment, or action is recorded here, giving each item a lightweight thread of context",
-				Type:        matching.ExtractionFieldTypeString,
+				Type:        extraction.ExtractionFieldTypeString,
 				Repeated:    true,
 			},
 		},

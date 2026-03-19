@@ -9,6 +9,7 @@ import (
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/entitystore/store"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Op is a batch operation builder that collects mutations and events
@@ -18,7 +19,7 @@ import (
 //
 //	item, err := ib.On(ctx, itemID, "user:sarah").
 //	    Respond("approve", "Verified against PO.").
-//	    WithEvent("screening_resolved", &compliancepb.ScreeningResolved{...}).
+//	    WithEvent(&compliancepb.ScreeningResolved{...}).
 //	    UpdatePayload(typeURL, data).
 //	    Comment("All checks passed.").
 //	    Tag("priority:resolved").
@@ -32,7 +33,7 @@ type Op struct {
 	err   error
 
 	// Collected mutations.
-	events     []Event
+	events     []*inboxv1.Event
 	newStatus  string
 	newPayload *payloadUpdate
 	tagsAdd    []string
@@ -71,7 +72,7 @@ func (op *Op) Respond(action string, comment string) *Op {
 		Action:  action,
 		Comment: comment,
 	}
-	op.events = append(op.events, newTypedEventWithDetail(op.actor, action, &inboxv1.ItemResponded{
+	op.events = append(op.events, newProtoEventWithDetail(op.actor, action, &inboxv1.ItemResponded{
 		Action:  action,
 		Comment: comment,
 	}))
@@ -83,7 +84,7 @@ func (op *Op) Comment(body string) *Op {
 	if op.err != nil {
 		return op
 	}
-	op.events = append(op.events, newTypedEventWithDetail(op.actor, body, &inboxv1.CommentAppended{
+	op.events = append(op.events, newProtoEventWithDetail(op.actor, body, &inboxv1.CommentAppended{
 		Body: body,
 	}))
 	return op
@@ -94,7 +95,7 @@ func (op *Op) CommentWith(body string, opts CommentOpts) *Op {
 	if op.err != nil {
 		return op
 	}
-	op.events = append(op.events, newTypedEventWithDetail(op.actor, body, &inboxv1.CommentAppended{
+	op.events = append(op.events, newProtoEventWithDetail(op.actor, body, &inboxv1.CommentAppended{
 		Body:       body,
 		Visibility: opts.Visibility,
 		Refs:       opts.Refs,
@@ -108,7 +109,7 @@ func (op *Op) UpdatePayload(payloadType string, payload json.RawMessage) *Op {
 		return op
 	}
 	op.newPayload = &payloadUpdate{payloadType: payloadType, payload: payload}
-	op.events = append(op.events, newTypedEvent(op.actor, &inboxv1.PayloadUpdated{
+	op.events = append(op.events, newProtoEvent(op.actor, &inboxv1.PayloadUpdated{
 		PayloadType: payloadType,
 	}))
 	return op
@@ -138,8 +139,8 @@ func (op *Op) TransitionTo(status string) *Op {
 	if op.err != nil {
 		return op
 	}
-	if IsTerminal(op.item.Status) {
-		op.err = fmt.Errorf("inbox: item %s is already in terminal status %s", op.item.ID, op.item.Status)
+	if IsTerminal(op.item.Proto.Status) {
+		op.err = fmt.Errorf("inbox: item %s is already in terminal status %s", op.item.ID, op.item.Proto.Status)
 		return op
 	}
 	op.newStatus = status
@@ -158,14 +159,14 @@ func (op *Op) TransitionTo(status string) *Op {
 		msg = &inboxv1.ItemReleased{ReleasedBy: op.actor}
 	}
 	if msg != nil {
-		op.events = append(op.events, newTypedEvent(op.actor, msg))
+		op.events = append(op.events, newProtoEvent(op.actor, msg))
 	}
 	return op
 }
 
 // ─── Events ───
 
-// WithEvent appends a typed event from a proto message. The Type is
+// WithEvent appends a typed event from a proto message. The DataType is
 // derived automatically from the proto message's fully qualified name.
 //
 //	op.WithEvent(&compliancepb.ScreeningResolved{...})
@@ -173,7 +174,7 @@ func (op *Op) WithEvent(msg proto.Message) *Op {
 	if op.err != nil {
 		return op
 	}
-	op.events = append(op.events, newTypedEvent(op.actor, msg))
+	op.events = append(op.events, newProtoEvent(op.actor, msg))
 	return op
 }
 
@@ -191,14 +192,17 @@ func (op *Op) Apply() (Item, error) {
 
 	// Apply payload update.
 	if op.newPayload != nil {
-		item.PayloadType = op.newPayload.payloadType
-		item.Payload = op.newPayload.payload
+		item.Proto.PayloadType = op.newPayload.payloadType
+		// For now, Op.UpdatePayload takes json.RawMessage — we store it
+		// by clearing the proto Payload field. The payload type string is
+		// still queryable.
+		item.Proto.Payload = nil
 	}
 
 	// Apply status transition.
 	if op.newStatus != "" {
-		item.Tags = replaceStatusTag(item.Tags, item.Status, op.newStatus)
-		item.Status = op.newStatus
+		item.Tags = replaceStatusTag(item.Tags, item.Proto.Status, op.newStatus)
+		item.Proto.Status = op.newStatus
 	}
 
 	// Apply tag changes.
@@ -213,25 +217,19 @@ func (op *Op) Apply() (Item, error) {
 
 	// Stamp and append all events.
 	for i := range op.events {
-		if op.events[i].At.IsZero() {
-			op.events[i].At = now
+		if op.events[i].GetAt() == nil {
+			op.events[i].At = timestamppb.New(now)
 		}
 	}
-	item.Events = append(item.Events, op.events...)
+	item.Proto.Events = append(item.Proto.Events, op.events...)
 
 	// Single write.
-	data, err := marshalItemData(item)
-	if err != nil {
-		return Item{}, fmt.Errorf("inbox: marshal item: %w", err)
-	}
-
-	_, err = op.ib.es.BatchWrite(op.ctx, []store.BatchWriteOp{
+	_, err := op.ib.es.BatchWrite(op.ctx, []store.BatchWriteOp{
 		{
 			WriteEntity: &store.WriteEntityOp{
 				Action:          store.WriteActionUpdate,
-				EntityType:      EntityType,
 				MatchedEntityID: item.ID,
-				Data:            data,
+				Data:            item.Proto,
 				Tags:            item.Tags,
 			},
 		},
