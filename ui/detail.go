@@ -14,7 +14,7 @@ import (
 func (s *server) handleDetail(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := actorFrom(ctx)
+	actor := inbox.ActorFrom(ctx)
 
 	item, err := s.ib.Get(ctx, id)
 	if err != nil {

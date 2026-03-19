@@ -12,7 +12,7 @@ import (
 func (s *server) handleClaim(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := actorFrom(ctx)
+	actor := inbox.ActorFrom(ctx)
 
 	_, err := s.ib.Claim(ctx, id, actor)
 	if err != nil {
@@ -30,7 +30,7 @@ func (s *server) handleClaim(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleRelease(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := actorFrom(ctx)
+	actor := inbox.ActorFrom(ctx)
 
 	item, err := s.ib.Release(ctx, id, actor)
 	if err != nil {
@@ -47,7 +47,7 @@ func (s *server) handleRelease(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleRespond(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := actorFrom(ctx)
+	actor := inbox.ActorFrom(ctx)
 
 	var signals struct {
 		Action  string `json:"action"`
@@ -74,7 +74,7 @@ func (s *server) handleRespond(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleComplete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := actorFrom(ctx)
+	actor := inbox.ActorFrom(ctx)
 
 	_, err := s.ib.Complete(ctx, id, actor)
 	if err != nil {
@@ -88,7 +88,7 @@ func (s *server) handleComplete(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := actorFrom(ctx)
+	actor := inbox.ActorFrom(ctx)
 
 	var signals struct {
 		Reason string `json:"reason"`
@@ -110,7 +110,7 @@ func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := actorFrom(ctx)
+	actor := inbox.ActorFrom(ctx)
 
 	var signals struct {
 		Body string `json:"body"`
@@ -132,7 +132,7 @@ func (s *server) handleComment(w http.ResponseWriter, r *http.Request) {
 // refreshDetailAndToast re-renders the detail drawer, updates the queue row, and shows a toast.
 func (s *server) refreshDetailAndToast(w http.ResponseWriter, r *http.Request, id string, msg string) {
 	ctx := r.Context()
-	actor := actorFrom(ctx)
+	actor := inbox.ActorFrom(ctx)
 
 	item, err := s.ib.Get(ctx, id)
 	if err != nil {

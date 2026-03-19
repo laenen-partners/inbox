@@ -1,17 +1,12 @@
 package ui
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 	"github.com/laenen-partners/inbox"
 )
-
-type ctxKey string
-
-const actorKey ctxKey = "inbox-ui-actor"
 
 // Handler returns a mountable chi.Router for the inbox UI.
 func Handler(ib *inbox.Inbox, opts ...Option) chi.Router {
@@ -48,16 +43,9 @@ type server struct {
 func (s *server) actorMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		actor := s.cfg.actorFn(r)
-		ctx := context.WithValue(r.Context(), actorKey, actor)
+		ctx := inbox.WithActor(r.Context(), actor)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func actorFrom(ctx context.Context) string {
-	if v, ok := ctx.Value(actorKey).(string); ok {
-		return v
-	}
-	return "anonymous"
 }
 
 // renderPage wraps content in the configured layout and renders to the response.

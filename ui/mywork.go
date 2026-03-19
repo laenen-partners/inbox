@@ -10,7 +10,7 @@ import (
 
 func (s *server) handleMyWork(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	actor := actorFrom(ctx)
+	actor := inbox.ActorFrom(ctx)
 
 	filterValues := s.readFilterValues(r)
 	tags := []string{"status:claimed", "assignee:" + actor}
