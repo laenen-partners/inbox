@@ -14,6 +14,7 @@ import (
 	"github.com/laenen-partners/entitystore"
 	"github.com/laenen-partners/entitystore/store"
 	"github.com/laenen-partners/inbox"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	inboxui "github.com/laenen-partners/inbox/ui"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -168,6 +169,96 @@ func TestFilterDropdowns(t *testing.T) {
 		}
 		if !strings.Contains(body, "No items found") {
 			t.Error("SSE response missing 'No items found' empty state")
+		}
+	})
+}
+
+func TestSchemaRendererIntegration(t *testing.T) {
+	ib := testInbox(t)
+	ctx := context.Background()
+
+	handler := inboxui.Handler(ib,
+		inboxui.WithPayloadRenderer("inbox.v1.ItemSchema", inboxui.SchemaRenderer()),
+		inboxui.WithActor(func(r *http.Request) string { return "test" }),
+	)
+
+	t.Run("display_fields", func(t *testing.T) {
+		item, err := ib.Create(ctx, inbox.Meta{
+			Title: "Schema display test", Actor: "test",
+			Tags: []string{"type:review"},
+			Payload: &inboxv1.ItemSchema{
+				Display: []*inboxv1.DisplayField{
+					{Label: "Customer", Value: "CUST-1234"},
+					{Label: "Transaction", Value: "TXN-9999", Mono: true},
+				},
+			},
+		})
+		if err != nil {
+			t.Fatalf("create: %v", err)
+		}
+
+		req := httptest.NewRequest("GET", "/items/"+item.ID, nil)
+		req.Header.Set("Accept", "text/event-stream")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		body := rec.Body.String()
+
+		for _, want := range []string{"Customer", "CUST-1234", "Transaction", "TXN-9999", "font-mono"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("missing %q in response", want)
+			}
+		}
+	})
+
+	t.Run("form_fields", func(t *testing.T) {
+		item, _ := ib.Create(ctx, inbox.Meta{
+			Title: "Schema form test", Actor: "test",
+			Tags: []string{"type:input_required"},
+			Payload: &inboxv1.ItemSchema{
+				Fields: []*inboxv1.FormField{
+					{Name: "name", Type: "text", Label: "Full Name", Placeholder: "John Doe", Required: true},
+					{Name: "notes", Type: "textarea", Label: "Notes"},
+					{Name: "country", Type: "select", Label: "Country", Options: []string{"NL", "BE", "DE"}},
+					{Name: "agree", Type: "checkbox", Label: "I agree to terms"},
+				},
+			},
+		})
+
+		req := httptest.NewRequest("GET", "/items/"+item.ID, nil)
+		req.Header.Set("Accept", "text/event-stream")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		body := rec.Body.String()
+
+		for _, want := range []string{"Full Name", "John Doe", "textarea", "Country", "NL", "checkbox", "I agree"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("missing %q in response", want)
+			}
+		}
+	})
+
+	t.Run("actions", func(t *testing.T) {
+		item, _ := ib.Create(ctx, inbox.Meta{
+			Title: "Schema actions test", Actor: "test",
+			Tags: []string{"type:approval"},
+			Payload: &inboxv1.ItemSchema{
+				Actions: []*inboxv1.Action{
+					{Name: "approve", Label: "Approve", Variant: "success"},
+					{Name: "reject", Label: "Reject", Variant: "error"},
+				},
+			},
+		})
+
+		req := httptest.NewRequest("GET", "/items/"+item.ID, nil)
+		req.Header.Set("Accept", "text/event-stream")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		body := rec.Body.String()
+
+		for _, want := range []string{"Approve", "Reject", "badge-success", "badge-error"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("missing %q in response", want)
+			}
 		}
 	})
 }

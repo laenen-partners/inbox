@@ -1,0 +1,110 @@
+// Schema-driven inbox item rendering.
+//
+// ItemSchema defines everything the UI needs to render and interact with an
+// inbox item: read-only display fields, input form fields with validation,
+// and available action buttons. Any module can create inbox items with a
+// schema payload and the inbox UI renders them generically — no custom
+// per-type renderers needed.
+//
+// Usage: pass an ItemSchema as the payload when creating an inbox item:
+//
+//   schema := &inboxv1.ItemSchema{
+//       Display: []*inboxv1.DisplayField{
+//           {Label: "Customer", Value: "CUST-1234"},
+//       },
+//       Fields: []*inboxv1.FormField{
+//           {Name: "decision", Type: "select", Label: "Decision",
+//            Options: []string{"approve", "reject"}, Required: true},
+//       },
+//       Actions: []*inboxv1.Action{
+//           {Name: "approve", Label: "Approve", Variant: "success"},
+//           {Name: "reject", Label: "Reject", Variant: "error"},
+//       },
+//   }
+//   ib.Create(ctx, inbox.Meta{Payload: schema, ...})
+syntax = "proto3";
+
+package inbox.v1;
+
+option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
+
+// ItemSchema defines the UI rendering schema for an inbox item.
+// It is used as the item's payload (proto.Message) and the inbox UI
+// renders it generically based on the field definitions.
+message ItemSchema {
+  // Read-only key/value pairs displayed to the operator.
+  repeated DisplayField display = 1;
+
+  // Input fields the operator fills in before responding.
+  repeated FormField fields = 2;
+
+  // Available response actions (buttons).
+  repeated Action actions = 3;
+
+  // If true, the item can be completed by the client/customer directly
+  // (not just by operators).
+  bool client_completable = 4;
+}
+
+// DisplayField shows a read-only label/value pair in the item detail view.
+message DisplayField {
+  string label = 1;
+  string value = 2;
+
+  // If true, render the value in a monospace font (e.g. IDs, codes).
+  bool mono = 3;
+}
+
+// FormField defines a single input field in the response form.
+message FormField {
+  // Field name used as the key in the response payload.
+  string name = 1;
+
+  // Field type: "text", "textarea", "select", "checkbox".
+  string type = 2;
+
+  // Human-readable label shown above the field.
+  string label = 3;
+
+  // Optional description shown below the label.
+  string description = 4;
+
+  // Placeholder text for text/textarea fields.
+  string placeholder = 5;
+
+  // Whether the field must be filled before submitting.
+  bool required = 6;
+
+  // Options for select fields.
+  repeated string options = 7;
+
+  // Optional validation rules.
+  FieldValidation validation = 8;
+
+  // Default value (pre-filled).
+  string default_value = 9;
+}
+
+// FieldValidation defines validation constraints for a form field.
+message FieldValidation {
+  // Regex pattern the value must match.
+  string pattern = 1;
+
+  // Minimum length for text/textarea fields.
+  int32 min_length = 2;
+
+  // Maximum length for text/textarea fields.
+  int32 max_length = 3;
+}
+
+// Action defines a response button in the item detail view.
+message Action {
+  // Action name sent in the response (e.g. "approve", "reject").
+  string name = 1;
+
+  // Button label shown to the operator.
+  string label = 2;
+
+  // Button variant: "success", "error", "warning", "neutral", "outline".
+  string variant = 3;
+}
