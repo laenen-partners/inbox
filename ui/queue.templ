@@ -6,7 +6,6 @@ import (
 
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/dsx/ui/badge"
-	"github.com/laenen-partners/dsx/ui/filter"
 	"github.com/laenen-partners/inbox"
 )
 
@@ -20,24 +19,18 @@ templ queueContent(data queueData) {
 }
 
 templ queueFilters(data queueData) {
-	<div class="flex flex-wrap gap-4 items-center">
+	<div id="queue-filters" class="flex flex-wrap gap-3 items-center">
 		for _, f := range data.Filters {
-			@filter.Filter(filter.Props{ID: "filter-" + f.TagPrefix}) {
-				@filter.Radio(filter.RadioProps{
-					Name:       f.TagPrefix,
-					Label:      "All",
-					Checked:    data.ActiveFilters[f.Label] == "",
-					Attributes: ds.OnClick(ds.Get(data.BasePath+"/", ds.WithFilterSignals("queue-filters"))),
-				})
+			<select
+				class="select select-bordered select-sm"
+				name={ f.TagPrefix }
+				{ ds.On("change", ds.Get(data.BasePath+"/", ds.WithFilterSignals("queue-filters")))... }
+			>
+				<option value="" selected?={ data.ActiveFilters[f.Label] == "" }>{ f.Label }: All</option>
 				for _, opt := range f.Options {
-					@filter.Radio(filter.RadioProps{
-						Name:       f.TagPrefix,
-						Label:      opt,
-						Checked:    data.ActiveFilters[f.Label] == opt,
-						Attributes: ds.OnClick(ds.Get(data.BasePath+"/", ds.WithFilterSignals("queue-filters"))),
-					})
+					<option value={ opt } selected?={ data.ActiveFilters[f.Label] == opt }>{ opt }</option>
 				}
-			}
+			</select>
 		}
 		<span class="text-sm text-base-content/60">
 			{ fmt.Sprintf("%d items", len(data.Items)) }
