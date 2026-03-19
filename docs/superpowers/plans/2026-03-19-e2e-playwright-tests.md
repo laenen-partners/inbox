@@ -103,6 +103,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -240,7 +241,7 @@ func e2eNewPage(t *testing.T, browser playwright.Browser, url string) playwright
 - [ ] **Step 3: Verify compilation**
 
 ```bash
-go build ./cmd/inboxui/
+go vet ./cmd/inboxui/
 ```
 
 Expected: no errors
@@ -380,7 +381,7 @@ func e2eAssertStatus(t *testing.T, page playwright.Page, want string) {
 	if err != nil {
 		t.Fatalf("read status badge: %v", err)
 	}
-	got = trimSpace(got)
+	got = trimBadgeText(got)
 	if got != want {
 		t.Errorf("status: got %q, want %q", got, want)
 	}
@@ -405,36 +406,21 @@ func e2eClickButton(t *testing.T, page playwright.Page, label string) {
 	}
 }
 
-func trimSpace(s string) string {
-	// Trim whitespace and newlines from text content
-	result := ""
-	for _, c := range s {
-		if c != ' ' && c != '\n' && c != '\r' && c != '\t' {
-			result += string(c)
-		}
-	}
-	return result
+// trimBadgeText trims whitespace from single-word badge text content.
+func trimBadgeText(s string) string {
+	return strings.TrimSpace(s)
 }
 ```
 
-- [ ] **Step 3: Remove the `_ = ...` suppression lines from TestE2E**
-
-Remove these lines from the end of `TestE2E`:
-```go
-	_ = baseURL
-	_ = browser
-	_ = ib
-```
-
-- [ ] **Step 4: Verify compilation**
+- [ ] **Step 3: Verify compilation**
 
 ```bash
-go build ./cmd/inboxui/
+go vet ./cmd/inboxui/
 ```
 
-Expected: no errors (may show "unused" warnings for `baseURL`/`browser`/`ib` — that's ok if go build succeeds; they'll be used when subtests are implemented). If compilation fails due to unused vars, keep the `_ = ...` lines until Task 4 removes the placeholder subtests.
+Expected: no errors. The `_ = baseURL`, `_ = browser`, `_ = ib` lines suppress unused-variable errors. They will be removed in Task 4 when the first real subtest uses these variables.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add cmd/inboxui/e2e_test.go
@@ -448,7 +434,16 @@ git commit -m "test: add E2E seed data and helper functions"
 **Files:**
 - Modify: `cmd/inboxui/e2e_test.go`
 
-- [ ] **Step 1: Replace the Queue placeholder subtest**
+- [ ] **Step 1: Remove `_ = ...` suppression lines from TestE2E**
+
+Remove these lines from the end of `TestE2E` (no longer needed — the subtests now use these variables):
+```go
+	_ = baseURL
+	_ = browser
+	_ = ib
+```
+
+- [ ] **Step 2: Replace the Queue placeholder subtest**
 
 ```go
 	t.Run("Queue", func(t *testing.T) {
@@ -529,7 +524,7 @@ git commit -m "test: add E2E seed data and helper functions"
 	})
 ```
 
-- [ ] **Step 2: Run the test**
+- [ ] **Step 3: Run the test**
 
 ```bash
 go test -v -count=1 -timeout 120s -run TestE2E/Queue ./cmd/inboxui/
@@ -537,7 +532,7 @@ go test -v -count=1 -timeout 120s -run TestE2E/Queue ./cmd/inboxui/
 
 Expected: PASS
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add cmd/inboxui/e2e_test.go
@@ -565,8 +560,9 @@ git commit -m "test: add E2E Queue subtest with filter verification"
 		if err != nil {
 			t.Fatalf("read drawer title: %v", err)
 		}
-		if trimSpace(title) != e2eItemTitles[4] {
-			t.Errorf("drawer title: got %q, want %q", trimSpace(title), e2eItemTitles[4])
+		title = strings.TrimSpace(title)
+		if title != e2eItemTitles[4] {
+			t.Errorf("drawer title: got %q, want %q", title, e2eItemTitles[4])
 		}
 
 		// Check status badge shows "open"
