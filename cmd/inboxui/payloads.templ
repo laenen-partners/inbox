@@ -1,0 +1,112 @@
+package main
+
+import (
+	"github.com/laenen-partners/dsx/ui/badge"
+	"google.golang.org/protobuf/types/known/structpb"
+)
+
+// addressPayload renders an address collection form.
+// Fields: street, city, zip, country (may be pre-filled or empty).
+templ addressPayload(fields map[string]*structpb.Value) {
+	<div class="space-y-3">
+		<div class="flex items-center gap-2 mb-2">
+			@badge.Badge(badge.Props{Variant: badge.VariantInfo, Size: badge.SizeSm}) {
+				Address Required
+			}
+		</div>
+		if msg := fields["message"]; msg != nil {
+			<p class="text-sm text-base-content/70">{ msg.GetStringValue() }</p>
+		}
+		<div class="grid grid-cols-1 gap-2">
+			@addressField("Street", fields["street"])
+			<div class="grid grid-cols-2 gap-2">
+				@addressField("City", fields["city"])
+				@addressField("ZIP", fields["zip"])
+			</div>
+			@addressField("Country", fields["country"])
+		</div>
+	</div>
+}
+
+templ addressField(label string, val *structpb.Value) {
+	<div>
+		<div class="text-xs text-base-content/50 mb-1">{ label }</div>
+		if val != nil && val.GetStringValue() != "" {
+			<div class="text-sm font-medium">{ val.GetStringValue() }</div>
+		} else {
+			<div class="text-sm text-base-content/40 italic">Not provided</div>
+		}
+	</div>
+}
+
+// consentPayload renders a list of consent items with their status.
+// Fields: items (list of structs with name, description, required).
+templ consentPayload(fields map[string]*structpb.Value) {
+	<div class="space-y-3">
+		<div class="flex items-center gap-2 mb-2">
+			@badge.Badge(badge.Props{Variant: badge.VariantWarning, Size: badge.SizeSm}) {
+				Consent Review
+			}
+		</div>
+		if items := fields["items"]; items != nil {
+			for _, item := range items.GetListValue().GetValues() {
+				{{ f := item.GetStructValue().GetFields() }}
+				<div class="border border-base-300 rounded-lg p-3">
+					<div class="flex items-start justify-between">
+						<div>
+							<div class="font-medium text-sm">
+								{ f["name"].GetStringValue() }
+							</div>
+							if desc := f["description"]; desc != nil {
+								<div class="text-xs text-base-content/60 mt-1">
+									{ desc.GetStringValue() }
+								</div>
+							}
+						</div>
+						if f["required"] != nil && f["required"].GetBoolValue() {
+							@badge.Badge(badge.Props{Variant: badge.VariantError, Size: badge.SizeXs}) {
+								required
+							}
+						}
+					</div>
+				</div>
+			}
+		}
+	</div>
+}
+
+// multiChoicePayload renders a set of options to choose from.
+// Fields: question, options (list of strings), allow_multiple (bool).
+templ multiChoicePayload(fields map[string]*structpb.Value) {
+	<div class="space-y-3">
+		<div class="flex items-center gap-2 mb-2">
+			@badge.Badge(badge.Props{Variant: badge.VariantAccent, Size: badge.SizeSm}) {
+				if fields["allow_multiple"] != nil && fields["allow_multiple"].GetBoolValue() {
+					Multi-Select
+				} else {
+					Single Choice
+				}
+			}
+		</div>
+		if q := fields["question"]; q != nil {
+			<p class="text-sm font-medium">{ q.GetStringValue() }</p>
+		}
+		if opts := fields["options"]; opts != nil {
+			<div class="space-y-1">
+				for _, opt := range opts.GetListValue().GetValues() {
+					<div class="flex items-center gap-2 p-2 border border-base-300 rounded-lg">
+						if fields["allow_multiple"] != nil && fields["allow_multiple"].GetBoolValue() {
+							<input type="checkbox" class="checkbox checkbox-sm" disabled/>
+						} else {
+							<input type="radio" class="radio radio-sm" disabled/>
+						}
+						<span class="text-sm">{ opt.GetStringValue() }</span>
+					</div>
+				}
+			</div>
+		}
+		if note := fields["note"]; note != nil {
+			<p class="text-xs text-base-content/50 mt-2">{ note.GetStringValue() }</p>
+		}
+	</div>
+}
