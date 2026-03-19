@@ -77,7 +77,6 @@ func main() {
 		inboxui.WithBasePath("/inbox"),
 		inboxui.WithLayout(showcaseLayout),
 		inboxui.WithPayloadRenderer("inbox.v1.ItemSchema", inboxui.SchemaRenderer()),
-		inboxui.WithPayloadRenderer("google.protobuf.Struct", structRenderer),
 		inboxui.WithActor(func(r *http.Request) string {
 			if actor := r.URL.Query().Get("actor"); actor != "" {
 				return actor
