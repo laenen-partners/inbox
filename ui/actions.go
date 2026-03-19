@@ -196,13 +196,10 @@ func (s *server) handleGenerateLink(w http.ResponseWriter, r *http.Request) {
 	link := s.cfg.linkBaseURL + "?token=" + token
 
 	sse := datastar.NewSSE(w, r)
-	ds.Send.Toast(sse, ds.ToastSuccess, "Link copied to clipboard",
-		ds.WithToastDuration(8000),
+	ds.Send.Toast(sse, ds.ToastSuccess, link,
+		ds.WithToastDuration(0),
+		ds.WithToastPersistent(),
 	)
-	// Send the link as a signal so the browser can copy it
-	sse.MarshalAndPatchSignals(map[string]any{
-		"_clipboard": link,
-	})
 }
 
 func (s *server) sseError(w http.ResponseWriter, r *http.Request, err error) {
