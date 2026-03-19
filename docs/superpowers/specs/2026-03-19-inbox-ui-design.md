@@ -63,6 +63,18 @@ The standalone binary (`cmd/inboxui/main.go`) wraps this with env-based config f
 
 All mutation endpoints return SSE fragments (Datastar pattern) to update the UI in-place. The actor for each action comes from `WithActor`.
 
+### Implementation notes
+
+**Claim must set `assignee:` tag.** The backend `Claim()` method only transitions status — it does not set an `assignee:` tag. The claim handler calls `ib.Claim()` first (which validates `StatusOpen`), then `ib.Tag()` to set `assignee:<actor>`. Two writes, but `Claim()` provides the correct from-status guard that the Op builder's `TransitionTo` does not enforce.
+
+**Release must remove `assignee:` tag.** The release handler calls `ib.Release()`, then reads the current assignee via `inbox.TagValue(item, "assignee:")` and calls `ib.Untag()` with the full tag string (e.g. `"assignee:user:fatima"`).
+
+**Cancel requires a reason.** The backend `Cancel()` takes a `reason` string. The cancel action opens a small inline form with a reason textarea before submitting.
+
+**Event display labels.** The proto `Event` message has both an `action` field (legacy) and a `data_type` field (fully qualified proto message name like `"inbox.v1.ItemClaimed"`). The UI uses `data_type` to discriminate event types. A mapping function in `helpers.go` converts proto message names to human-readable labels (e.g. `"inbox.v1.ItemClaimed"` -> `"Claimed"`).
+
+**Pagination cursors are timestamps.** `ListOpts.Cursor` is `*time.Time` (the last item's `UpdatedAt`). The UI serializes this as an RFC3339 query param. Pages may be shorter than `PageSize` because tag filtering happens client-side after the entity store query. In extreme cases with many non-matching items, pages could be empty — the UI should auto-fetch the next page when this happens.
+
 ### Data flow
 
 All interactivity uses Datastar — no full page reloads after initial load.
@@ -80,7 +92,7 @@ All interactivity uses Datastar — no full page reloads after initial load.
 The main working screen. Filterable, paginated table of inbox items.
 
 **Layout:**
-- Top bar: preset filter dropdowns + active filter badges
+- Top bar: preset filters (using dsx `filter` component — radio-button style for visible state) + active filter badges
 - Table columns: Title, Status, Priority, Team, Assignee, Age, Deadline
 - Column values extracted from tags (e.g. `priority:` tag -> Priority column)
 - Rows are clickable — opens the detail drawer
@@ -96,11 +108,11 @@ The main working screen. Filterable, paginated table of inbox items.
 
 **Filter bar:**
 
-Each dropdown is configured via `WithFilter`. Selecting a value adds the corresponding tag to the `ListByTags` query. Multiple filters combine with AND (matching the backend behavior).
+Each filter group is configured via `WithFilter` and rendered using the dsx `filter` component (radio-button style). Selecting a value adds the corresponding tag to the `ListByTags` query. Multiple filters combine with AND (matching the backend behavior).
 
 ### Item Detail Drawer (GET `/items/{id}`)
 
-Opens from the right when an operator clicks a queue row. The queue stays visible (dimmed) behind it. Uses the dsx `drawer` component (end/right position).
+Opens from the right when an operator clicks a queue row. The queue stays visible (dimmed) behind it. Uses `ds.Send.Drawer()` (the SSE-driven slide-in panel), not the dsx `drawer` layout component.
 
 **Layout (top to bottom):**
 1. **Header:** Title, status badge, close button.
@@ -170,6 +182,10 @@ Opens an inline form within the drawer:
 - Comment field (textarea).
 - Submit button.
 
+### Cancel action
+
+Opens a small inline form with a reason textarea + submit button.
+
 ### Comment action
 
 Always visible as a textarea + button at the bottom of the activity feed.
@@ -178,7 +194,7 @@ Always visible as a textarea + button at the bottom of the activity feed.
 
 All actions use Datastar `@post` and return SSE fragments that:
 1. Update the drawer content (new status, new event in feed).
-2. Show a dsx `alert` toast (auto-dismiss) confirming the action.
+2. Show a toast via `ds.Send.Toast()` (auto-dismiss) confirming the action.
 3. Update the corresponding queue row (status badge change).
 
 No confirmation modals — everything is inline and immediate.
@@ -200,8 +216,7 @@ inbox/
     detail.templ       — drawer content: header, meta, payload, actions, feed
     actions.go         — action handlers (POST /items/{id}/{action})
     actions.templ      — action buttons, respond form, comment form
-    toast.templ        — toast/alert feedback component
-    helpers.go         — shared helpers (tag extraction, time formatting, actor display)
+    helpers.go         — shared helpers (tag extraction, time formatting, actor display, event label mapping)
   cmd/
     inboxui/
       main.go          — standalone binary, env-based config
@@ -227,17 +242,16 @@ Each `.go` handler file pairs with a `.templ` file. Handlers parse requests, cal
 - **Playwright** for e2e testing of the standalone binary.
 - **Testcontainers** for test database provisioning.
 
-## Key dsx components used
+## Key dsx components and APIs used
 
-- `drawer` — item detail panel
-- `table` — queue/search results (if available, otherwise raw HTML table with DaisyUI classes)
+- `ds.Send.Drawer()` — SSE-driven slide-in panel for item detail
+- `ds.Send.Toast()` — SSE-driven toast notifications for action feedback
+- `filter` — radio-button style filter groups for tag filtering
 - `button` — all action buttons
 - `badge` — status, priority, tag display
-- `alert` — toast feedback
-- `dropdown` — filter selects
 - `feed`/`feeditem` — activity event log
 - `jsonview` — fallback payload renderer
-- `form` — respond and comment forms
+- `form` — respond, cancel reason, and comment forms
 - `navbar` — top navigation between queue/mywork/search
 
 ## Testing strategy
