@@ -1,0 +1,115 @@
+package ui
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/laenen-partners/dsx/ds"
+	"github.com/laenen-partners/dsx/ui/badge"
+	"github.com/laenen-partners/dsx/ui/filter"
+	"github.com/laenen-partners/inbox"
+)
+
+templ queuePage(cfg *config, data queueData) {
+	@layout(cfg, "/") {
+		<div class="space-y-4">
+			@queueFilters(data)
+			<div id="queue-table">
+				@queueTable(data)
+			</div>
+		</div>
+	}
+}
+
+templ queueFilters(data queueData) {
+	<div class="flex flex-wrap gap-4 items-center">
+		for _, f := range data.Filters {
+			@filter.Filter(filter.Props{ID: "filter-" + f.TagPrefix}) {
+				@filter.Radio(filter.RadioProps{
+					Name:       f.TagPrefix,
+					Label:      "All",
+					Checked:    data.ActiveFilters[f.Label] == "",
+					Attributes: ds.OnClick(ds.Get(data.BasePath+"/", ds.WithFilterSignals("queue-filters"))),
+				})
+				for _, opt := range f.Options {
+					@filter.Radio(filter.RadioProps{
+						Name:       f.TagPrefix,
+						Label:      opt,
+						Checked:    data.ActiveFilters[f.Label] == opt,
+						Attributes: ds.OnClick(ds.Get(data.BasePath+"/", ds.WithFilterSignals("queue-filters"))),
+					})
+				}
+			}
+		}
+		<span class="text-sm text-base-content/60">
+			{ fmt.Sprintf("%d items", len(data.Items)) }
+		</span>
+	</div>
+}
+
+templ queueTable(data queueData) {
+	<table class="table table-zebra w-full">
+		<thead>
+			<tr>
+				<th>Title</th>
+				<th>Status</th>
+				<th>Priority</th>
+				<th>Team</th>
+				<th>Assignee</th>
+				<th>Age</th>
+				<th>Deadline</th>
+			</tr>
+		</thead>
+		<tbody>
+			if len(data.Items) == 0 {
+				<tr>
+					<td colspan="7" class="text-center text-base-content/60 py-8">
+						No items found
+					</td>
+				</tr>
+			}
+			for _, item := range data.Items {
+				@queueRow(item, data.BasePath)
+			}
+		</tbody>
+	</table>
+	if data.NextCursor != nil {
+		<div class="flex justify-center py-4">
+			<button
+				class="btn btn-ghost"
+				{ ds.OnClick(ds.Get(data.BasePath + "/?cursor=" + data.NextCursor.Format(time.RFC3339)))... }
+			>
+				Load more
+			</button>
+		</div>
+	}
+}
+
+// queueRow renders a single table row. Used both in the table and as an SSE fragment
+// to update individual rows after actions.
+templ queueRow(item inbox.Item, basePath string) {
+	<tr
+		id={ "row-" + item.ID }
+		class={ "cursor-pointer hover", templ.KV("bg-error/5", inbox.TagValue(item, "priority:") == "urgent") }
+		{ ds.OnClick(ds.Get(basePath + "/items/" + item.ID))... }
+	>
+		<td class="font-medium">{ item.Title() }</td>
+		<td>
+			@badge.Badge(badge.Props{
+				Variant: badge.Variant(statusBadgeVariant(item.Status())),
+				Size:    badge.SizeSm,
+			}) {
+				{ item.Status() }
+			}
+		</td>
+		<td>{ inbox.TagValue(item, "priority:") }</td>
+		<td>{ inbox.TagValue(item, "team:") }</td>
+		<td>{ actorDisplayName(inbox.TagValue(item, "assignee:")) }</td>
+		<td>{ formatAge(item.CreatedAt) }</td>
+		<td>
+			if dl := item.Deadline(); dl != nil {
+				{ dl.Format("2006-01-02 15:04") }
+			}
+		</td>
+	</tr>
+}
