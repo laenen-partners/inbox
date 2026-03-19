@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"flag"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -10,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/laenen-partners/dsx"
 	"github.com/laenen-partners/entitystore"
 	"github.com/laenen-partners/entitystore/store"
 	"github.com/laenen-partners/inbox"
@@ -52,11 +55,26 @@ func main() {
 		log.Println("test data seeded")
 	}
 
+	// Generate a random secret for CSRF tokens
+	secret := make([]byte, 32)
+	if _, err := rand.Read(secret); err != nil {
+		log.Fatalf("generate secret: %v", err)
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(dsx.Middleware(dsx.MiddlewareConfig{Secret: secret}))
 
-	r.Mount("/", inboxui.Handler(ib,
+	// Serve dsx static assets (CSS, JS)
+	staticFS, _ := fs.Sub(dsx.Static, "static")
+	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServerFS(staticFS)))
+
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/inbox", http.StatusFound)
+	})
+	r.Mount("/inbox", inboxui.Handler(ib,
+		inboxui.WithBasePath("/inbox"),
 		inboxui.WithActor(func(r *http.Request) string {
 			if actor := r.URL.Query().Get("actor"); actor != "" {
 				return actor

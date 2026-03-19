@@ -1,13 +1,23 @@
 package ui
 
 import (
-	"github.com/laenen-partners/dsx/ui/navbar"
+	"github.com/laenen-partners/dsx"
 	"github.com/laenen-partners/dsx/layouts"
+	"github.com/laenen-partners/dsx/ui/navbar"
 )
 
+templ head() {
+	<link rel="stylesheet" href="/assets/css/output.css"/>
+	<script type="module" src="/assets/js/datastar.js"></script>
+}
+
 templ layout(cfg *config, currentPath string) {
+	{{ dsxCtx := dsx.FromContext(ctx) }}
 	@layouts.Base(layouts.BaseProps{
-		Title: "Inbox",
+		Title:     "Inbox",
+		CSRFToken: dsxCtx.CSRFToken,
+		Theme:     dsxCtx.Theme,
+		Head:      head(),
 	}) {
 		<div class="flex flex-col h-screen">
 			@navbar.Navbar(navbar.Props{Class: "bg-base-200"}) {
