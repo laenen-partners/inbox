@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -163,6 +164,45 @@ func (s *server) refreshDetailAndToast(w http.ResponseWriter, r *http.Request, i
 
 	// Show toast
 	ds.Send.Toast(sse, ds.ToastSuccess, msg)
+}
+
+func (s *server) handleGenerateLink(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.signer == nil {
+		s.sseError(w, r, fmt.Errorf("link generation not configured"))
+		return
+	}
+
+	ctx := r.Context()
+	id := chi.URLParam(r, "id")
+
+	item, err := s.ib.Get(ctx, id)
+	if err != nil {
+		s.sseError(w, r, err)
+		return
+	}
+
+	// Use assignee as the token actor, or fall back to a generic client actor
+	actor := inbox.TagValue(item, "assignee:")
+	if actor == "" {
+		actor = "client:" + id
+	}
+
+	token, _, err := s.cfg.signer.Sign(ctx, id, actor, inbox.ScopeRespond, s.cfg.linkExpiry)
+	if err != nil {
+		s.sseError(w, r, err)
+		return
+	}
+
+	link := s.cfg.linkBaseURL + "?token=" + token
+
+	sse := datastar.NewSSE(w, r)
+	ds.Send.Toast(sse, ds.ToastSuccess, "Link copied to clipboard",
+		ds.WithToastDuration(8000),
+	)
+	// Send the link as a signal so the browser can copy it
+	sse.MarshalAndPatchSignals(map[string]any{
+		"_clipboard": link,
+	})
 }
 
 func (s *server) sseError(w http.ResponseWriter, r *http.Request, err error) {

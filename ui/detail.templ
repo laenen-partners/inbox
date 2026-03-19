@@ -13,11 +13,16 @@ templ detailDrawer(data detailData) {
 		// Header
 		<div class="flex items-center justify-between">
 			<h2 class="text-xl font-bold">{ data.Item.Title() }</h2>
-			@badge.Badge(badge.Props{
-				Variant: badge.Variant(statusBadgeVariant(data.Item.Status())),
-			}) {
-				{ data.Item.Status() }
-			}
+			<div class="flex items-center gap-2">
+				if data.CanLink && !inbox.IsTerminal(data.Item.Status()) {
+					@sendLinkButton(data)
+				}
+				@badge.Badge(badge.Props{
+					Variant: badge.Variant(statusBadgeVariant(data.Item.Status())),
+				}) {
+					{ data.Item.Status() }
+				}
+			</div>
 		</div>
 
 		// Meta bar

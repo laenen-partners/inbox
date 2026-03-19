@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -62,7 +63,6 @@ func main() {
 	}
 
 	tokens := NewHMACTokens(secret)
-	_ = tokens // available for future token middleware
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -79,6 +79,7 @@ func main() {
 	r.Mount("/inbox", inboxui.Handler(ib,
 		inboxui.WithBasePath("/inbox"),
 		inboxui.WithLayout(showcaseLayout),
+		inboxui.WithSigner(tokens, "http://localhost:8080/inbox/respond", 24*time.Hour),
 		inboxui.WithActor(func(r *http.Request) string {
 			// Check if actor was already set (e.g. by token middleware)
 			if actor := inbox.ActorFrom(r.Context()); actor != "" {

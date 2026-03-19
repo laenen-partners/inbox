@@ -2,8 +2,10 @@ package ui
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/a-h/templ"
+	"github.com/laenen-partners/inbox"
 )
 
 // FilterConfig defines a preset tag filter shown in the filter bar.
@@ -31,6 +33,9 @@ type config struct {
 	payloadRenderers map[string]PayloadRendererFunc
 	basePath         string
 	layoutFn         LayoutFunc
+	signer           inbox.Signer
+	linkBaseURL      string        // base URL for presigned links (e.g. "https://app.example.com/respond")
+	linkExpiry       time.Duration // how long presigned links are valid
 }
 
 func defaultConfig() *config {
@@ -64,4 +69,16 @@ func WithBasePath(path string) Option {
 // When set, replaces the default layout (Base + navbar tabs).
 func WithLayout(fn LayoutFunc) Option {
 	return func(c *config) { c.layoutFn = fn }
+}
+
+// WithSigner enables presigned link generation for inbox items.
+// linkBaseURL is the public URL prefix for the client-facing endpoint
+// (e.g. "https://app.example.com/respond"). The generated link appends ?token=<jwt>.
+// expiry controls how long the links are valid.
+func WithSigner(signer inbox.Signer, linkBaseURL string, expiry time.Duration) Option {
+	return func(c *config) {
+		c.signer = signer
+		c.linkBaseURL = linkBaseURL
+		c.linkExpiry = expiry
+	}
 }

@@ -23,9 +23,10 @@ func (s *server) handleDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := detailData{
-		Item:     item,
-		Actor:    actor,
-		BasePath: s.cfg.basePath,
+		Item:       item,
+		Actor:      actor,
+		BasePath:   s.cfg.basePath,
+		CanLink:    s.cfg.signer != nil,
 	}
 
 	// Try to parse as ItemSchema first (renders interactive form)
@@ -57,4 +58,5 @@ type detailData struct {
 	BasePath         string
 	PayloadComponent templ.Component
 	Schema           *inboxv1.ItemSchema
+	CanLink          bool
 }
