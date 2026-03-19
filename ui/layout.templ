@@ -1,0 +1,42 @@
+package ui
+
+import (
+	"github.com/laenen-partners/dsx/ui/navbar"
+	"github.com/laenen-partners/dsx/layouts"
+)
+
+templ layout(cfg *config, currentPath string) {
+	@layouts.Base(layouts.BaseProps{
+		Title: "Inbox",
+	}) {
+		<div class="flex flex-col h-screen">
+			@navbar.Navbar(navbar.Props{Class: "bg-base-200"}) {
+				@navbar.Start() {
+					<a class="btn btn-ghost text-xl" href={ templ.SafeURL(cfg.basePath + "/") }>Inbox</a>
+				}
+				@navbar.End() {
+					<div role="tablist" class="tabs tabs-boxed">
+						<a
+							role="tab"
+							class={ "tab", templ.KV("tab-active", currentPath == "/" || currentPath == "") }
+							href={ templ.SafeURL(cfg.basePath + "/") }
+						>Queue</a>
+						<a
+							role="tab"
+							class={ "tab", templ.KV("tab-active", currentPath == "/mywork") }
+							href={ templ.SafeURL(cfg.basePath + "/mywork") }
+						>My Work</a>
+						<a
+							role="tab"
+							class={ "tab", templ.KV("tab-active", currentPath == "/search") }
+							href={ templ.SafeURL(cfg.basePath + "/search") }
+						>Search</a>
+					</div>
+				}
+			}
+			<main class="flex-1 overflow-auto p-4">
+				{ children... }
+			</main>
+		</div>
+	}
+}
