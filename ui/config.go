@@ -34,6 +34,7 @@ type config struct {
 	basePath         string
 	layoutFn         LayoutFunc
 	signer           inbox.Signer
+	verifier         inbox.Verifier
 	linkBaseURL      string        // base URL for presigned links (e.g. "https://app.example.com/respond")
 	linkExpiry       time.Duration // how long presigned links are valid
 }
@@ -81,4 +82,10 @@ func WithSigner(signer inbox.Signer, linkBaseURL string, expiry time.Duration) O
 		c.linkBaseURL = linkBaseURL
 		c.linkExpiry = expiry
 	}
+}
+
+// WithVerifier enables the client-facing /respond endpoint that accepts
+// presigned JWT tokens. The verifier validates the token and extracts claims.
+func WithVerifier(v inbox.Verifier) Option {
+	return func(c *config) { c.verifier = v }
 }

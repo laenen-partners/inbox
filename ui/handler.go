@@ -32,6 +32,8 @@ func Handler(ib *inbox.Inbox, opts ...Option) chi.Router {
 	r.Post("/items/{id}/cancel", s.handleCancel)
 	r.Post("/items/{id}/comment", s.handleComment)
 	r.Post("/items/{id}/link", s.handleGenerateLink)
+	r.Get("/respond", s.handleClientRespond)
+	r.Post("/respond", s.handleClientRespondSubmit)
 
 	return r
 }
