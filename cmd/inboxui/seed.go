@@ -10,6 +10,12 @@ import (
 )
 
 func seedData(ctx context.Context, ib *inbox.Inbox) error {
+	// Skip if items already exist
+	existing, _ := ib.ListByTags(ctx, []string{"status:open"}, inbox.ListOpts{PageSize: 1})
+	if len(existing) > 0 {
+		return nil
+	}
+
 	deadline := time.Now().Add(48 * time.Hour)
 
 	// --- KYC document upload (file + image fields) ---
