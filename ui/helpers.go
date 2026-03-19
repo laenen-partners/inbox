@@ -58,6 +58,35 @@ func statusBadgeVariant(status string) string {
 	}
 }
 
+// filterKey returns the query param key for a filter, stripping the trailing colon.
+// e.g. "priority:" → "priority"
+func filterKey(tagPrefix string) string {
+	if len(tagPrefix) > 0 && tagPrefix[len(tagPrefix)-1] == ':' {
+		return tagPrefix[:len(tagPrefix)-1]
+	}
+	return tagPrefix
+}
+
+// buildFilterSignalsJSON builds a JSON string for Datastar data-signals
+// with clean filter keys mapped to their active values.
+func buildFilterSignalsJSON(filters []FilterConfig, active map[string]string) string {
+	buf := []byte("{")
+	for i, f := range filters {
+		if i > 0 {
+			buf = append(buf, ',')
+		}
+		key := filterKey(f.TagPrefix)
+		val := active[f.Label]
+		buf = append(buf, '"')
+		buf = append(buf, key...)
+		buf = append(buf, `":"`...)
+		buf = append(buf, val...)
+		buf = append(buf, '"')
+	}
+	buf = append(buf, '}')
+	return string(buf)
+}
+
 // actorDisplayName extracts a human-readable name from an actor string.
 // "user:compliance:fatima" -> "fatima"
 // "agent:triage-bot" -> "triage-bot"

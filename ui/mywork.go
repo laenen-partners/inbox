@@ -14,7 +14,7 @@ func (s *server) handleMyWork(w http.ResponseWriter, r *http.Request) {
 
 	tags := []string{"status:claimed", "assignee:" + actor}
 	for _, f := range s.cfg.filters {
-		if v := r.URL.Query().Get(f.TagPrefix); v != "" {
+		if v := r.URL.Query().Get(filterKey(f.TagPrefix)); v != "" {
 			tags = append(tags, f.TagPrefix+v)
 		}
 	}

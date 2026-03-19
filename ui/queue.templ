@@ -19,16 +19,20 @@ templ queueContent(data queueData) {
 }
 
 templ queueFilters(data queueData) {
-	<div id="queue-filters" class="flex flex-wrap gap-3 items-center">
+	<div
+		id="queue-filters"
+		class="flex flex-wrap gap-3 items-center"
+		{ ds.RawSignals(buildFilterSignalsJSON(data.Filters, data.ActiveFilters))... }
+	>
 		for _, f := range data.Filters {
 			<select
 				class="select select-bordered select-sm"
-				name={ f.TagPrefix }
-				{ ds.On("change", ds.Get(data.BasePath+"/", ds.WithFilterSignals("queue-filters")))... }
+				{ ds.Bind("", filterKey(f.TagPrefix))... }
+				{ ds.On("change", ds.Get(data.BasePath+"/"))... }
 			>
-				<option value="" selected?={ data.ActiveFilters[f.Label] == "" }>{ f.Label }: All</option>
+				<option value="">{ f.Label }: All</option>
 				for _, opt := range f.Options {
-					<option value={ opt } selected?={ data.ActiveFilters[f.Label] == opt }>{ opt }</option>
+					<option value={ opt }>{ opt }</option>
 				}
 			</select>
 		}

@@ -13,7 +13,7 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 
 	tags := []string{"status:open"}
 	for _, f := range s.cfg.filters {
-		if v := r.URL.Query().Get(f.TagPrefix); v != "" {
+		if v := r.URL.Query().Get(filterKey(f.TagPrefix)); v != "" {
 			tags = append(tags, f.TagPrefix+v)
 		}
 	}
@@ -37,7 +37,7 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 	// Build active filters for display
 	activeFilters := make(map[string]string)
 	for _, f := range s.cfg.filters {
-		if v := r.URL.Query().Get(f.TagPrefix); v != "" {
+		if v := r.URL.Query().Get(filterKey(f.TagPrefix)); v != "" {
 			activeFilters[f.Label] = v
 		}
 	}
