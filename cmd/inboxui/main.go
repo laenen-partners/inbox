@@ -61,6 +61,9 @@ func main() {
 		log.Fatalf("generate secret: %v", err)
 	}
 
+	tokens := NewHMACTokens(secret)
+	_ = tokens // available for future token middleware
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -77,6 +80,10 @@ func main() {
 		inboxui.WithBasePath("/inbox"),
 		inboxui.WithLayout(showcaseLayout),
 		inboxui.WithActor(func(r *http.Request) string {
+			// Check if actor was already set (e.g. by token middleware)
+			if actor := inbox.ActorFrom(r.Context()); actor != "" {
+				return actor
+			}
 			if actor := r.URL.Query().Get("actor"); actor != "" {
 				return actor
 			}
