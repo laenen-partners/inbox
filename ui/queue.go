@@ -62,7 +62,7 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queuePage(s.cfg, data).Render(ctx, w)
+	s.renderPage(w, r, "/", queueContent(data))
 }
 
 type queueData struct {

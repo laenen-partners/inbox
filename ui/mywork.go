@@ -52,5 +52,5 @@ func (s *server) handleMyWork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	myworkPage(s.cfg, data).Render(ctx, w)
+	s.renderPage(w, r, "/mywork", myworkContent(data))
 }

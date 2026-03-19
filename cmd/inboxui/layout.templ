@@ -1,0 +1,51 @@
+package main
+
+import (
+	"github.com/laenen-partners/dsx"
+	"github.com/laenen-partners/dsx/layouts"
+	"github.com/laenen-partners/dsx/ui/icon"
+)
+
+var inboxNav = []layouts.NavGroup{
+	{
+		Title: "Inbox",
+		Items: []layouts.NavItem{
+			{Label: "Queue", Href: "/inbox", Icon: icon.Inbox},
+			{Label: "My Work", Href: "/inbox/mywork", Icon: icon.ClipboardList},
+			{Label: "Search", Href: "/inbox/search", Icon: icon.Search},
+		},
+	},
+}
+
+func showcaseLayout(currentPath string, content templ.Component) templ.Component {
+	return showcaseLayoutTempl(currentPath, content)
+}
+
+templ showcaseHead() {
+	<link rel="stylesheet" href="/assets/css/output.css"/>
+	<script type="module" src="/assets/js/datastar.js"></script>
+}
+
+templ showcaseLayoutTempl(currentPath string, content templ.Component) {
+	{{ dsxCtx := dsx.FromContext(ctx) }}
+	@layouts.Dashboard(layouts.DashboardProps{
+		BaseProps: layouts.BaseProps{
+			Title:     "Inbox",
+			CSRFToken: dsxCtx.CSRFToken,
+			Theme:     dsxCtx.Theme,
+			Head:      showcaseHead(),
+		},
+		App: layouts.AppBranding{
+			Name: "Inbox",
+			Href: "/inbox",
+		},
+		Nav:         inboxNav,
+		CurrentPath: "/inbox" + currentPath,
+		ThemeToggle: &layouts.ThemeToggleConfig{
+			DarkTheme:  "dark",
+			LightTheme: "silk",
+		},
+	}) {
+		@content
+	}
+}

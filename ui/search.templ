@@ -4,33 +4,31 @@ import (
 	"github.com/laenen-partners/dsx/ds"
 )
 
-templ searchPage(cfg *config, data searchData) {
-	@layout(cfg, "/search") {
-		<div class="space-y-4">
-			{{ signals := ds.NewSignals("search", struct {
-				Q string `json:"q"`
-			}{Q: data.Query}) }}
-			<form
-				class="flex gap-2"
-				data-signals={ signals.DataSignals }
-				{ ds.On("submit", "$event.preventDefault(); " + ds.Get(data.BasePath + "/search", ds.WithFilterSignals("search")))... }
-			>
-				<input
-					type="text"
-					class="input input-bordered flex-1"
-					placeholder="Search inbox items..."
-					{ ds.Bind("search", "q")... }
-				/>
-				<button type="submit" class="btn btn-primary">Search</button>
-			</form>
-			if data.Query != "" {
-				<div id="queue-table">
-					@queueTable(queueData{
-						Items:    data.Items,
-						BasePath: data.BasePath,
-					})
-				</div>
-			}
-		</div>
-	}
+templ searchContent(data searchData) {
+	<div class="space-y-4">
+		{{ signals := ds.NewSignals("search", struct {
+			Q string `json:"q"`
+		}{Q: data.Query}) }}
+		<form
+			class="flex gap-2"
+			data-signals={ signals.DataSignals }
+			{ ds.On("submit", "$event.preventDefault(); " + ds.Get(data.BasePath + "/search", ds.WithFilterSignals("search")))... }
+		>
+			<input
+				type="text"
+				class="input input-bordered flex-1"
+				placeholder="Search inbox items..."
+				{ ds.Bind("search", "q")... }
+			/>
+			<button type="submit" class="btn btn-primary">Search</button>
+		</form>
+		if data.Query != "" {
+			<div id="queue-table">
+				@queueTable(queueData{
+					Items:    data.Items,
+					BasePath: data.BasePath,
+				})
+			</div>
+		}
+	</div>
 }

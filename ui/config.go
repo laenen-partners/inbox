@@ -17,6 +17,11 @@ type FilterConfig struct {
 // It receives the raw proto Any bytes and the payload type URL.
 type PayloadRendererFunc func(payloadType string, data []byte) templ.Component
 
+// LayoutFunc wraps page content in an application layout.
+// currentPath is the active route (e.g. "/", "/mywork", "/search").
+// content is the page body to render inside the layout.
+type LayoutFunc func(currentPath string, content templ.Component) templ.Component
+
 // Option configures the inbox UI handler.
 type Option func(*config)
 
@@ -25,6 +30,7 @@ type config struct {
 	filters          []FilterConfig
 	payloadRenderers map[string]PayloadRendererFunc
 	basePath         string
+	layoutFn         LayoutFunc
 }
 
 func defaultConfig() *config {
@@ -52,4 +58,10 @@ func WithPayloadRenderer(payloadType string, fn PayloadRendererFunc) Option {
 // WithBasePath sets the URL prefix for link generation.
 func WithBasePath(path string) Option {
 	return func(c *config) { c.basePath = path }
+}
+
+// WithLayout sets a custom layout wrapper for page rendering.
+// When set, replaces the default layout (Base + navbar tabs).
+func WithLayout(fn LayoutFunc) Option {
+	return func(c *config) { c.layoutFn = fn }
 }

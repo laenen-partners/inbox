@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 	"github.com/laenen-partners/inbox"
 )
@@ -59,3 +60,13 @@ func actorFrom(ctx context.Context) string {
 	return "anonymous"
 }
 
+// renderPage wraps content in the configured layout and renders to the response.
+func (s *server) renderPage(w http.ResponseWriter, r *http.Request, currentPath string, content templ.Component) {
+	var page templ.Component
+	if s.cfg.layoutFn != nil {
+		page = s.cfg.layoutFn(currentPath, content)
+	} else {
+		page = defaultLayout(s.cfg, currentPath, content)
+	}
+	page.Render(r.Context(), w)
+}

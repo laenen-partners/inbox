@@ -41,7 +41,7 @@ func (s *server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	searchPage(s.cfg, data).Render(ctx, w)
+	s.renderPage(w, r, "/search", searchContent(data))
 }
 
 type searchData struct {
