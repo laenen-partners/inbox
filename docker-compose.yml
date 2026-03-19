@@ -15,16 +15,5 @@ services:
       timeout: 5s
       retries: 10
 
-  inboxui:
-    build: .
-    command: ["-seed"]
-    environment:
-      DATABASE_URL: postgres://inbox:inbox@postgres:5432/inbox?sslmode=disable
-    ports:
-      - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
 volumes:
   pgdata:

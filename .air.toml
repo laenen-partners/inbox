@@ -2,7 +2,7 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "templ generate ./ui/ ./cmd/inboxui/ && go build -o ./tmp/inboxui ./cmd/inboxui/"
+  cmd = "go build -o ./tmp/inboxui ./cmd/inboxui/"
   bin = "./tmp/inboxui -seed"
   full_bin = "DATABASE_URL=${DATABASE_URL} ./tmp/inboxui -seed"
   include_ext = ["go", "templ"]
