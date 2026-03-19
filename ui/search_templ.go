@@ -33,7 +33,7 @@ func searchContent(data searchData) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-6 p-6\"><div><h1 class=\"text-2xl font-bold tracking-tight\">Search</h1><p class=\"text-sm text-base-content/40 mt-1\">Find items by title or description</p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-6\"><div><h1 class=\"text-2xl font-bold tracking-tight\">Search</h1><p class=\"text-sm text-base-content/40 mt-1\">Find items by title or description</p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

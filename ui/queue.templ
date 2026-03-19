@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/laenen-partners/dsx/ds"
@@ -11,25 +10,22 @@ import (
 )
 
 templ queueContent(data queueData) {
-	<div class="space-y-6 p-6">
-		// Header row
+	<div class="space-y-5">
+		// Header
 		<div class="flex items-end justify-between">
 			<div>
 				<h1 class="text-2xl font-bold tracking-tight">Queue</h1>
-				<p class="text-sm text-base-content/40 mt-1">Open items awaiting action</p>
+				<div class="flex items-center gap-4 mt-2">
+					@statChip(fmt.Sprintf("%d", len(data.Items)), "total", "")
+					if data.PriorityCounts["urgent"] > 0 {
+						@statChip(fmt.Sprintf("%d", data.PriorityCounts["urgent"]), "urgent", "text-error")
+					}
+					if data.PriorityCounts["high"] > 0 {
+						@statChip(fmt.Sprintf("%d", data.PriorityCounts["high"]), "high", "text-warning")
+					}
+				</div>
 			</div>
 			@queueFilters(data)
-		</div>
-
-		// Stats
-		<div class="flex gap-6 border border-base-300 rounded-lg px-5 py-3">
-			@statItem("Total", len(data.Items), "")
-			<div class="border-l border-base-200"></div>
-			@statItem("Urgent", data.PriorityCounts["urgent"], "text-error")
-			<div class="border-l border-base-200"></div>
-			@statItem("High", data.PriorityCounts["high"], "text-warning")
-			<div class="border-l border-base-200"></div>
-			@statItem("Normal", data.PriorityCounts["normal"]+data.PriorityCounts["low"], "")
 		</div>
 
 		// Table
@@ -37,13 +33,11 @@ templ queueContent(data queueData) {
 	</div>
 }
 
-templ statItem(label string, count int, valueClass string) {
-	<div class="flex items-baseline gap-2">
-		<span class={ "text-lg font-bold tabular-nums", templ.KV(valueClass, valueClass != "") }>
-			{ strconv.Itoa(count) }
-		</span>
-		<span class="text-xs text-base-content/40">{ label }</span>
-	</div>
+templ statChip(count string, label string, colorClass string) {
+	<span class="flex items-center gap-1.5 text-sm">
+		<span class={ "font-semibold tabular-nums", templ.KV(colorClass, colorClass != ""), templ.KV("text-base-content/70", colorClass == "") }>{ count }</span>
+		<span class="text-base-content/30">{ label }</span>
+	</span>
 }
 
 templ queueFilters(data queueData) {
