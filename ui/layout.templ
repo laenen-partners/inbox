@@ -15,10 +15,14 @@ templ defaultHead() {
 // defaultLayout is used when no custom LayoutFunc is configured.
 templ defaultLayout(cfg *config, currentPath string, content templ.Component) {
 	{{ dsxCtx := dsx.FromContext(ctx) }}
+	{{ theme := dsxCtx.Theme }}
+	if theme == "" {
+		{{ theme = "neo-light" }}
+	}
 	@layouts.Base(layouts.BaseProps{
 		Title:     "Inbox",
 		CSRFToken: dsxCtx.CSRFToken,
-		Theme:     dsxCtx.Theme,
+		Theme:     theme,
 		Head:      defaultHead(),
 	}) {
 		<div class="flex flex-col h-screen">

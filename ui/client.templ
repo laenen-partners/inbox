@@ -19,10 +19,14 @@ type clientData struct {
 
 templ clientStandalonePage(data clientData) {
 	{{ dsxCtx := dsx.FromContext(ctx) }}
+	{{ theme := dsxCtx.Theme }}
+	if theme == "" {
+		{{ theme = "neo-light" }}
+	}
 	@layouts.Base(layouts.BaseProps{
 		Title:     data.Item.Title(),
 		CSRFToken: dsxCtx.CSRFToken,
-		Theme:     dsxCtx.Theme,
+		Theme:     theme,
 		Head:      defaultHead(),
 	}) {
 		<div class="min-h-screen bg-base-200/40">

@@ -106,14 +106,14 @@ func showcaseLayoutTempl(currentPath string, content templ.Component) templ.Comp
 				Head:      showcaseHead(),
 			},
 			App: layouts.AppBranding{
-				Name: "mal.ai",
+				Name: "Neo",
 				Href: "/inbox",
 			},
 			Nav:         inboxNav,
 			CurrentPath: "/inbox" + currentPath,
 			ThemeToggle: &layouts.ThemeToggleConfig{
-				DarkTheme:  "malai-dark",
-				LightTheme: "malai",
+				DarkTheme:  "neo-dark",
+				LightTheme: "neo-light",
 			},
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var3), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
