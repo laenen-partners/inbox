@@ -1,0 +1,7 @@
+*.exe
+*.test
+*.out
+.git
+.env
+docs/
+cmd/inboxui/e2e/node_modules/
