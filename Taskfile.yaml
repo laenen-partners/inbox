@@ -1,38 +1,55 @@
 version: "3"
 
 tasks:
-  generate:
-    desc: Generate Go code from proto definitions
+  setup:
+    desc: Download and verify Go module dependencies
     cmds:
-      - buf dep update
-      - buf generate
+      - go mod download
+      - go mod verify
 
   build:
-    desc: Build all packages
-    deps: [generate]
+    desc: Build the Go project
     cmds:
       - go build ./...
 
-  test:
-    desc: Run all tests
-    deps: [build]
+  generate:
+    desc: Run generations
     cmds:
-      - go test -v -count=1 -timeout 120s ./...
+      - task: generate:proto
+
+  generate:proto:
+    desc: Run proto generate
+    cmds:
+      - buf generate
+
+  format:
+    desc: Format Go code with gofmt
+    cmds:
+      - gofumpt -l -w .
 
   lint:
-    desc: Run go vet and buf lint
-    deps: [build]
+    desc: Run golangci-lint
     cmds:
-      - go vet ./...
-      - buf lint
+      - golangci-lint run ./...
 
-  tidy:
-    desc: Tidy go modules and buf deps
+  test:ci:
+    desc: Run tests and output JUnit XML to reports/junit.xml
     cmds:
-      - go mod tidy
-      - buf dep update
+      - mkdir -p reports
+      - gotestsum --junitfile reports/junit.xml ./...
 
-  clean:
-    desc: Remove generated code
+  vuln:ci:
+    desc: Run osv-scanner vulnerability scan
     cmds:
-      - rm -rf gen/
+      - osv-scanner scan -r .
+
+  ci:
+    desc: Run the full CI pipeline
+    cmds:
+      - task setup
+      - task generate
+      - task format
+      - task lint
+      - task build
+      - task test:ci
+      - task vuln:ci

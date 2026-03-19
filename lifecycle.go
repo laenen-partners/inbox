@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/entitystore/store"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

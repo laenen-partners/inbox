@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="9" failures="0" errors="0" time="4.000527">
+	<testsuite tests="9" failures="0" time="4.001000" name="github.com/laenen-partners/inbox" timestamp="2026-03-19T10:53:36+01:00">
+		<properties>
+			<property name="go.version" value="go1.26.1 darwin/arm64"></property>
+		</properties>
+		<testcase classname="github.com/laenen-partners/inbox" name="TestCustomerMissingDocuments" time="3.290000"></testcase>
+		<testcase classname="github.com/laenen-partners/inbox" name="TestComplianceReviewPEPScreening" time="0.020000"></testcase>
+		<testcase classname="github.com/laenen-partners/inbox" name="TestRMOverrideOnBehalfOfClient" time="0.020000"></testcase>
+		<testcase classname="github.com/laenen-partners/inbox" name="TestEscalationFromOpsToCompliance" time="0.030000"></testcase>
+		<testcase classname="github.com/laenen-partners/inbox" name="TestItemExpiry" time="0.010000"></testcase>
+		<testcase classname="github.com/laenen-partners/inbox" name="TestCancelDuplicateItem" time="0.010000"></testcase>
+		<testcase classname="github.com/laenen-partners/inbox" name="TestMultipleItemsFromEligibilityEvaluation" time="0.010000"></testcase>
+		<testcase classname="github.com/laenen-partners/inbox" name="TestOpBuilderRespondAndComplete" time="0.010000"></testcase>
+		<testcase classname="github.com/laenen-partners/inbox" name="TestOpBuilderWithProtoEvents" time="0.010000"></testcase>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/laenen-partners/inbox/gen/inbox/v1" timestamp="2026-03-19T10:53:36+01:00">
+		<properties>
+			<property name="go.version" value="go1.26.1 darwin/arm64"></property>
+		</properties>
+	</testsuite>
+</testsuites>

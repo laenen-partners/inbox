@@ -684,7 +684,7 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("create %s: %v", req.requirement, err)
 		}
-		itemIDs = append(itemIDs, item.ID)
+		_ = append(itemIDs, item.ID)
 	}
 
 	// Customer sees their 2 items.
@@ -787,7 +787,6 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 		Tag("resolved:cleared").
 		TransitionTo(inbox.StatusCompleted).
 		Apply()
-
 	if err != nil {
 		t.Fatalf("apply: %v", err)
 	}
@@ -869,7 +868,6 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 		WithEvent(addressResult).
 		Comment("All automated checks passed. Ready for final review.").
 		Apply()
-
 	if err != nil {
 		t.Fatalf("apply: %v", err)
 	}

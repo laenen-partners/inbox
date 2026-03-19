@@ -116,17 +116,6 @@ func packPayloadAny(msg proto.Message) *anypb.Any {
 	return a
 }
 
-func mustPackAny(msg proto.Message) *anypb.Any {
-	if msg == nil {
-		return nil
-	}
-	a, err := anypb.New(msg)
-	if err != nil {
-		return nil
-	}
-	return a
-}
-
 func payloadTypeFromMsg(msg proto.Message) string {
 	if msg == nil {
 		return ""

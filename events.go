@@ -3,11 +3,10 @@ package inbox
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
-	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/entitystore/store"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -88,14 +87,4 @@ func (ib *Inbox) Reassign(ctx context.Context, itemID string, actor string, from
 		ToActor:   toActor,
 		Reason:    reason,
 	}))
-}
-
-// ─── Tag event helpers (used by tags.go) ───
-
-func tagAddedDetail(tags []string) string {
-	return "+" + strings.Join(tags, ", +")
-}
-
-func tagRemovedDetail(tag string) string {
-	return "-" + tag
 }
