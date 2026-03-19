@@ -9,7 +9,7 @@ import (
 )
 
 templ detailDrawer(data detailData) {
-	<div class="space-y-6">
+	<div class="space-y-6" data-signals='{"__link":""}' data-effect="if($__link){navigator.clipboard.writeText($__link);$__link='';}">
 		// Header
 		<div class="flex items-center justify-between">
 			<h2 class="text-xl font-bold">{ data.Item.Title() }</h2>

@@ -196,10 +196,11 @@ func (s *server) handleGenerateLink(w http.ResponseWriter, r *http.Request) {
 	link := s.cfg.linkBaseURL + "?token=" + token
 
 	sse := datastar.NewSSE(w, r)
-	ds.Send.Toast(sse, ds.ToastSuccess, link,
-		ds.WithToastDuration(0),
-		ds.WithToastPersistent(),
-	)
+	// Patch the link into a signal; the client-side effect copies it to clipboard
+	sse.MarshalAndPatchSignals(map[string]any{
+		"__link": link,
+	})
+	ds.Send.Toast(sse, ds.ToastSuccess, "Link copied to clipboard")
 }
 
 func (s *server) sseError(w http.ResponseWriter, r *http.Request, err error) {
