@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/laenen-partners/dsx"
 	"github.com/laenen-partners/entitystore"
+	appstatic "github.com/laenen-partners/inbox/cmd/inboxui/static"
 	"github.com/laenen-partners/entitystore/store"
 	"github.com/laenen-partners/inbox"
 	inboxui "github.com/laenen-partners/inbox/ui"
@@ -72,6 +73,9 @@ func main() {
 	// Serve dsx static assets (CSS, JS)
 	staticFS, _ := fs.Sub(dsx.Static, "static")
 	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServerFS(staticFS)))
+
+	// Serve custom theme CSS
+	r.Handle("/theme/*", http.StripPrefix("/theme/", http.FileServerFS(appstatic.FS)))
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/inbox", http.StatusFound)

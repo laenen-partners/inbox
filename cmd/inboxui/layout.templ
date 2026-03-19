@@ -23,6 +23,7 @@ func showcaseLayout(currentPath string, content templ.Component) templ.Component
 
 templ showcaseHead() {
 	<link rel="stylesheet" href="/assets/css/output.css"/>
+	<link rel="stylesheet" href="/theme/theme.css"/>
 	<script type="module" src="/assets/js/datastar.js"></script>
 }
 
@@ -36,14 +37,14 @@ templ showcaseLayoutTempl(currentPath string, content templ.Component) {
 			Head:      showcaseHead(),
 		},
 		App: layouts.AppBranding{
-			Name: "Inbox",
+			Name: "mal.ai",
 			Href: "/inbox",
 		},
 		Nav:         inboxNav,
 		CurrentPath: "/inbox" + currentPath,
 		ThemeToggle: &layouts.ThemeToggleConfig{
-			DarkTheme:  "dark",
-			LightTheme: "silk",
+			DarkTheme:  "malai-dark",
+			LightTheme: "malai",
 		},
 	}) {
 		@content
