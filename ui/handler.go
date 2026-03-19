@@ -59,12 +59,5 @@ func actorFrom(ctx context.Context) string {
 	return "anonymous"
 }
 
-func (s *server) handleMyWork(w http.ResponseWriter, r *http.Request)   {}
-func (s *server) handleSearch(w http.ResponseWriter, r *http.Request)   {}
-func (s *server) handleDetail(w http.ResponseWriter, r *http.Request)   {}
-func (s *server) handleClaim(w http.ResponseWriter, r *http.Request)    {}
-func (s *server) handleRelease(w http.ResponseWriter, r *http.Request)  {}
-func (s *server) handleRespond(w http.ResponseWriter, r *http.Request)  {}
-func (s *server) handleComplete(w http.ResponseWriter, r *http.Request) {}
-func (s *server) handleCancel(w http.ResponseWriter, r *http.Request)   {}
-func (s *server) handleComment(w http.ResponseWriter, r *http.Request)  {}
+func (s *server) handleMyWork(w http.ResponseWriter, r *http.Request) {}
+func (s *server) handleSearch(w http.ResponseWriter, r *http.Request) {}

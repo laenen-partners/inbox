@@ -1,0 +1,134 @@
+package ui
+
+import (
+	"github.com/laenen-partners/dsx/ds"
+	"github.com/laenen-partners/dsx/ui/button"
+)
+
+templ actionButtons(data detailData) {
+	<div class="flex flex-wrap gap-2">
+		switch data.Item.Status() {
+		case "open":
+			@button.Button(button.Props{
+				Variant: button.VariantPrimary,
+				Size:    button.SizeSm,
+				OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/claim"),
+			}) {
+				Claim
+			}
+			@cancelButton(data)
+		case "claimed":
+			if data.IsClaimant {
+				@respondButton(data)
+				@button.Button(button.Props{
+					Variant: button.VariantSuccess,
+					Size:    button.SizeSm,
+					OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/complete"),
+				}) {
+					Complete
+				}
+				@button.Button(button.Props{
+					Variant: button.VariantGhost,
+					Size:    button.SizeSm,
+					OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/release"),
+				}) {
+					Release
+				}
+				@cancelButton(data)
+			}
+		}
+	</div>
+}
+
+templ respondButton(data detailData) {
+	{{ signals := ds.NewSignals("respond-form", struct {
+		Action  string `json:"action"`
+		Comment string `json:"comment"`
+		Open    bool   `json:"open"`
+	}{}) }}
+	<div data-signals={ signals.DataSignals }>
+		@button.Button(button.Props{
+			Variant: button.VariantInfo,
+			Size:    button.SizeSm,
+			OnClick: signals.Toggle("open"),
+		}) {
+			Respond
+		}
+		<div { ds.Show(signals.Signal("open"))... } class="mt-2 space-y-2 p-3 bg-base-200 rounded-lg">
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full"
+				placeholder="Action (e.g. approve, reject)"
+				{ ds.Bind("respond-form", "action")... }
+			/>
+			<textarea
+				class="textarea textarea-bordered textarea-sm w-full"
+				placeholder="Comment"
+				rows="2"
+				{ ds.Bind("respond-form", "comment")... }
+			></textarea>
+			@button.Button(button.Props{
+				Variant: button.VariantPrimary,
+				Size:    button.SizeSm,
+				OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/respond", ds.WithFilterSignals("respond-form")),
+			}) {
+				Submit
+			}
+		</div>
+	</div>
+}
+
+templ cancelButton(data detailData) {
+	{{ signals := ds.NewSignals("cancel-form", struct {
+		Reason string `json:"reason"`
+		Open   bool   `json:"open"`
+	}{}) }}
+	<div data-signals={ signals.DataSignals }>
+		@button.Button(button.Props{
+			Variant: button.VariantError,
+			Size:    button.SizeSm,
+			OnClick: signals.Toggle("open"),
+		}) {
+			Cancel
+		}
+		<div { ds.Show(signals.Signal("open"))... } class="mt-2 space-y-2 p-3 bg-base-200 rounded-lg">
+			<textarea
+				class="textarea textarea-bordered textarea-sm w-full"
+				placeholder="Reason for cancellation"
+				rows="2"
+				{ ds.Bind("cancel-form", "reason")... }
+			></textarea>
+			@button.Button(button.Props{
+				Variant: button.VariantError,
+				Size:    button.SizeSm,
+				OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/cancel", ds.WithFilterSignals("cancel-form")),
+			}) {
+				Confirm Cancel
+			}
+		</div>
+	</div>
+}
+
+templ commentForm(data detailData) {
+	{{ signals := ds.NewSignals("comment-form", struct {
+		Body string `json:"body"`
+	}{}) }}
+	<div class="mt-4" data-signals={ signals.DataSignals }>
+		<h3 class="font-semibold mb-2">Add Comment</h3>
+		<textarea
+			class="textarea textarea-bordered w-full"
+			placeholder="Write a comment..."
+			rows="3"
+			{ ds.Bind("comment-form", "body")... }
+		></textarea>
+		<div class="mt-2">
+			@button.Button(button.Props{
+				Variant: button.VariantGhost,
+				Size:    button.SizeSm,
+				OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/comment", ds.WithFilterSignals("comment-form")),
+			}) {
+				Comment
+			}
+		</div>
+	</div>
+}

@@ -1,0 +1,99 @@
+package ui
+
+import (
+	"github.com/laenen-partners/dsx/ui/badge"
+	"github.com/laenen-partners/dsx/ui/feed"
+	"github.com/laenen-partners/dsx/ui/jsonview"
+	"github.com/laenen-partners/inbox"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+)
+
+templ detailDrawer(data detailData) {
+	<div class="space-y-6">
+		// Header
+		<div class="flex items-center justify-between">
+			<h2 class="text-xl font-bold">{ data.Item.Title() }</h2>
+			@badge.Badge(badge.Props{
+				Variant: badge.Variant(statusBadgeVariant(data.Item.Status())),
+			}) {
+				{ data.Item.Status() }
+			}
+		</div>
+
+		// Meta bar
+		<div class="grid grid-cols-2 gap-2 text-sm">
+			if team := inbox.TagValue(data.Item, "team:"); team != "" {
+				<div class="text-base-content/60">Team</div>
+				<div>{ team }</div>
+			}
+			if assignee := inbox.TagValue(data.Item, "assignee:"); assignee != "" {
+				<div class="text-base-content/60">Assignee</div>
+				<div>{ actorDisplayName(assignee) }</div>
+			}
+			if priority := inbox.TagValue(data.Item, "priority:"); priority != "" {
+				<div class="text-base-content/60">Priority</div>
+				<div>{ priority }</div>
+			}
+			if dl := data.Item.Deadline(); dl != nil {
+				<div class="text-base-content/60">Deadline</div>
+				<div>{ dl.Format("2006-01-02 15:04") }</div>
+			}
+			<div class="text-base-content/60">Age</div>
+			<div>{ formatAge(data.Item.CreatedAt) }</div>
+		</div>
+
+		// Description
+		if data.Item.Description() != "" {
+			<div class="text-sm text-base-content/80">
+				{ data.Item.Description() }
+			</div>
+		}
+
+		// Payload
+		<div>
+			<h3 class="font-semibold mb-2">Payload</h3>
+			if data.PayloadComponent != nil {
+				@data.PayloadComponent
+			} else if data.Item.Proto.GetPayload() != nil {
+				@jsonview.JSONView(jsonview.Props{
+					Value: string(data.Item.Proto.GetPayload().GetValue()),
+				})
+			} else {
+				<p class="text-sm text-base-content/60">No payload</p>
+			}
+		</div>
+
+		// Action buttons
+		@actionButtons(data)
+
+		// Activity feed
+		<div>
+			<h3 class="font-semibold mb-2">Activity</h3>
+			@feed.Feed() {
+				for _, evt := range data.Item.Events() {
+					@eventItem(evt, data.BasePath)
+				}
+			}
+		</div>
+
+		// Comment form (always visible)
+		@commentForm(data)
+	</div>
+}
+
+templ eventItem(evt *inboxv1.Event, basePath string) {
+	<div class="flex gap-3 py-2 border-b border-base-200 last:border-0">
+		<div class="flex-1">
+			<div class="flex items-center gap-2">
+				<span class="font-medium text-sm">{ eventLabel(evt.GetDataType()) }</span>
+				<span class="text-xs text-base-content/60">by { actorDisplayName(evt.GetActor()) }</span>
+			</div>
+			if evt.GetDetail() != "" {
+				<p class="text-sm text-base-content/80 mt-1">{ evt.GetDetail() }</p>
+			}
+		</div>
+		<div class="text-xs text-base-content/60 whitespace-nowrap">
+			{ formatAge(evt.GetAt().AsTime()) }
+		</div>
+	</div>
+}
