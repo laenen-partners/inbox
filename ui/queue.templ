@@ -21,12 +21,15 @@ templ queueContent(data queueData) {
 			@queueFilters(data)
 		</div>
 
-		// Stat cards
-		<div class="grid grid-cols-4 gap-3">
-			@statCard("Total", len(data.Items), "", "")
-			@statCard("Urgent", data.PriorityCounts["urgent"], "text-error", "bg-error/5 border-error/10")
-			@statCard("High", data.PriorityCounts["high"], "text-warning", "bg-warning/5 border-warning/10")
-			@statCard("Normal", data.PriorityCounts["normal"]+data.PriorityCounts["low"], "", "")
+		// Stats
+		<div class="flex gap-6 border border-base-300 rounded-lg px-5 py-3">
+			@statItem("Total", len(data.Items), "")
+			<div class="border-l border-base-200"></div>
+			@statItem("Urgent", data.PriorityCounts["urgent"], "text-error")
+			<div class="border-l border-base-200"></div>
+			@statItem("High", data.PriorityCounts["high"], "text-warning")
+			<div class="border-l border-base-200"></div>
+			@statItem("Normal", data.PriorityCounts["normal"]+data.PriorityCounts["low"], "")
 		</div>
 
 		// Table
@@ -34,12 +37,12 @@ templ queueContent(data queueData) {
 	</div>
 }
 
-templ statCard(label string, count int, valueClass string, cardClass string) {
-	<div class={ "border rounded-lg px-4 py-3", templ.KV(cardClass, cardClass != ""), templ.KV("border-base-300", cardClass == "") }>
-		<div class="text-xs text-base-content/40 uppercase tracking-wider font-medium">{ label }</div>
-		<div class={ "text-2xl font-bold mt-1 tabular-nums", templ.KV(valueClass, valueClass != "") }>
+templ statItem(label string, count int, valueClass string) {
+	<div class="flex items-baseline gap-2">
+		<span class={ "text-lg font-bold tabular-nums", templ.KV(valueClass, valueClass != "") }>
 			{ strconv.Itoa(count) }
-		</div>
+		</span>
+		<span class="text-xs text-base-content/40">{ label }</span>
 	</div>
 }
 
