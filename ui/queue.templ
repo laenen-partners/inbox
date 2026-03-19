@@ -10,7 +10,15 @@ import (
 )
 
 templ queueContent(data queueData) {
-	<div class="space-y-4">
+	<div class="space-y-6">
+		<div class="flex items-center justify-between">
+			<div>
+				<h1 class="text-2xl font-bold tracking-tight">Queue</h1>
+				<p class="text-sm text-base-content/50 mt-1">
+					{ fmt.Sprintf("%d open items", len(data.Items)) }
+				</p>
+			</div>
+		</div>
 		@queueFilters(data)
 		@queueTable(data)
 	</div>
@@ -19,57 +27,59 @@ templ queueContent(data queueData) {
 templ queueFilters(data queueData) {
 	<div
 		id="queue-filters"
-		class="flex flex-wrap gap-3 items-center"
+		class="flex flex-wrap gap-2 items-center"
 		{ ds.RawSignals(buildFilterSignalsJSON(data.Filters, data.ActiveFilters))... }
 	>
 		for _, f := range data.Filters {
 			<select
-				class="select select-bordered select-sm"
+				class="select select-bordered select-sm min-w-[140px]"
 				data-bind={ filterKey(f.TagPrefix) }
 				{ ds.On("change", ds.Get(data.BasePath+"/"))... }
 			>
-				<option value="">{ f.Label }: All</option>
+				<option value="">{ f.Label }</option>
 				for _, opt := range f.Options {
 					<option value={ opt }>{ opt }</option>
 				}
 			</select>
 		}
-		<span class="text-sm text-base-content/60">
-			{ fmt.Sprintf("%d items", len(data.Items)) }
-		</span>
 	</div>
 }
 
 templ queueTable(data queueData) {
-	<table id="queue-table" class="table table-zebra w-full">
-		<thead>
-			<tr>
-				<th>Title</th>
-				<th>Status</th>
-				<th>Priority</th>
-				<th>Team</th>
-				<th>Assignee</th>
-				<th>Age</th>
-				<th>Deadline</th>
-			</tr>
-		</thead>
-		<tbody>
-			if len(data.Items) == 0 {
-				<tr>
-					<td colspan="7" class="text-center text-base-content/60 py-8">
-						No items found
-					</td>
+	<div class="bg-base-100 border border-base-300 rounded-lg overflow-x-auto">
+		<table id="queue-table" class="table table-sm">
+			<thead>
+				<tr class="text-xs uppercase text-base-content/40 border-b border-base-300">
+					<th class="font-medium">Title</th>
+					<th class="font-medium">Status</th>
+					<th class="font-medium">Priority</th>
+					<th class="font-medium">Team</th>
+					<th class="font-medium">Assignee</th>
+					<th class="font-medium">Age</th>
+					<th class="font-medium">Deadline</th>
 				</tr>
-			}
-			for _, item := range data.Items {
-				@queueRow(item, data.BasePath)
-			}
-		</tbody>
-	</table>
+			</thead>
+			<tbody>
+				if len(data.Items) == 0 {
+					<tr>
+						<td colspan="7" class="text-center text-base-content/40 py-12">
+							<div class="space-y-2">
+								<p class="text-lg">No items found</p>
+								<p class="text-sm">Try adjusting your filters</p>
+							</div>
+						</td>
+					</tr>
+				}
+				for _, item := range data.Items {
+					@queueRow(item, data.BasePath)
+				}
+			</tbody>
+		</table>
+	</div>
 	if data.NextCursor != nil {
-		<div class="flex justify-center py-4">
+		<div class="flex justify-center pt-2">
 			<button
-				class="btn btn-ghost"
+				class="btn btn-ghost btn-sm"
 				{ ds.OnClick(ds.Get(data.BasePath + "/?cursor=" + data.NextCursor.Format(time.RFC3339)))... }
 			>
 				Load more
@@ -78,31 +88,49 @@ templ queueTable(data queueData) {
 	}
 }
 
-// queueRow renders a single table row. Used both in the table and as an SSE fragment
-// to update individual rows after actions.
 templ queueRow(item inbox.Item, basePath string) {
 	<tr
 		id={ "row-" + item.ID }
-		class={ "cursor-pointer hover", templ.KV("bg-error/5", inbox.TagValue(item, "priority:") == "urgent") }
+		class={ "hover:bg-base-200/50 cursor-pointer transition-colors", templ.KV("border-l-2 border-l-error", inbox.TagValue(item, "priority:") == "urgent") }
 		{ ds.OnClick(ds.Get(basePath + "/items/" + item.ID))... }
 	>
-		<td class="font-medium">{ item.Title() }</td>
+		<td>
+			<div class="font-medium text-sm">{ item.Title() }</div>
+		</td>
 		<td>
 			@badge.Badge(badge.Props{
 				Variant: badge.Variant(statusBadgeVariant(item.Status())),
-				Size:    badge.SizeSm,
+				Style:   badge.StyleSoft,
+				Size:    badge.SizeXs,
 			}) {
 				{ item.Status() }
 			}
 		</td>
-		<td>{ inbox.TagValue(item, "priority:") }</td>
-		<td>{ inbox.TagValue(item, "team:") }</td>
-		<td>{ actorDisplayName(inbox.TagValue(item, "assignee:")) }</td>
-		<td>{ formatAge(item.CreatedAt) }</td>
 		<td>
+			@priorityBadge(inbox.TagValue(item, "priority:"))
+		</td>
+		<td class="text-sm text-base-content/70">{ inbox.TagValue(item, "team:") }</td>
+		<td class="text-sm text-base-content/70">{ actorDisplayName(inbox.TagValue(item, "assignee:")) }</td>
+		<td class="text-xs text-base-content/50">{ formatAge(item.CreatedAt) }</td>
+		<td class="text-xs text-base-content/50">
 			if dl := item.Deadline(); dl != nil {
-				{ dl.Format("2006-01-02 15:04") }
+				{ dl.Format("Jan 02, 15:04") }
 			}
 		</td>
 	</tr>
+}
+
+templ priorityBadge(priority string) {
+	switch priority {
+	case "urgent":
+		@badge.Badge(badge.Props{Variant: badge.VariantError, Style: badge.StyleSoft, Size: badge.SizeXs}) {
+			{ priority }
+		}
+	case "high":
+		@badge.Badge(badge.Props{Variant: badge.VariantWarning, Style: badge.StyleSoft, Size: badge.SizeXs}) {
+			{ priority }
+		}
+	default:
+		<span class="text-xs text-base-content/50">{ priority }</span>
+	}
 }

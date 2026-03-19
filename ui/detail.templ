@@ -2,7 +2,6 @@ package ui
 
 import (
 	"github.com/laenen-partners/dsx/ui/badge"
-	"github.com/laenen-partners/dsx/ui/feed"
 	"github.com/laenen-partners/dsx/ui/jsonview"
 	"github.com/laenen-partners/inbox"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
@@ -11,63 +10,60 @@ import (
 templ detailDrawer(data detailData) {
 	<div class="space-y-6" data-signals='{"__link":""}' data-effect="if($__link){navigator.clipboard.writeText($__link);$__link='';}">
 		// Header
-		<div class="flex items-center justify-between">
-			<h2 class="text-xl font-bold">{ data.Item.Title() }</h2>
-			<div class="flex items-center gap-2">
-				if data.CanLink && !inbox.IsTerminal(data.Item.Status()) {
-					@sendLinkButton(data)
-				}
-				@badge.Badge(badge.Props{
-					Variant: badge.Variant(statusBadgeVariant(data.Item.Status())),
-				}) {
-					{ data.Item.Status() }
-				}
+		<div>
+			<div class="flex items-start justify-between gap-4">
+				<h2 class="text-lg font-semibold tracking-tight leading-snug">{ data.Item.Title() }</h2>
+				<div class="flex items-center gap-2 shrink-0">
+					if data.CanLink && !inbox.IsTerminal(data.Item.Status()) {
+						@sendLinkButton(data)
+					}
+					@badge.Badge(badge.Props{
+						Variant: badge.Variant(statusBadgeVariant(data.Item.Status())),
+						Style:   badge.StyleSoft,
+						Size:    badge.SizeSm,
+					}) {
+						{ data.Item.Status() }
+					}
+				</div>
 			</div>
+			if data.Item.Description() != "" {
+				<p class="text-sm text-base-content/60 mt-2 leading-relaxed">
+					{ data.Item.Description() }
+				</p>
+			}
 		</div>
 
 		// Meta bar
-		<div class="grid grid-cols-2 gap-2 text-sm">
-			if team := inbox.TagValue(data.Item, "team:"); team != "" {
-				<div class="text-base-content/60">Team</div>
-				<div>{ team }</div>
-			}
-			if assignee := inbox.TagValue(data.Item, "assignee:"); assignee != "" {
-				<div class="text-base-content/60">Assignee</div>
-				<div>{ actorDisplayName(assignee) }</div>
-			}
-			if priority := inbox.TagValue(data.Item, "priority:"); priority != "" {
-				<div class="text-base-content/60">Priority</div>
-				<div>{ priority }</div>
-			}
-			if dl := data.Item.Deadline(); dl != nil {
-				<div class="text-base-content/60">Deadline</div>
-				<div>{ dl.Format("2006-01-02 15:04") }</div>
-			}
-			<div class="text-base-content/60">Age</div>
-			<div>{ formatAge(data.Item.CreatedAt) }</div>
+		<div class="bg-base-200/50 rounded-lg p-4">
+			<div class="grid grid-cols-2 gap-x-6 gap-y-3">
+				if team := inbox.TagValue(data.Item, "team:"); team != "" {
+					@metaField("Team", team)
+				}
+				if assignee := inbox.TagValue(data.Item, "assignee:"); assignee != "" {
+					@metaField("Assignee", actorDisplayName(assignee))
+				}
+				if priority := inbox.TagValue(data.Item, "priority:"); priority != "" {
+					@metaField("Priority", priority)
+				}
+				if dl := data.Item.Deadline(); dl != nil {
+					@metaField("Deadline", dl.Format("Jan 02, 2006 15:04"))
+				}
+				@metaField("Age", formatAge(data.Item.CreatedAt))
+			</div>
 		</div>
 
-		// Description
-		if data.Item.Description() != "" {
-			<div class="text-sm text-base-content/80">
-				{ data.Item.Description() }
-			</div>
-		}
-
-		// Payload
+		// Payload / Schema
 		<div>
 			if data.Schema != nil {
 				@schemaPayload(data.Schema, data.Item.ID, data.BasePath)
 			} else if data.PayloadComponent != nil {
-				<h3 class="font-semibold mb-2">Payload</h3>
+				<h3 class="text-xs uppercase tracking-wide text-base-content/40 font-medium mb-3">Payload</h3>
 				@data.PayloadComponent
 			} else if data.Item.Proto.GetPayload() != nil {
-				<h3 class="font-semibold mb-2">Payload</h3>
+				<h3 class="text-xs uppercase tracking-wide text-base-content/40 font-medium mb-3">Payload</h3>
 				@jsonview.JSONView(jsonview.Props{
 					Value: string(data.Item.Proto.GetPayload().GetValue()),
 				})
-			} else {
-				<p class="text-sm text-base-content/60">No payload</p>
 			}
 		</div>
 
@@ -75,33 +71,41 @@ templ detailDrawer(data detailData) {
 		@actionButtons(data)
 
 		// Activity feed
-		<div>
-			<h3 class="font-semibold mb-2">Activity</h3>
-			@feed.Feed() {
-				for _, evt := range data.Item.Events() {
-					@eventItem(evt, data.BasePath)
-				}
-			}
-		</div>
+		if len(data.Item.Events()) > 0 {
+			<div>
+				<h3 class="text-xs uppercase tracking-wide text-base-content/40 font-medium mb-3">Activity</h3>
+				<div class="space-y-0">
+					for _, evt := range data.Item.Events() {
+						@eventItem(evt, data.BasePath)
+					}
+				</div>
+			</div>
+		}
 
-		// Comment form (always visible)
+		// Comment form
 		@commentForm(data)
 	</div>
 }
 
+templ metaField(label string, value string) {
+	<div>
+		<div class="text-xs text-base-content/40 uppercase tracking-wide">{ label }</div>
+		<div class="text-sm font-medium mt-0.5">{ value }</div>
+	</div>
+}
+
 templ eventItem(evt *inboxv1.Event, basePath string) {
-	<div class="flex gap-3 py-2 border-b border-base-200 last:border-0">
-		<div class="flex-1">
-			<div class="flex items-center gap-2">
-				<span class="font-medium text-sm">{ eventLabel(evt.GetDataType()) }</span>
-				<span class="text-xs text-base-content/60">by { actorDisplayName(evt.GetActor()) }</span>
+	<div class="flex gap-3 py-3 border-b border-base-200/80 last:border-0">
+		<div class="w-1.5 h-1.5 rounded-full bg-base-content/20 mt-2 shrink-0"></div>
+		<div class="flex-1 min-w-0">
+			<div class="flex items-baseline gap-2">
+				<span class="text-sm font-medium">{ eventLabel(evt.GetDataType()) }</span>
+				<span class="text-xs text-base-content/40">{ actorDisplayName(evt.GetActor()) }</span>
+				<span class="text-xs text-base-content/30 ml-auto shrink-0">{ formatAge(evt.GetAt().AsTime()) }</span>
 			</div>
 			if evt.GetDetail() != "" {
-				<p class="text-sm text-base-content/80 mt-1">{ evt.GetDetail() }</p>
+				<p class="text-sm text-base-content/60 mt-1 leading-relaxed">{ evt.GetDetail() }</p>
 			}
-		</div>
-		<div class="text-xs text-base-content/60 whitespace-nowrap">
-			{ formatAge(evt.GetAt().AsTime()) }
 		</div>
 	</div>
 }

@@ -59,7 +59,7 @@ func actionButtons(data detailData) templ.Component {
 				return nil
 			})
 			templ_7745c5c3_Err = button.Button(button.Props{
-				Variant: button.VariantPrimary,
+				Variant: button.VariantNeutral,
 				Size:    button.SizeSm,
 				OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/claim"),
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
@@ -220,7 +220,7 @@ func respondButton(data detailData) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = button.Button(button.Props{
-			Variant: button.VariantInfo,
+			Variant: button.VariantOutline,
 			Size:    button.SizeSm,
 			OnClick: signals.Toggle("open"),
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var7), templ_7745c5c3_Buffer)
@@ -235,7 +235,7 @@ func respondButton(data detailData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, " class=\"mt-2 space-y-2 p-3 bg-base-200 rounded-lg\"><input type=\"text\" class=\"input input-bordered input-sm w-full\" placeholder=\"Action (e.g. approve, reject)\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, " class=\"mt-3 space-y-3 p-4 bg-base-200/50 rounded-lg border border-base-300\"><input type=\"text\" class=\"input input-bordered input-sm w-full\" placeholder=\"Action (e.g. approve, reject)\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -243,7 +243,7 @@ func respondButton(data detailData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "> <textarea class=\"textarea textarea-bordered textarea-sm w-full\" placeholder=\"Comment\" rows=\"2\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "> <textarea class=\"textarea textarea-bordered w-full text-sm\" placeholder=\"Comment\" rows=\"2\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -274,7 +274,7 @@ func respondButton(data detailData) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = button.Button(button.Props{
-			Variant: button.VariantPrimary,
+			Variant: button.VariantNeutral,
 			Size:    button.SizeSm,
 			OnClick: ds.Post(data.BasePath+"/items/"+data.Item.ID+"/respond", ds.WithFilterSignals("respond-form")),
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var8), templ_7745c5c3_Buffer)
@@ -350,9 +350,10 @@ func cancelButton(data detailData) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = button.Button(button.Props{
-			Variant: button.VariantError,
+			Variant: button.VariantGhost,
 			Size:    button.SizeSm,
 			OnClick: signals.Toggle("open"),
+			Class:   "text-error",
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var11), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -365,7 +366,7 @@ func cancelButton(data detailData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, " class=\"mt-2 space-y-2 p-3 bg-base-200 rounded-lg\"><textarea class=\"textarea textarea-bordered textarea-sm w-full\" placeholder=\"Reason for cancellation\" rows=\"2\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, " class=\"mt-3 space-y-3 p-4 bg-error/5 rounded-lg border border-error/20\"><textarea class=\"textarea textarea-bordered w-full text-sm\" placeholder=\"Reason for cancellation\" rows=\"2\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -444,14 +445,14 @@ func sendLinkButton(data detailData) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "Send as Link")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "Send Link")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
 		templ_7745c5c3_Err = button.Button(button.Props{
-			Variant: button.VariantOutline,
+			Variant: button.VariantGhost,
 			Size:    button.SizeXs,
 			OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/link"),
 		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var14), templ_7745c5c3_Buffer)
@@ -486,20 +487,20 @@ func commentForm(data detailData) templ.Component {
 		signals := ds.NewSignals("comment-form", struct {
 			Body string `json:"body"`
 		}{})
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<div class=\"mt-4\" data-signals=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<div data-signals=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(signals.DataSignals)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/actions.templ`, Line: 126, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/actions.templ`, Line: 127, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\"><h3 class=\"font-semibold mb-2\">Add Comment</h3><textarea class=\"textarea textarea-bordered w-full\" placeholder=\"Write a comment...\" rows=\"3\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\"><h3 class=\"text-xs uppercase tracking-wide text-base-content/40 font-medium mb-3\">Add Comment</h3><textarea class=\"textarea textarea-bordered w-full text-sm\" placeholder=\"Write a comment...\" rows=\"2\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

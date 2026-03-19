@@ -17,7 +17,6 @@ type clientData struct {
 	Scope    string
 }
 
-// clientStandalonePage renders a minimal page WITHOUT the dashboard layout.
 templ clientStandalonePage(data clientData) {
 	{{ dsxCtx := dsx.FromContext(ctx) }}
 	@layouts.Base(layouts.BaseProps{
@@ -26,23 +25,27 @@ templ clientStandalonePage(data clientData) {
 		Theme:     dsxCtx.Theme,
 		Head:      defaultHead(),
 	}) {
-		<div class="min-h-screen bg-base-200 flex items-start justify-center py-12 px-4">
-			<div class="bg-base-100 rounded-xl shadow-lg max-w-2xl w-full p-8 space-y-6">
-				<div>
-					<h1 class="text-2xl font-bold">{ data.Item.Title() }</h1>
-					if data.Item.Description() != "" {
-						<p class="text-base-content/70 mt-2">{ data.Item.Description() }</p>
+		<div class="min-h-screen bg-base-200/50 flex items-start justify-center py-16 px-4">
+			<div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 max-w-xl w-full">
+				<div class="p-8 space-y-6">
+					<div>
+						<h1 class="text-xl font-semibold tracking-tight">{ data.Item.Title() }</h1>
+						if data.Item.Description() != "" {
+							<p class="text-sm text-base-content/60 mt-2 leading-relaxed">
+								{ data.Item.Description() }
+							</p>
+						}
+					</div>
+					if inbox.IsTerminal(data.Item.Status()) {
+						<div class="bg-success/10 text-success border border-success/20 rounded-lg p-4 text-sm">
+							This item has already been completed. Thank you.
+						</div>
+					} else if data.Schema != nil {
+						@clientSchemaForm(data)
+					} else {
+						<p class="text-base-content/50 text-sm">No form available for this item.</p>
 					}
 				</div>
-				if inbox.IsTerminal(data.Item.Status()) {
-					<div class="alert alert-info">
-						This item has already been completed.
-					</div>
-				} else if data.Schema != nil {
-					@clientSchemaForm(data)
-				} else {
-					<p class="text-base-content/60">No form available for this item.</p>
-				}
 			</div>
 		</div>
 	}
@@ -50,34 +53,36 @@ templ clientStandalonePage(data clientData) {
 
 templ clientSchemaForm(data clientData) {
 	{{ signals := buildSchemaSignals(data.Schema) }}
-	<div data-signals={ signals } data-signals__client={ `{"token":"` + data.Token + `"}` }>
-		// Display fields
+	<div class="space-y-6" data-signals={ signals } data-signals__client={ `{"token":"` + data.Token + `"}` }>
 		if len(data.Schema.Display) > 0 {
-			<div class="grid grid-cols-2 gap-x-4 gap-y-2 bg-base-200 rounded-lg p-4">
-				for _, d := range data.Schema.Display {
-					<div class="text-sm text-base-content/60">{ d.Label }</div>
-					if d.Mono {
-						<div class="text-sm font-mono">{ d.Value }</div>
-					} else {
-						<div class="text-sm">{ d.Value }</div>
+			<div class="bg-base-200/50 rounded-lg p-4">
+				<div class="grid grid-cols-2 gap-x-6 gap-y-3">
+					for _, d := range data.Schema.Display {
+						<div>
+							<div class="text-xs text-base-content/40 uppercase tracking-wide">{ d.Label }</div>
+							if d.Mono {
+								<div class="text-sm font-mono mt-0.5">{ d.Value }</div>
+							} else {
+								<div class="text-sm font-medium mt-0.5">{ d.Value }</div>
+							}
+						</div>
 					}
-				}
+				</div>
 			</div>
 		}
-		// Form fields (interactive)
 		if len(data.Schema.Fields) > 0 && data.Scope == "respond" {
-			<div class="space-y-4">
+			<div class="space-y-5">
 				for _, f := range data.Schema.Fields {
 					@schemaField(f)
 				}
 			</div>
 		}
-		// Submit button
 		if data.Scope == "respond" && len(data.Schema.Actions) > 0 {
-			<div class="flex flex-wrap gap-2 pt-4">
+			<div class="flex flex-wrap gap-2 pt-2">
 				for _, a := range data.Schema.Actions {
 					@button.Button(button.Props{
 						Variant: buttonVariant(a.Variant),
+						Class:   "flex-1",
 						OnClick: ds.Post(data.BasePath + "/respond"),
 					}) {
 						{ a.Label }
@@ -86,7 +91,8 @@ templ clientSchemaForm(data clientData) {
 			</div>
 		} else if data.Scope == "respond" {
 			@button.Button(button.Props{
-				Variant: button.VariantPrimary,
+				Variant: button.VariantNeutral,
+				Class:   "w-full",
 				OnClick: ds.Post(data.BasePath + "/respond"),
 			}) {
 				Submit

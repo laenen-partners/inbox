@@ -1,11 +1,16 @@
 package ui
 
 templ myworkContent(data queueData) {
-	<div class="space-y-4">
+	<div class="space-y-6">
+		<div>
+			<h1 class="text-2xl font-bold tracking-tight">My Work</h1>
+			<p class="text-sm text-base-content/50 mt-1">Items you've claimed</p>
+		</div>
 		if len(data.Items) == 0 {
-			<div class="text-center py-12">
-				<p class="text-lg text-base-content/60">You have no claimed items.</p>
-				<a href={ templ.SafeURL(data.BasePath + "/") } class="btn btn-primary mt-4">
+			<div class="text-center py-16">
+				<p class="text-base-content/40 text-lg">No claimed items</p>
+				<p class="text-base-content/30 text-sm mt-2">Claim items from the queue to get started</p>
+				<a href={ templ.SafeURL(data.BasePath + "/") } class="btn btn-neutral btn-sm mt-6">
 					Go to Queue
 				</a>
 			</div>
