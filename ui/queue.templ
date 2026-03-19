@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/laenen-partners/dsx/ds"
@@ -11,28 +12,46 @@ import (
 
 templ queueContent(data queueData) {
 	<div class="space-y-6">
-		<div class="flex items-center justify-between">
+		// Header row
+		<div class="flex items-end justify-between">
 			<div>
 				<h1 class="text-2xl font-bold tracking-tight">Queue</h1>
-				<p class="text-sm text-base-content/50 mt-1">
-					{ fmt.Sprintf("%d open items", len(data.Items)) }
-				</p>
+				<p class="text-sm text-base-content/40 mt-1">Open items awaiting action</p>
 			</div>
+			@queueFilters(data)
 		</div>
-		@queueFilters(data)
+
+		// Stat cards
+		<div class="grid grid-cols-4 gap-3">
+			@statCard("Total", len(data.Items), "", "")
+			@statCard("Urgent", data.PriorityCounts["urgent"], "text-error", "bg-error/5 border-error/10")
+			@statCard("High", data.PriorityCounts["high"], "text-warning", "bg-warning/5 border-warning/10")
+			@statCard("Normal", data.PriorityCounts["normal"]+data.PriorityCounts["low"], "", "")
+		</div>
+
+		// Table
 		@queueTable(data)
+	</div>
+}
+
+templ statCard(label string, count int, valueClass string, cardClass string) {
+	<div class={ "border rounded-lg px-4 py-3", templ.KV(cardClass, cardClass != ""), templ.KV("border-base-300", cardClass == "") }>
+		<div class="text-xs text-base-content/40 uppercase tracking-wider font-medium">{ label }</div>
+		<div class={ "text-2xl font-bold mt-1 tabular-nums", templ.KV(valueClass, valueClass != "") }>
+			{ strconv.Itoa(count) }
+		</div>
 	</div>
 }
 
 templ queueFilters(data queueData) {
 	<div
 		id="queue-filters"
-		class="flex flex-wrap gap-2 items-center"
+		class="flex gap-2 items-center"
 		{ ds.RawSignals(buildFilterSignalsJSON(data.Filters, data.ActiveFilters))... }
 	>
 		for _, f := range data.Filters {
 			<select
-				class="select select-bordered select-sm min-w-[140px]"
+				class="select select-bordered select-sm select-ghost min-w-[120px] text-xs"
 				data-bind={ filterKey(f.TagPrefix) }
 				{ ds.On("change", ds.Get(data.BasePath+"/"))... }
 			>
@@ -46,26 +65,27 @@ templ queueFilters(data queueData) {
 }
 
 templ queueTable(data queueData) {
-	<div class="bg-base-100 border border-base-300 rounded-lg overflow-x-auto">
+	<div class="bg-base-100 border border-base-300 rounded-lg overflow-hidden">
 		<table id="queue-table" class="table table-sm">
 			<thead>
-				<tr class="text-xs uppercase text-base-content/40 border-b border-base-300">
-					<th class="font-medium">Title</th>
-					<th class="font-medium">Status</th>
-					<th class="font-medium">Priority</th>
-					<th class="font-medium">Team</th>
-					<th class="font-medium">Assignee</th>
-					<th class="font-medium">Age</th>
-					<th class="font-medium">Deadline</th>
+				<tr class="border-b border-base-300 bg-base-200/30">
+					<th class="text-xs uppercase tracking-wider text-base-content/40 font-medium py-3">Title</th>
+					<th class="text-xs uppercase tracking-wider text-base-content/40 font-medium py-3 w-24">Status</th>
+					<th class="text-xs uppercase tracking-wider text-base-content/40 font-medium py-3 w-24">Priority</th>
+					<th class="text-xs uppercase tracking-wider text-base-content/40 font-medium py-3 w-28">Team</th>
+					<th class="text-xs uppercase tracking-wider text-base-content/40 font-medium py-3 w-28">Assignee</th>
+					<th class="text-xs uppercase tracking-wider text-base-content/40 font-medium py-3 w-20">Age</th>
+					<th class="text-xs uppercase tracking-wider text-base-content/40 font-medium py-3 w-32">Deadline</th>
 				</tr>
 			</thead>
 			<tbody>
 				if len(data.Items) == 0 {
 					<tr>
-						<td colspan="7" class="text-center text-base-content/40 py-12">
-							<div class="space-y-2">
-								<p class="text-lg">No items found</p>
-								<p class="text-sm">Try adjusting your filters</p>
+						<td colspan="7" class="py-16">
+							<div class="text-center space-y-3">
+								<div class="text-4xl opacity-20">{ "\u2709" }</div>
+								<p class="text-base-content/40 font-medium">Queue is empty</p>
+								<p class="text-xs text-base-content/30">All caught up — no items matching your filters</p>
 							</div>
 						</td>
 					</tr>
@@ -77,9 +97,9 @@ templ queueTable(data queueData) {
 		</table>
 	</div>
 	if data.NextCursor != nil {
-		<div class="flex justify-center pt-2">
+		<div class="flex justify-center pt-1">
 			<button
-				class="btn btn-ghost btn-sm"
+				class="btn btn-ghost btn-sm text-xs"
 				{ ds.OnClick(ds.Get(data.BasePath + "/?cursor=" + data.NextCursor.Format(time.RFC3339)))... }
 			>
 				Load more
@@ -91,13 +111,17 @@ templ queueTable(data queueData) {
 templ queueRow(item inbox.Item, basePath string) {
 	<tr
 		id={ "row-" + item.ID }
-		class={ "hover:bg-base-200/50 cursor-pointer transition-colors", templ.KV("border-l-2 border-l-error", inbox.TagValue(item, "priority:") == "urgent") }
+		class={ "hover:bg-base-200/50 cursor-pointer transition-colors border-b border-base-200/60 last:border-0",
+			templ.KV("border-l-2 border-l-error", inbox.TagValue(item, "priority:") == "urgent") }
 		{ ds.OnClick(ds.Get(basePath + "/items/" + item.ID))... }
 	>
-		<td>
-			<div class="font-medium text-sm">{ item.Title() }</div>
+		<td class="py-3">
+			<div class="font-medium text-sm leading-snug">{ item.Title() }</div>
+			if item.Description() != "" {
+				<div class="text-xs text-base-content/40 mt-0.5 truncate max-w-xs">{ item.Description() }</div>
+			}
 		</td>
-		<td>
+		<td class="py-3">
 			@badge.Badge(badge.Props{
 				Variant: badge.Variant(statusBadgeVariant(item.Status())),
 				Style:   badge.StyleSoft,
@@ -106,13 +130,13 @@ templ queueRow(item inbox.Item, basePath string) {
 				{ item.Status() }
 			}
 		</td>
-		<td>
+		<td class="py-3">
 			@priorityBadge(inbox.TagValue(item, "priority:"))
 		</td>
-		<td class="text-sm text-base-content/70">{ inbox.TagValue(item, "team:") }</td>
-		<td class="text-sm text-base-content/70">{ actorDisplayName(inbox.TagValue(item, "assignee:")) }</td>
-		<td class="text-xs text-base-content/50">{ formatAge(item.CreatedAt) }</td>
-		<td class="text-xs text-base-content/50">
+		<td class="py-3 text-xs text-base-content/60">{ inbox.TagValue(item, "team:") }</td>
+		<td class="py-3 text-xs text-base-content/60">{ actorDisplayName(inbox.TagValue(item, "assignee:")) }</td>
+		<td class="py-3 text-xs text-base-content/40 tabular-nums">{ formatAge(item.CreatedAt) }</td>
+		<td class="py-3 text-xs text-base-content/40 tabular-nums">
 			if dl := item.Deadline(); dl != nil {
 				{ dl.Format("Jan 02, 15:04") }
 			}
@@ -131,6 +155,10 @@ templ priorityBadge(priority string) {
 			{ priority }
 		}
 	default:
-		<span class="text-xs text-base-content/50">{ priority }</span>
+		<span class="text-xs text-base-content/40">{ priority }</span>
 	}
+}
+
+func queueItemCount(data queueData) string {
+	return fmt.Sprintf("%d", len(data.Items))
 }

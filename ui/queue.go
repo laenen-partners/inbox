@@ -43,11 +43,21 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Count by priority for stat cards
+	counts := make(map[string]int)
+	for _, item := range items {
+		p := inbox.TagValue(item, "priority:")
+		if p != "" {
+			counts[p]++
+		}
+	}
+
 	data := queueData{
-		Items:         items,
-		Filters:       s.cfg.filters,
-		ActiveFilters: activeFilters,
-		BasePath:      s.cfg.basePath,
+		Items:          items,
+		Filters:        s.cfg.filters,
+		ActiveFilters:  activeFilters,
+		BasePath:       s.cfg.basePath,
+		PriorityCounts: counts,
 	}
 
 	// If next page exists, set cursor
@@ -67,9 +77,10 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 }
 
 type queueData struct {
-	Items         []inbox.Item
-	Filters       []FilterConfig
-	ActiveFilters map[string]string
-	BasePath      string
-	NextCursor    *time.Time
+	Items          []inbox.Item
+	Filters        []FilterConfig
+	ActiveFilters  map[string]string
+	BasePath       string
+	NextCursor     *time.Time
+	PriorityCounts map[string]int
 }

@@ -8,29 +8,47 @@ templ searchContent(data searchData) {
 	<div class="space-y-6">
 		<div>
 			<h1 class="text-2xl font-bold tracking-tight">Search</h1>
-			<p class="text-sm text-base-content/50 mt-1">Find items by title or description</p>
+			<p class="text-sm text-base-content/40 mt-1">Find items by title or description</p>
 		</div>
 		{{ signals := ds.NewSignals("search", struct {
 			Q string `json:"q"`
 		}{Q: data.Query}) }}
-		<form
+		<div
 			class="flex gap-2"
 			data-signals={ signals.DataSignals }
-			{ ds.On("submit", "$event.preventDefault(); " + ds.Get(data.BasePath + "/search", ds.WithFilterSignals("search")))... }
 		>
-			<input
-				type="text"
-				class="input input-bordered flex-1"
-				placeholder="Search inbox items..."
-				{ ds.Bind("search", "q")... }
-			/>
-			<button type="submit" class="btn btn-neutral">Search</button>
-		</form>
+			<div class="relative flex-1">
+				<input
+					type="text"
+					class="input input-bordered w-full pl-10"
+					placeholder="Type to search..."
+					{ ds.Bind("search", "q")... }
+					{ ds.On("keydown", "if(event.key==='Enter'){event.preventDefault();" + ds.Get(data.BasePath + "/search", ds.WithFilterSignals("search")) + "}")... }
+				/>
+				<svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+				</svg>
+			</div>
+			<button
+				class="btn btn-neutral"
+				{ ds.OnClick(ds.Get(data.BasePath + "/search", ds.WithFilterSignals("search")))... }
+			>
+				Search
+			</button>
+		</div>
 		if data.Query != "" {
 			@queueTable(queueData{
 				Items:    data.Items,
 				BasePath: data.BasePath,
 			})
+		} else {
+			<div class="border border-base-300 rounded-lg py-16">
+				<div class="text-center space-y-3">
+					<div class="text-4xl opacity-15">{ "\U0001F50D" }</div>
+					<p class="text-base-content/40 font-medium">Search across all items</p>
+					<p class="text-xs text-base-content/30">Enter a keyword to find items by title or description</p>
+				</div>
+			</div>
 		}
 	</div>
 }

@@ -25,27 +25,42 @@ templ clientStandalonePage(data clientData) {
 		Theme:     dsxCtx.Theme,
 		Head:      defaultHead(),
 	}) {
-		<div class="min-h-screen bg-base-200/50 flex items-start justify-center py-16 px-4">
-			<div class="bg-base-100 rounded-2xl shadow-sm border border-base-300 max-w-xl w-full">
-				<div class="p-8 space-y-6">
-					<div>
+		<div class="min-h-screen bg-base-200/40">
+			// Minimal top bar
+			<div class="border-b border-base-300 bg-base-100">
+				<div class="max-w-xl mx-auto px-6 py-4">
+					<span class="text-sm font-semibold tracking-tight text-base-content/60">Inbox</span>
+				</div>
+			</div>
+			// Content
+			<div class="max-w-xl mx-auto px-6 py-10">
+				<div class="bg-base-100 rounded-xl border border-base-300 overflow-hidden">
+					// Item header
+					<div class="px-8 pt-8 pb-6 border-b border-base-200">
 						<h1 class="text-xl font-semibold tracking-tight">{ data.Item.Title() }</h1>
 						if data.Item.Description() != "" {
-							<p class="text-sm text-base-content/60 mt-2 leading-relaxed">
+							<p class="text-sm text-base-content/50 mt-2 leading-relaxed">
 								{ data.Item.Description() }
 							</p>
 						}
 					</div>
-					if inbox.IsTerminal(data.Item.Status()) {
-						<div class="bg-success/10 text-success border border-success/20 rounded-lg p-4 text-sm">
-							This item has already been completed. Thank you.
-						</div>
-					} else if data.Schema != nil {
-						@clientSchemaForm(data)
-					} else {
-						<p class="text-base-content/50 text-sm">No form available for this item.</p>
-					}
+					// Body
+					<div class="px-8 py-6">
+						if inbox.IsTerminal(data.Item.Status()) {
+							<div class="flex items-center gap-3 bg-success/5 border border-success/15 rounded-lg p-4">
+								<svg class="w-5 h-5 text-success shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+								</svg>
+								<p class="text-sm text-success">This item has been completed. Thank you.</p>
+							</div>
+						} else if data.Schema != nil {
+							@clientSchemaForm(data)
+						} else {
+							<p class="text-base-content/40 text-sm">No form available for this item.</p>
+						}
+					</div>
 				</div>
+				<p class="text-center text-xs text-base-content/20 mt-6">Secured link — do not share</p>
 			</div>
 		</div>
 	}
@@ -55,20 +70,21 @@ templ clientSchemaForm(data clientData) {
 	{{ signals := buildSchemaSignals(data.Schema) }}
 	<div class="space-y-6" data-signals={ signals } data-signals__client={ `{"token":"` + data.Token + `"}` }>
 		if len(data.Schema.Display) > 0 {
-			<div class="bg-base-200/50 rounded-lg p-4">
-				<div class="grid grid-cols-2 gap-x-6 gap-y-3">
-					for _, d := range data.Schema.Display {
-						<div>
-							<div class="text-xs text-base-content/40 uppercase tracking-wide">{ d.Label }</div>
-							if d.Mono {
-								<div class="text-sm font-mono mt-0.5">{ d.Value }</div>
-							} else {
-								<div class="text-sm font-medium mt-0.5">{ d.Value }</div>
-							}
-						</div>
-					}
-				</div>
+			<div class="grid grid-cols-2 gap-x-6 gap-y-3">
+				for _, d := range data.Schema.Display {
+					<div>
+						<div class="text-[11px] uppercase tracking-widest text-base-content/30 font-medium">{ d.Label }</div>
+						if d.Mono {
+							<div class="text-sm font-mono mt-1">{ d.Value }</div>
+						} else {
+							<div class="text-sm font-medium mt-1">{ d.Value }</div>
+						}
+					</div>
+				}
 			</div>
+		}
+		if len(data.Schema.Display) > 0 && len(data.Schema.Fields) > 0 {
+			<div class="border-t border-base-200"></div>
 		}
 		if len(data.Schema.Fields) > 0 && data.Scope == "respond" {
 			<div class="space-y-5">
@@ -78,7 +94,7 @@ templ clientSchemaForm(data clientData) {
 			</div>
 		}
 		if data.Scope == "respond" && len(data.Schema.Actions) > 0 {
-			<div class="flex flex-wrap gap-2 pt-2">
+			<div class="flex gap-3 pt-2">
 				for _, a := range data.Schema.Actions {
 					@button.Button(button.Props{
 						Variant: buttonVariant(a.Variant),
