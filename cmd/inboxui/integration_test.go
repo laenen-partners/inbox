@@ -176,7 +176,6 @@ func TestSchemaRendererIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	handler := inboxui.Handler(ib,
-		inboxui.WithPayloadRenderer("inbox.v1.ItemSchema", inboxui.SchemaRenderer()),
 		inboxui.WithActor(func(r *http.Request) string { return "test" }),
 	)
 
@@ -253,7 +252,7 @@ func TestSchemaRendererIntegration(t *testing.T) {
 		handler.ServeHTTP(rec, req)
 		body := rec.Body.String()
 
-		for _, want := range []string{"Approve", "Reject", "badge-success", "badge-error"} {
+		for _, want := range []string{"Approve", "Reject", "btn-success", "btn-error"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("missing %q in response", want)
 			}

@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/inbox"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
@@ -27,10 +28,17 @@ func (s *server) handleDetail(w http.ResponseWriter, r *http.Request) {
 		BasePath: s.cfg.basePath,
 	}
 
-	// Resolve payload renderer
-	if fn, ok := s.cfg.payloadRenderers[item.PayloadType()]; ok {
-		if item.Proto.GetPayload() != nil {
-			data.PayloadComponent = fn(item.PayloadType(), item.Proto.GetPayload().GetValue())
+	// Try to parse as ItemSchema first (renders interactive form)
+	if item.Proto.GetPayload() != nil {
+		data.Schema = tryParseSchema(item.PayloadType(), item.Proto.GetPayload().GetValue())
+	}
+
+	// Fall back to custom payload renderer
+	if data.Schema == nil {
+		if fn, ok := s.cfg.payloadRenderers[item.PayloadType()]; ok {
+			if item.Proto.GetPayload() != nil {
+				data.PayloadComponent = fn(item.PayloadType(), item.Proto.GetPayload().GetValue())
+			}
 		}
 	}
 
@@ -48,4 +56,5 @@ type detailData struct {
 	IsClaimant       bool
 	BasePath         string
 	PayloadComponent templ.Component
+	Schema           *inboxv1.ItemSchema
 }

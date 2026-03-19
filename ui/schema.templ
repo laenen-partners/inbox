@@ -1,14 +1,15 @@
 package ui
 
 import (
-	"github.com/laenen-partners/dsx/ui/badge"
+	"github.com/laenen-partners/dsx/ds"
+	"github.com/laenen-partners/dsx/ui/button"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 )
 
-// schemaPayload renders an ItemSchema generically: display fields, form fields, and actions.
-templ schemaPayload(schema *inboxv1.ItemSchema) {
-	<div class="space-y-4">
-		// Display fields (read-only key/value pairs)
+templ schemaPayload(schema *inboxv1.ItemSchema, itemID string, basePath string) {
+	{{ signals := buildSchemaSignals(schema) }}
+	<div class="space-y-4" data-signals={ signals }>
+		// Display fields (read-only)
 		if len(schema.Display) > 0 {
 			<div class="grid grid-cols-2 gap-x-4 gap-y-2">
 				for _, d := range schema.Display {
@@ -21,7 +22,7 @@ templ schemaPayload(schema *inboxv1.ItemSchema) {
 				}
 			</div>
 		}
-		// Form fields
+		// Form fields (interactive)
 		if len(schema.Fields) > 0 {
 			<div class="space-y-3">
 				for _, f := range schema.Fields {
@@ -33,7 +34,7 @@ templ schemaPayload(schema *inboxv1.ItemSchema) {
 		if len(schema.Actions) > 0 {
 			<div class="flex flex-wrap gap-2 pt-2">
 				for _, a := range schema.Actions {
-					@schemaAction(a)
+					@schemaActionButton(a, itemID, basePath)
 				}
 			</div>
 		}
@@ -56,12 +57,15 @@ templ schemaField(f *inboxv1.FormField) {
 			<textarea
 				class="textarea textarea-bordered w-full mt-1"
 				placeholder={ f.Placeholder }
-				disabled
+				data-bind={ "schema." + f.Name }
 			>{ f.DefaultValue }</textarea>
 		case "select":
-			<select class="select select-bordered select-sm w-full mt-1" disabled>
+			<select
+				class="select select-bordered select-sm w-full mt-1"
+				data-bind={ "schema." + f.Name }
+			>
 				if f.Placeholder != "" {
-					<option value="" disabled selected>{ f.Placeholder }</option>
+					<option value="">{ f.Placeholder }</option>
 				}
 				for _, opt := range f.Options {
 					<option value={ opt } selected?={ opt == f.DefaultValue }>{ opt }</option>
@@ -69,7 +73,12 @@ templ schemaField(f *inboxv1.FormField) {
 			</select>
 		case "checkbox":
 			<div class="flex items-center gap-2 mt-1">
-				<input type="checkbox" class="checkbox checkbox-sm" disabled checked?={ f.DefaultValue == "true" }/>
+				<input
+					type="checkbox"
+					class="checkbox checkbox-sm"
+					data-bind={ "schema." + f.Name }
+					checked?={ f.DefaultValue == "true" }
+				/>
 				if f.Placeholder != "" {
 					<span class="text-sm">{ f.Placeholder }</span>
 				}
@@ -80,33 +89,36 @@ templ schemaField(f *inboxv1.FormField) {
 				class="input input-bordered input-sm w-full mt-1"
 				placeholder={ f.Placeholder }
 				value={ f.DefaultValue }
-				disabled
+				data-bind={ "schema." + f.Name }
 			/>
 		}
 	</div>
 }
 
-templ schemaAction(a *inboxv1.Action) {
-	{{ variant := actionVariant(a.Variant) }}
-	@badge.Badge(badge.Props{
-		Variant: variant,
-		Size:    badge.SizeSm,
+templ schemaActionButton(a *inboxv1.Action, itemID string, basePath string) {
+	@button.Button(button.Props{
+		Variant: buttonVariant(a.Variant),
+		Size:    button.SizeSm,
+		OnClick: ds.Post(basePath + "/items/" + itemID + "/respond"),
+		Attributes: ds.RawSignals(`{"schema":{"_action":"` + a.Name + `"}}`),
 	}) {
 		{ a.Label }
 	}
 }
 
-func actionVariant(v string) badge.Variant {
+func buttonVariant(v string) button.Variant {
 	switch v {
 	case "success":
-		return badge.VariantSuccess
+		return button.VariantSuccess
 	case "error":
-		return badge.VariantError
+		return button.VariantError
 	case "warning":
-		return badge.VariantWarning
+		return button.VariantWarning
 	case "neutral":
-		return badge.VariantNeutral
+		return button.VariantNeutral
+	case "outline":
+		return button.VariantOutline
 	default:
-		return badge.VariantInfo
+		return button.VariantInfo
 	}
 }

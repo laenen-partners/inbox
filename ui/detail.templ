@@ -51,10 +51,13 @@ templ detailDrawer(data detailData) {
 
 		// Payload
 		<div>
-			<h3 class="font-semibold mb-2">Payload</h3>
-			if data.PayloadComponent != nil {
+			if data.Schema != nil {
+				@schemaPayload(data.Schema, data.Item.ID, data.BasePath)
+			} else if data.PayloadComponent != nil {
+				<h3 class="font-semibold mb-2">Payload</h3>
 				@data.PayloadComponent
 			} else if data.Item.Proto.GetPayload() != nil {
+				<h3 class="font-semibold mb-2">Payload</h3>
 				@jsonview.JSONView(jsonview.Props{
 					Value: string(data.Item.Proto.GetPayload().GetValue()),
 				})
