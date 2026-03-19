@@ -1,0 +1,13 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "templ generate ./ui/ ./cmd/inboxui/ && go build -o ./tmp/inboxui ./cmd/inboxui/"
+  bin = "./tmp/inboxui -seed"
+  full_bin = "DATABASE_URL=${DATABASE_URL} ./tmp/inboxui -seed"
+  include_ext = ["go", "templ"]
+  exclude_dir = ["tmp", "gen", "docs", "proto"]
+  delay = 500
+
+[misc]
+  clean_on_exit = true
