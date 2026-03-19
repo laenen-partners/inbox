@@ -48,7 +48,8 @@ func (s *server) handleClientRespond(w http.ResponseWriter, r *http.Request) {
 		Scope:    claims.Scope,
 	}
 
-	s.renderPage(w, r, "/respond", clientPage(data))
+	// Render directly — bypass the app layout (no dashboard for client-facing pages)
+	clientStandalonePage(data).Render(r.Context(), w)
 }
 
 func (s *server) handleClientRespondSubmit(w http.ResponseWriter, r *http.Request) {

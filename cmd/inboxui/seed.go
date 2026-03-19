@@ -62,6 +62,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 				{Name: "approve", Label: "Approve All", Variant: "success"},
 				{Name: "reject", Label: "Reject", Variant: "error"},
 			},
+			ClientCompletable: true,
 		},
 	}); err != nil {
 		return err

@@ -1,10 +1,12 @@
 package ui
 
 import (
+	"github.com/laenen-partners/dsx"
 	"github.com/laenen-partners/dsx/ds"
+	"github.com/laenen-partners/dsx/layouts"
 	"github.com/laenen-partners/dsx/ui/button"
-	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/inbox"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 )
 
 type clientData struct {
@@ -15,24 +17,35 @@ type clientData struct {
 	Scope    string
 }
 
-templ clientPage(data clientData) {
-	<div class="max-w-2xl mx-auto py-8 space-y-6">
-		<div>
-			<h1 class="text-2xl font-bold">{ data.Item.Title() }</h1>
-			if data.Item.Description() != "" {
-				<p class="text-base-content/70 mt-2">{ data.Item.Description() }</p>
-			}
-		</div>
-		if inbox.IsTerminal(data.Item.Status()) {
-			<div class="alert alert-info">
-				This item has already been completed.
+// clientStandalonePage renders a minimal page WITHOUT the dashboard layout.
+templ clientStandalonePage(data clientData) {
+	{{ dsxCtx := dsx.FromContext(ctx) }}
+	@layouts.Base(layouts.BaseProps{
+		Title:     data.Item.Title(),
+		CSRFToken: dsxCtx.CSRFToken,
+		Theme:     dsxCtx.Theme,
+		Head:      defaultHead(),
+	}) {
+		<div class="min-h-screen bg-base-200 flex items-start justify-center py-12 px-4">
+			<div class="bg-base-100 rounded-xl shadow-lg max-w-2xl w-full p-8 space-y-6">
+				<div>
+					<h1 class="text-2xl font-bold">{ data.Item.Title() }</h1>
+					if data.Item.Description() != "" {
+						<p class="text-base-content/70 mt-2">{ data.Item.Description() }</p>
+					}
+				</div>
+				if inbox.IsTerminal(data.Item.Status()) {
+					<div class="alert alert-info">
+						This item has already been completed.
+					</div>
+				} else if data.Schema != nil {
+					@clientSchemaForm(data)
+				} else {
+					<p class="text-base-content/60">No form available for this item.</p>
+				}
 			</div>
-		} else if data.Schema != nil {
-			@clientSchemaForm(data)
-		} else {
-			<p class="text-base-content/60">No form available for this item.</p>
-		}
-	</div>
+		</div>
+	}
 }
 
 templ clientSchemaForm(data clientData) {

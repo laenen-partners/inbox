@@ -23,16 +23,18 @@ func (s *server) handleDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := detailData{
-		Item:       item,
-		Actor:      actor,
-		BasePath:   s.cfg.basePath,
-		CanLink:    s.cfg.signer != nil,
+		Item:     item,
+		Actor:    actor,
+		BasePath: s.cfg.basePath,
 	}
 
 	// Try to parse as ItemSchema first (renders interactive form)
 	if item.Proto.GetPayload() != nil {
 		data.Schema = tryParseSchema(item.PayloadType(), item.Proto.GetPayload().GetValue())
 	}
+
+	// Only show "Send as Link" if signer is configured AND schema is client-completable
+	data.CanLink = s.cfg.signer != nil && data.Schema != nil && data.Schema.ClientCompletable
 
 	// Fall back to custom payload renderer
 	if data.Schema == nil {

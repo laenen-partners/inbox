@@ -146,11 +146,17 @@ func (s *server) refreshDetailAndToast(w http.ResponseWriter, r *http.Request, i
 		Actor:    actor,
 		BasePath: s.cfg.basePath,
 	}
-	if fn, ok := s.cfg.payloadRenderers[item.PayloadType()]; ok {
-		if item.Proto.GetPayload() != nil {
-			data.PayloadComponent = fn(item.PayloadType(), item.Proto.GetPayload().GetValue())
+	if item.Proto.GetPayload() != nil {
+		data.Schema = tryParseSchema(item.PayloadType(), item.Proto.GetPayload().GetValue())
+	}
+	if data.Schema == nil {
+		if fn, ok := s.cfg.payloadRenderers[item.PayloadType()]; ok {
+			if item.Proto.GetPayload() != nil {
+				data.PayloadComponent = fn(item.PayloadType(), item.Proto.GetPayload().GetValue())
+			}
 		}
 	}
+	data.CanLink = s.cfg.signer != nil && data.Schema != nil && data.Schema.ClientCompletable
 	assignee := inbox.TagValue(item, "assignee:")
 	data.IsClaimant = assignee == actor
 
