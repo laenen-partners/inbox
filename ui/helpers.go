@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -85,6 +87,37 @@ func buildFilterSignalsJSON(filters []FilterConfig, active map[string]string) st
 	}
 	buf = append(buf, '}')
 	return string(buf)
+}
+
+// readFilterValues reads filter values from a request. Datastar sends signals
+// in a ?datastar= JSON query param for GET requests, so we check there first,
+// then fall back to regular query params (for non-Datastar requests).
+func (s *server) readFilterValues(r *http.Request) map[string]string {
+	values := make(map[string]string)
+
+	if dsJSON := r.URL.Query().Get("datastar"); dsJSON != "" {
+		var raw map[string]json.RawMessage
+		if json.Unmarshal([]byte(dsJSON), &raw) == nil {
+			for _, f := range s.cfg.filters {
+				key := filterKey(f.TagPrefix)
+				if v, ok := raw[key]; ok {
+					var val string
+					if json.Unmarshal(v, &val) == nil && val != "" {
+						values[key] = val
+					}
+				}
+			}
+			return values
+		}
+	}
+
+	for _, f := range s.cfg.filters {
+		key := filterKey(f.TagPrefix)
+		if v := r.URL.Query().Get(key); v != "" {
+			values[key] = v
+		}
+	}
+	return values
 }
 
 // actorDisplayName extracts a human-readable name from an actor string.

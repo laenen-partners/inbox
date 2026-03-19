@@ -131,8 +131,9 @@ func TestFilterDropdowns(t *testing.T) {
 	})
 
 	t.Run("sse_with_priority_filter", func(t *testing.T) {
-		// Simulate what Datastar @get sends: SSE request with filter as query param
-		req := httptest.NewRequest("GET", "/?priority=urgent", nil)
+		// Datastar sends signals as ?datastar={"priority":"urgent","team":""}
+		dsParam := `{"priority":"urgent","team":""}`
+		req := httptest.NewRequest("GET", "/?datastar="+dsParam, nil)
 		req.Header.Set("Accept", "text/event-stream")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -153,7 +154,8 @@ func TestFilterDropdowns(t *testing.T) {
 	})
 
 	t.Run("sse_with_team_filter", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/?team=finance", nil)
+		dsParam := `{"priority":"","team":"finance"}`
+		req := httptest.NewRequest("GET", "/?datastar="+dsParam, nil)
 		req.Header.Set("Accept", "text/event-stream")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -161,7 +163,6 @@ func TestFilterDropdowns(t *testing.T) {
 		body := rec.Body.String()
 		t.Logf("SSE Body:\n%s", body)
 
-		// No items have team:finance, so should be empty
 		if strings.Contains(body, "Item urgent") || strings.Contains(body, "Item normal") {
 			t.Error("SSE response should have no items for team:finance")
 		}
