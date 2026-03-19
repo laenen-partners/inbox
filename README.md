@@ -205,7 +205,6 @@ Items are routed and filtered entirely via tags — free-form `key:value` string
 | `assignee:user:sarah` | Assigned human or agent |
 | `source:workflow:inv-123` | What created this item |
 | `workflow:onboarding-456` | Parent workflow |
-| `callback:https://...` | Response delivery address |
 | `ref:invoice:789` | Link to a related entity |
 | `status:open` | Mirrored from the status field |
 
