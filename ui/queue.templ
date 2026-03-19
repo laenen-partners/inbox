@@ -27,7 +27,7 @@ templ queueFilters(data queueData) {
 		for _, f := range data.Filters {
 			<select
 				class="select select-bordered select-sm"
-				{ ds.Bind("", filterKey(f.TagPrefix))... }
+				data-bind={ filterKey(f.TagPrefix) }
 				{ ds.On("change", ds.Get(data.BasePath+"/"))... }
 			>
 				<option value="">{ f.Label }: All</option>
