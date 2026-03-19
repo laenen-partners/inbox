@@ -1,12 +1,197 @@
 # inbox
 
-A task-driven inbox system backed by the [entity store](https://github.com/laenen-partners/entitystore). Inbox items are units of work to be resolved by a human or AI agent — approvals, reviews, data collection, compliance checks, or any async decision point in a workflow.
+A task-driven inbox for GenAI-first applications, backed by the [entity store](https://github.com/laenen-partners/entitystore). Inbox items are units of work to be resolved by a human or AI agent — approvals, reviews, data collection, compliance checks, or any async decision point in a workflow.
+
+The inbox is the coordination layer between AI agents, humans, and workflows. AI agents create items, triage them, resolve what they can, and escalate what they can't. Humans see the same items, with the same API, in the same queue. The system doesn't distinguish between the two — it just tracks who did what.
+
+## Use cases
+
+### AI agent triage and routing
+
+An AI extraction pipeline processes incoming documents. When confidence is high, it resolves automatically. When confidence is low or a conflict is detected, it creates an inbox item for human review — tagged with the right team, priority, and context.
+
+```
+Document arrives → AI extracts data → confidence < threshold
+    → inbox.Create(type:review, team:ops, payload: extraction result)
+    → human reviews, corrects, responds
+    → workflow continues with corrected data
+```
+
+### Human-in-the-loop for compliance (KYC/AML)
+
+Eligibility rules flag requirements that need human judgment — PEP screening, source of funds, sanctions checks. The inbox bridges the gap between automated evaluation and manual decision-making.
+
+```
+Prodcat evaluates eligibility → requirement pending (manual_review)
+    → inbox.Create(type:review, team:compliance, payload: requirement details)
+    → compliance officer claims, reviews screening report, approves/rejects
+    → workflow re-evaluates with the decision, activates subscription
+```
+
+### Customer data collection
+
+When a customer application is missing data (ID documents, address proof, employment details), the inbox creates items assigned to the customer. The customer — or an RM acting on their behalf — provides the data.
+
+```
+Eligibility evaluation → missing passport
+    → inbox.Create(type:input_required, assignee:customer:CUST-123)
+    → customer uploads document via action form
+    → workflow re-evaluates eligibility
+```
+
+### RM override on behalf of client
+
+A relationship manager can claim and respond to any item assigned to their clients. The event trail captures the delegation — who acted, on whose behalf, and why.
+
+```
+Customer can't complete online → calls the bank
+    → RM claims the item, acts on behalf of client
+    → event trail: actor=user:rm:sarah, on_behalf_of=customer:CUST-123
+```
+
+### AI agent auto-resolution
+
+An AI agent watches the inbox via semantic search or tag subscriptions. When it finds items it can handle (e.g. straightforward verifications, known patterns), it responds automatically. Items it can't handle stay for humans.
+
+```
+Agent polls: ib.ListByTags(["status:open", "type:verification"])
+    → for each item: evaluate confidence
+    → high confidence: ib.On(itemID, "agent:auto-verify").
+          WithEvent(&VerificationCompleted{...}).
+          Respond("approve", "Auto-verified").
+          TransitionTo(StatusCompleted).Apply()
+    → low confidence: skip (human picks it up)
+```
+
+### Multi-step onboarding journey
+
+A single workflow creates multiple inbox items — some for the customer, some for compliance, some for ops. Tags link them all to the same workflow for correlation. The workflow completes when all items reach terminal states.
+
+```
+Onboarding workflow starts
+    → inbox.Create(type:action, assignee:customer, "Verify email")
+    → inbox.Create(type:input_required, assignee:customer, "Upload ID")
+    → inbox.Create(type:review, team:compliance, "PEP screening")
+    → workflow polls: ib.ListByTags(["workflow:onboarding-456", "status:open"])
+    → all completed → activate subscription
+```
+
+### Escalation chains
+
+Ops discovers an item needs specialist review. They escalate to compliance, which escalates to legal. Each escalation updates the team tags and records a typed event — the full chain is visible in the audit trail.
+
+```
+Ops claims → reviews → escalates to compliance
+    → ib.Escalate(itemID, "user:ops:marco", "ops", "compliance", "Needs EDD")
+    → compliance claims → escalates to legal
+    → full trail: ops → compliance → legal, with reasons at each step
+```
+
+## Architecture
+
+```
+                        +-----------------------+
+                        |      Workflows        |
+                        |  (DBOS, cron, etc.)   |
+                        +----------+------------+
+                                   |
+                          Create / Complete
+                          UpdatePayload
+                                   |
+                                   v
++------------+    Respond    +----------+    callback     +------------+
+|   Human    | -----------> |          | --------------> |  Workflow   |
+|   (RM,     |    Claim     |  Inbox   |                 |  Engine    |
+|  client)   |    Comment   |          | <-- Create      +------------+
++------------+              +----+-----+
+                                 |
++------------+    Respond        |
+|  AI Agent  | ----------->     |
+|  (triage,  |    WithEvent     |
+|   KYC bot) |    Comment       |
++------------+                  |
+                                v
+                   +------------------------+
+                   |     Entity Store       |
+                   |  (PostgreSQL + JSONB)  |
+                   |                        |
+                   |  +------------------+  |
+                   |  | entities         |  |
+                   |  |  - id            |  |
+                   |  |  - entity_type   |  |
+                   |  |  - data (JSONB)  |  |
+                   |  |  - tags[]        |  |
+                   |  |  - embedding     |  |
+                   |  +------------------+  |
+                   +------------------------+
+                                |
+            +-------------------+-------------------+
+            |                   |                   |
+      Tags (GIN)         Tokens (GIN)        Embeddings
+      routing &          fuzzy text          semantic
+      filtering          search              search
+```
+
+### Data flow
+
+```
+Workflow/Agent/Human
+        |
+        |  inbox.Create(meta)
+        v
+  +-- Inbox Item (entity) ----------------------------------+
+  |                                                         |
+  |  title: "PEP screening review — Ahmed K."               |
+  |  status: open                                           |
+  |  payload_type: eligibility.v1.EligibilityReviewPayload  |
+  |  payload: { subscriptionId: "SUB-042", ... }            |
+  |                                                         |
+  |  tags: [type:review, team:compliance, priority:high,    |
+  |         status:open, workflow:onboarding-456]            |
+  |                                                         |
+  |  events:                                                |
+  |    [inbox.v1.ItemCreated]  workflow:onboarding-456       |
+  |    [inbox.v1.ItemClaimed]  user:compliance:fatima        |
+  |    [inbox.v1.CommentAppended] "Checked screening..."    |
+  |    [inbox.v1.ItemResponded]  approve                    |
+  |    [inbox.v1.ItemCompleted]  workflow:onboarding-456     |
+  +------ ----- ----- ----- ----- ----- ----- ----- -------+
+```
+
+### Item lifecycle
+
+```
+              Create
+                |
+                v
+  +--------+  Claim   +---------+
+  |  open  | -------> | claimed |
+  +---+----+          +----+----+
+      ^                    |
+      |     Release        |
+      +--------------------+
+      |                    |
+      |    Respond (no status change)
+      |                    |
+      v                    v
+  +---------+        +-----------+
+  | expired |        | completed |
+  +---------+        +-----------+
+      ^
+      |                +-----------+
+      +-- Expire       | cancelled |
+                       +-----------+
+                            ^
+                            |
+                       Cancel (from any
+                        non-terminal)
+```
 
 ## Concepts
 
 ### Items are entities
 
-Every inbox item is an entity in the entity store (type `inbox.item`). This means items get tags, embeddings, token search, provenance tracking, and all other entity store features for free. There is no separate `inbox_items` table.
+Every inbox item is an entity in the entity store (type `inbox.v1.Item`). This means items get tags, embeddings, token search, provenance tracking, and all other entity store features for free. There is no separate `inbox_items` table.
 
 ### Tags as routing
 
@@ -20,6 +205,7 @@ Items are routed and filtered entirely via tags — free-form `key:value` string
 | `assignee:user:sarah` | Assigned human or agent |
 | `source:workflow:inv-123` | What created this item |
 | `workflow:onboarding-456` | Parent workflow |
+| `callback:https://...` | Response delivery address |
 | `ref:invoice:789` | Link to a related entity |
 | `status:open` | Mirrored from the status field |
 
@@ -35,7 +221,7 @@ This gives you:
 
 ### Typed events
 
-Every state change, comment, and action on an item produces a typed event. Each event has a `type` field set to the fully qualified proto message name (e.g. `inbox.v1.ItemClaimed`), derived automatically from the proto message — never set manually. Events are append-only and form a lightweight thread on each item.
+Every operation on an item produces a typed event. The `Event.Type` field is the fully qualified proto message name (e.g. `inbox.v1.ItemClaimed`), derived automatically from the proto message — never set manually.
 
 Custom domain events are emitted via `WithEvent(proto.Message)` on the Op builder.
 
@@ -69,9 +255,7 @@ The inbox is **not** event-sourced. The item's current state — `status`, `payl
 | Who approved it and when? | `item.Events` (audit trail) |
 | Average time-to-response? | `item.Events` (analytics) |
 
-When a workflow updates the payload (e.g. after re-evaluating eligibility rules), it calls `UpdatePayload()` and the item reflects the latest state immediately. Consumers always read current state, never reconstruct it.
-
-Events are an **audit log**, not a projection source. They tell you what happened, not what the current state is.
+Events are an **audit log**, not a projection source.
 
 ### Workflow integration
 
@@ -95,21 +279,19 @@ import (
     "github.com/laenen-partners/inbox"
 )
 
-// Create the entity store.
 pool, _ := pgxpool.New(ctx, connString)
 es, _ := entitystore.New(entitystore.WithPgStore(pool))
 
-// Create the inbox.
+// Basic inbox.
 ib := inbox.New(es)
 
-// With a callback dispatcher for workflow integration:
+// With callback dispatcher for workflow integration.
 ib := inbox.New(es, inbox.WithDispatcher(myWebhookDispatcher))
 ```
 
 ### Creating items
 
 ```go
-// Simple approval item.
 item, err := ib.Create(ctx, inbox.Meta{
     Title:       "Approve vendor invoice #1234",
     Description: "Invoice from Acme Corp for $5,000. Matches PO-789.",
@@ -127,7 +309,6 @@ item, err := ib.Create(ctx, inbox.Meta{
 ### Creating items with typed payloads
 
 ```go
-// Pack a proto payload.
 typeURL, data, _ := inbox.PackPayload(&eligibilityv1.EligibilityReviewPayload{
     SubscriptionId:  "SUB-2026-0042",
     ProductName:     "Current Account — AED",
@@ -142,12 +323,7 @@ item, err := ib.Create(ctx, inbox.Meta{
     PayloadType: typeURL,
     Payload:     data,
     Actor:       "workflow:onboarding-456",
-    Tags: []string{
-        "type:review",
-        "team:compliance",
-        "priority:high",
-        "ref:subscription:SUB-2026-0042",
-    },
+    Tags:        []string{"type:review", "team:compliance", "priority:high"},
 })
 
 // Or use the SetPayload convenience:
@@ -156,36 +332,42 @@ inbox.SetPayload(&meta, &myProtoPayload)
 item, err := ib.Create(ctx, meta)
 ```
 
+### Idempotency
+
+Set `IdempotencyKey` to prevent duplicate item creation on workflow retries:
+
+```go
+item, err := ib.Create(ctx, inbox.Meta{
+    Title:          "Upload Emirates ID",
+    Actor:          "workflow:onboarding-456",
+    IdempotencyKey: "workflow:onboarding-456:valid_passport",
+    Tags:           []string{"type:input_required", "assignee:customer:CUST-1234"},
+})
+```
+
 ### Item lifecycle
 
 ```go
-// Claim an item.
 item, err := ib.Claim(ctx, itemID, "user:sarah")
-
-// Release back to the pool.
 item, err := ib.Release(ctx, itemID, "user:sarah")
 
-// Respond (does NOT complete the item — workflow decides).
+// Respond does NOT complete — workflow decides.
 item, err := ib.Respond(ctx, itemID, inbox.Response{
     Actor:   "user:sarah",
     Action:  "approve",
     Comment: "Verified against PO, amounts match.",
 })
 
-// Workflow completes the item after processing the response.
 item, err := ib.Complete(ctx, itemID, "workflow:invoice-processing-456")
-
-// Or cancel / expire.
 item, err := ib.Cancel(ctx, itemID, "user:sarah", "Duplicate item")
 item, err := ib.Expire(ctx, itemID)
 ```
 
 ### Batch operations with Op builder
 
-The `Op` builder collects multiple mutations and events on an item and flushes them in a single entity store write. This is the recommended way to perform compound operations.
+The `Op` builder collects multiple mutations and events on an item and flushes them in a single entity store write.
 
 ```go
-// Compliance officer responds, updates payload, comments, and completes — one write.
 item, err := ib.On(ctx, itemID, "user:compliance:fatima").
     Respond("approve", "False positive — name similarity only.").
     UpdatePayload(typeURL, resolvedPayload).
@@ -197,7 +379,7 @@ item, err := ib.On(ctx, itemID, "user:compliance:fatima").
 
 #### Custom domain events
 
-Use `WithEvent` to emit custom proto events alongside standard operations. The `Event.Type` is derived automatically from the proto message name.
+Use `WithEvent` to emit custom proto events. `Event.Type` is derived from the proto message name.
 
 ```go
 item, err := ib.On(ctx, itemID, "agent:kyc-bot").
@@ -210,15 +392,9 @@ item, err := ib.On(ctx, itemID, "agent:kyc-bot").
         Validated: true,
         Method:    "utility_bill",
     }).
-    Comment("All automated checks passed. Ready for final review.").
+    Comment("All automated checks passed.").
     Apply()
 ```
-
-Every event gets:
-- `type` set to the fully qualified proto message name (e.g. `kyc.v1.IDVCompleted`)
-- `data` set to the proto message serialized as JSON
-- `actor` inherited from the `On()` call
-- `at` timestamped at `Apply()` time
 
 #### Op builder methods
 
@@ -231,79 +407,38 @@ Every event gets:
 | `CommentWith(body, opts)` | Add a comment with visibility/refs |
 | `Tag(tags...)` | Add tags |
 | `Untag(tags...)` | Remove tags |
-| `TransitionTo(status)` | Change status (completed, cancelled, etc.) |
+| `TransitionTo(status)` | Change status |
 | `Apply()` | Flush all mutations in one write |
 
-### Comments
+### Comments, escalation, reassignment
 
 ```go
-// Simple comment.
-item, err := ib.Comment(ctx, itemID, "user:sarah", "Spoke with client, docs arriving tomorrow.", nil)
+ib.Comment(ctx, itemID, "user:sarah", "Spoke with client.", nil)
+ib.Comment(ctx, itemID, "user:sarah", "Internal note.",
+    &inbox.CommentOpts{Visibility: []string{"team:compliance"}})
 
-// Internal comment visible only to compliance.
-item, err := ib.Comment(ctx, itemID, "user:sarah",
-    "PEP status is historical — low risk.",
-    &inbox.CommentOpts{Visibility: []string{"team:compliance"}},
-)
-```
-
-### Escalation and reassignment
-
-```go
-// Escalate from ops to compliance.
-item, err := ib.Escalate(ctx, itemID, "user:sarah", "ops", "compliance",
-    "Sanctions screening flagged — needs compliance review")
-
-// Reassign to a specific person.
-item, err := ib.Reassign(ctx, itemID, "user:manager",
-    "user:sarah", "user:ahmed", "Ahmed handles PEP reviews")
+ib.Escalate(ctx, itemID, "user:sarah", "ops", "compliance", "Needs EDD")
+ib.Reassign(ctx, itemID, "user:manager", "user:sarah", "user:ahmed", "PEP specialist")
 ```
 
 ### Tags
 
 ```go
-// Add tags.
-err := ib.Tag(ctx, itemID, "user:sarah", "priority:urgent", "escalated")
+ib.Tag(ctx, itemID, "user:sarah", "priority:urgent", "escalated")
+ib.Untag(ctx, itemID, "user:sarah", "priority:normal")
 
-// Remove a tag.
-err := ib.Untag(ctx, itemID, "user:sarah", "priority:normal")
-
-// Query helpers.
-team := inbox.TagValue(item, "team:")           // "compliance"
-refs := inbox.TagsWithPrefix(item, "ref:")       // ["ref:invoice:INV-1234"]
-isUrgent := inbox.HasTag(item, "priority:urgent") // true
+inbox.TagValue(item, "team:")            // "compliance"
+inbox.TagsWithPrefix(item, "ref:")       // ["ref:invoice:INV-1234"]
+inbox.HasTag(item, "priority:urgent")    // true
 ```
 
 ### Querying
 
 ```go
-// List by tags.
-items, err := ib.ListByTags(ctx, []string{"status:open", "team:compliance"}, inbox.ListOpts{PageSize: 20})
-
-// Fuzzy text search.
-items, err := ib.Search(ctx, "PEP screening Ahmed", inbox.ListOpts{})
-
-// Semantic search (requires embeddings).
-items, err := ib.SemanticSearch(ctx, embeddingVector, 10)
-
-// Stale items (no activity for 2 hours).
-items, err := ib.Stale(ctx, []string{"status:open", "priority:urgent"}, 2*time.Hour, inbox.ListOpts{})
-```
-
-### Unpacking payloads
-
-```go
-item, _ := ib.Get(ctx, itemID)
-
-// Check the payload type.
-fmt.Println(item.PayloadType) // "type.googleapis.com/eligibility.v1.EligibilityReviewPayload"
-
-// Unpack into a concrete proto.
-var review eligibilityv1.EligibilityReviewPayload
-if err := inbox.UnpackPayload(item.Payload, &review); err != nil {
-    // handle error
-}
-fmt.Println(review.RequirementName) // "pep_screening_clear"
+ib.ListByTags(ctx, []string{"status:open", "team:compliance"}, inbox.ListOpts{PageSize: 20})
+ib.Search(ctx, "PEP screening Ahmed", inbox.ListOpts{})
+ib.SemanticSearch(ctx, embeddingVector, 10)
+ib.Stale(ctx, []string{"status:open", "priority:urgent"}, 2*time.Hour, inbox.ListOpts{})
 ```
 
 ### Reading events
@@ -312,59 +447,40 @@ fmt.Println(review.RequirementName) // "pep_screening_clear"
 for _, evt := range item.Events {
     fmt.Printf("[%s] %s\n", evt.Type, evt.Actor)
 
-    // Switch on the proto message name.
     switch evt.Type {
     case "inbox.v1.CommentAppended":
-        var comment inboxv1.CommentAppended
-        json.Unmarshal(evt.Data, &comment)
-        fmt.Printf("  comment: %s (visibility: %v)\n", comment.Body, comment.Visibility)
-
-    case "inbox.v1.ItemEscalated":
-        var esc inboxv1.ItemEscalated
-        json.Unmarshal(evt.Data, &esc)
-        fmt.Printf("  escalated: %s → %s\n", esc.FromTeam, esc.ToTeam)
+        var c inboxv1.CommentAppended
+        json.Unmarshal(evt.Data, &c)
 
     case "kyc.v1.IDVCompleted":
         var idv kycpb.IDVCompleted
         json.Unmarshal(evt.Data, &idv)
-        fmt.Printf("  IDV: liveness=%v confidence=%.2f\n", idv.LivenessPassed, idv.Confidence)
     }
 }
 ```
 
 ## How it's stored
 
-An inbox item maps to a single row in the entity store's `entities` table:
-
 ```
 entity_type: "inbox.v1.Item"
 tags:        ["type:review", "team:compliance", "status:open", "priority:high"]
 data (JSONB): {
   "title": "PEP screening review — Ahmed K.",
-  "description": "Customer flagged as PEP during onboarding.",
   "status": "open",
-  "payload_type": "type.googleapis.com/eligibility.v1.EligibilityReviewPayload",
-  "payload": {
-    "@type": "type.googleapis.com/eligibility.v1.EligibilityReviewPayload",
-    "subscriptionId": "SUB-2026-0042",
-    ...
-  },
+  "payload_type": "eligibility.v1.EligibilityReviewPayload",
+  "payload": { "subscription_id": "SUB-2026-0042", ... },
   "events": [
     {
       "at": "2026-03-18T10:00:00Z",
       "actor": "workflow:onboarding-456",
       "type": "inbox.v1.ItemCreated",
-      "data": {"payload_type": "type.googleapis.com/eligibility.v1.EligibilityReviewPayload"}
+      "data": { "payload_type": "eligibility.v1.EligibilityReviewPayload" }
     },
     {
       "at": "2026-03-18T14:30:00Z",
       "actor": "agent:kyc-bot",
       "type": "kyc.v1.IDVCompleted",
-      "data": {
-        "liveness_passed": true,
-        "facial_match_passed": true,
-        "confidence": 0.98
-      }
+      "data": { "liveness_passed": true, "confidence": 0.98 }
     }
   ]
 }
