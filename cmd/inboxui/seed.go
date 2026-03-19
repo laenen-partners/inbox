@@ -12,28 +12,26 @@ import (
 func seedData(ctx context.Context, ib *inbox.Inbox) error {
 	deadline := time.Now().Add(48 * time.Hour)
 
-	// --- Schema-based items (using ItemSchema proto) ---
-
-	// Address collection
+	// --- KYC document upload (file + image fields) ---
 	if _, err := ib.Create(ctx, inbox.Meta{
-		Title:       "Collect customer address",
-		Description: "Residential address required for KYC verification.",
-		Tags:        []string{"type:input_required", "priority:normal", "team:ops"},
+		Title:       "Upload identity documents",
+		Description: "Please upload your identity document and a recent proof of address to continue opening your account.",
+		Tags:        []string{"type:input_required", "priority:high", "team:ops", "assignee:customer:CUST-1234"},
 		Actor:       "workflow:onboarding-001",
+		Deadline:    &deadline,
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
 				{Label: "Customer", Value: "CUST-1234"},
 				{Label: "Product", Value: "Current Account — AED"},
-				{Label: "Subscription", Value: "SUB-2026-0042", Mono: true},
+				{Type: "alert", Variant: "info", Value: "Accepted documents: passport, national ID, or driver's license. Must be valid and not expired."},
 			},
 			Fields: []*inboxv1.FormField{
-				{Name: "street", Type: "text", Label: "Street", Placeholder: "123 Main Street", Required: true},
-				{Name: "city", Type: "text", Label: "City", Placeholder: "Amsterdam", Required: true},
-				{Name: "zip", Type: "text", Label: "ZIP / Postal Code", Placeholder: "1012 AB", Required: true},
-				{Name: "country", Type: "select", Label: "Country", Options: []string{"Netherlands", "Belgium", "Germany", "France", "United Kingdom"}, Required: true},
+				{Name: "id_doc", Type: "file", Label: "Identity Document", Description: "Passport, national ID, or driver's license.", Accept: ".pdf,.jpg,.png", MaxSizeMb: 10, Required: true},
+				{Name: "selfie", Type: "image", Label: "Selfie with ID", Description: "Take a photo holding your ID next to your face.", MaxSizeMb: 5, Required: true},
+				{Name: "proof_address", Type: "file", Label: "Proof of Address", Description: "Utility bill or bank statement within last 3 months.", Accept: ".pdf,.jpg,.png", MaxSizeMb: 10, Required: true},
 			},
 			Actions: []*inboxv1.Action{
-				{Name: "submit", Label: "Submit Address", Variant: "success"},
+				{Name: "submit", Label: "Submit Documents", Variant: "success"},
 			},
 			ClientCompletable: true,
 		},
@@ -41,26 +39,25 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		return err
 	}
 
-	// Consent collection
+	// --- Contract review (document display + signature) ---
 	if _, err := ib.Create(ctx, inbox.Meta{
-		Title:       "Customer consent review",
-		Description: "New customer onboarding requires consent verification for 3 items.",
-		Tags:        []string{"type:approval", "priority:high", "team:compliance"},
+		Title:       "Review and sign service agreement",
+		Description: "Please review the service agreement and sign to activate your account.",
+		Tags:        []string{"type:approval", "priority:normal", "team:ops", "assignee:customer:CUST-1234"},
 		Actor:       "workflow:onboarding-001",
-		Deadline:    &deadline,
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
 				{Label: "Customer", Value: "CUST-1234"},
-				{Label: "Onboarding", Value: "workflow:onboarding-001", Mono: true},
+				{Type: "document", Label: "Service Agreement v2.1", Value: "/assets/docs/agreement.pdf"},
+				{Type: "alert", Variant: "warning", Value: "Please read the full agreement before signing. This is a legally binding document."},
 			},
 			Fields: []*inboxv1.FormField{
-				{Name: "dpa", Type: "checkbox", Label: "Data Processing Agreement", Description: "Consent to process personal data under GDPR Article 6(1)(a).", Required: true},
-				{Name: "marketing", Type: "checkbox", Label: "Marketing Communications", Description: "Opt-in to receive product updates and promotional emails."},
-				{Name: "third_party", Type: "checkbox", Label: "Third-Party Data Sharing", Description: "Allow sharing anonymized data with analytics partners."},
+				{Name: "read_agreement", Type: "checkbox", Label: "I have read and understood the service agreement", Required: true},
+				{Name: "signature", Type: "signature", Label: "Signature", Description: "Sign in the box below."},
 			},
 			Actions: []*inboxv1.Action{
-				{Name: "approve", Label: "Approve All", Variant: "success"},
-				{Name: "reject", Label: "Reject", Variant: "error"},
+				{Name: "sign", Label: "Sign Agreement", Variant: "success"},
+				{Name: "request_changes", Label: "Request Changes", Variant: "outline"},
 			},
 			ClientCompletable: true,
 		},
@@ -68,64 +65,110 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		return err
 	}
 
-	// Payment terms decision (multi-choice)
+	// --- Email verification (OTP field) ---
 	if _, err := ib.Create(ctx, inbox.Meta{
-		Title:       "Payment terms decision",
-		Description: "Non-standard payment terms requested. Select appropriate terms based on credit assessment.",
-		Tags:        []string{"type:review", "priority:normal", "team:finance"},
-		Actor:       "workflow:contract-review",
-		Payload: &inboxv1.ItemSchema{
-			Display: []*inboxv1.DisplayField{
-				{Label: "Customer", Value: "Acme Corp"},
-				{Label: "Credit Score", Value: "B+"},
-				{Label: "Requested Terms", Value: "Net 60"},
-			},
-			Fields: []*inboxv1.FormField{
-				{Name: "terms", Type: "select", Label: "Payment Terms", Options: []string{"Net 30 (standard)", "Net 60 (extended)", "Net 90 (enterprise)", "Prepayment required"}, Required: true},
-				{Name: "reason", Type: "textarea", Label: "Justification", Placeholder: "Explain the decision...", Required: true},
-			},
-			Actions: []*inboxv1.Action{
-				{Name: "approve", Label: "Set Terms", Variant: "success"},
-			},
-		},
-	}); err != nil {
-		return err
-	}
-
-	// PEP screening (document checklist)
-	if _, err := ib.Create(ctx, inbox.Meta{
-		Title:       "PEP screening review",
-		Description: "Customer flagged as PEP during onboarding. Verify provided documents.",
-		Tags:        []string{"type:review", "priority:urgent", "team:compliance"},
+		Title:       "Verify your email address",
+		Description: "We sent a 6-digit code to your email. Enter it below to verify your address.",
+		Tags:        []string{"type:action", "priority:high", "team:ops", "assignee:customer:CUST-2000"},
 		Actor:       "workflow:onboarding-001",
-		Deadline:    &deadline,
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
-				{Label: "Customer", Value: "CUST-5678"},
-				{Label: "Risk Level", Value: "High"},
-				{Label: "Screening Source", Value: "World-Check"},
+				{Label: "Email", Value: "j.doe@example.com"},
+				{Type: "alert", Variant: "info", Value: "Check your inbox for a message from noreply@neo.app. The code expires in 10 minutes."},
 			},
 			Fields: []*inboxv1.FormField{
-				{Name: "gov_id", Type: "checkbox", Label: "Government-issued ID", Description: "Passport or Emirates ID verified."},
-				{Name: "proof_of_address", Type: "checkbox", Label: "Proof of Address", Description: "Utility bill or bank statement within 3 months."},
-				{Name: "bank_statement", Type: "checkbox", Label: "Bank Statement", Description: "Recent bank statement showing source of funds."},
-				{Name: "company_reg", Type: "checkbox", Label: "Company Registration", Description: "Certificate of incorporation or trade license."},
-				{Name: "notes", Type: "textarea", Label: "Review Notes", Placeholder: "Document your findings..."},
+				{Name: "code", Type: "otp", Label: "Verification Code", Required: true},
 			},
 			Actions: []*inboxv1.Action{
-				{Name: "clear", Label: "Clear — Low Risk", Variant: "success"},
-				{Name: "escalate", Label: "Escalate to MLRO", Variant: "warning"},
-				{Name: "reject", Label: "Reject — High Risk", Variant: "error"},
+				{Name: "verify", Label: "Verify Email", Variant: "success"},
 			},
+			ClientCompletable: true,
 		},
 	}); err != nil {
 		return err
 	}
 
-	// Customer screening (simple approve/reject)
+	// --- Insurance claim (image upload + date + number) ---
+	if _, err := ib.Create(ctx, inbox.Meta{
+		Title:       "Document vehicle damage",
+		Description: "Please provide photos and details of the damage for your insurance claim.",
+		Tags:        []string{"type:input_required", "priority:normal", "team:ops", "assignee:customer:CUST-3000"},
+		Actor:       "workflow:claims-001",
+		Payload: &inboxv1.ItemSchema{
+			Display: []*inboxv1.DisplayField{
+				{Label: "Claim", Value: "CLM-2026-0099", Mono: true},
+				{Label: "Policy", Value: "Comprehensive Auto — POL-445566"},
+			},
+			Fields: []*inboxv1.FormField{
+				{Name: "photos", Type: "image", Label: "Damage Photos", Description: "Take clear photos of all damaged areas.", Multiple: true, MaxSizeMb: 10, Required: true},
+				{Name: "incident_date", Type: "date", Label: "Date of Incident", Required: true},
+				{Name: "estimate", Type: "number", Label: "Estimated Repair Cost", Placeholder: "0.00", Required: true},
+				{Name: "description", Type: "textarea", Label: "Description", Placeholder: "Describe what happened...", Required: true},
+			},
+			Actions: []*inboxv1.Action{
+				{Name: "submit", Label: "Submit Claim", Variant: "success"},
+			},
+			ClientCompletable: true,
+		},
+	}); err != nil {
+		return err
+	}
+
+	// --- Service feedback (rating + textarea) ---
+	if _, err := ib.Create(ctx, inbox.Meta{
+		Title:       "Rate your onboarding experience",
+		Description: "We'd love to hear your feedback on the account opening process.",
+		Tags:        []string{"type:action", "priority:low", "team:ops", "assignee:customer:CUST-4000"},
+		Actor:       "system",
+		Payload: &inboxv1.ItemSchema{
+			Display: []*inboxv1.DisplayField{
+				{Type: "alert", Variant: "success", Label: "Account activated", Value: "Your Current Account is now ready to use."},
+			},
+			Fields: []*inboxv1.FormField{
+				{Name: "rating", Type: "rating", Label: "Overall Experience"},
+				{Name: "feedback", Type: "textarea", Label: "Comments", Placeholder: "What went well? What could we improve?"},
+				{Name: "contact_ok", Type: "checkbox", Label: "May we follow up?", Placeholder: "You can contact me about my feedback"},
+			},
+			Actions: []*inboxv1.Action{
+				{Name: "submit", Label: "Submit Feedback", Variant: "neutral"},
+			},
+			ClientCompletable: true,
+		},
+	}); err != nil {
+		return err
+	}
+
+	// --- Employment details (phone, email, number fields) ---
+	if _, err := ib.Create(ctx, inbox.Meta{
+		Title:       "Provide employment details",
+		Description: "We need your employment and income information for the account assessment.",
+		Tags:        []string{"type:input_required", "priority:normal", "team:ops", "assignee:customer:CUST-1234"},
+		Actor:       "workflow:onboarding-001",
+		Payload: &inboxv1.ItemSchema{
+			Display: []*inboxv1.DisplayField{
+				{Label: "Customer", Value: "CUST-1234"},
+			},
+			Fields: []*inboxv1.FormField{
+				{Name: "employer", Type: "text", Label: "Employer Name", Required: true},
+				{Name: "job_title", Type: "text", Label: "Job Title", Required: true},
+				{Name: "work_phone", Type: "phone", Label: "Work Phone"},
+				{Name: "work_email", Type: "email", Label: "Work Email"},
+				{Name: "annual_income", Type: "number", Label: "Annual Income (AED)", Required: true},
+				{Name: "employment_date", Type: "date", Label: "Employment Start Date"},
+			},
+			Actions: []*inboxv1.Action{
+				{Name: "submit", Label: "Submit Details", Variant: "success"},
+			},
+			ClientCompletable: true,
+		},
+	}); err != nil {
+		return err
+	}
+
+	// --- Operator: sanctions screening (no customer access) ---
 	if _, err := ib.Create(ctx, inbox.Meta{
 		Title:       "Sanctions screening review",
-		Description: "Automated sanctions screening returned a potential match. Manual review required.",
+		Description: "Automated screening returned a potential match. Manual review required.",
 		Tags:        []string{"type:review", "priority:high", "team:compliance"},
 		Actor:       "agent:screening-bot",
 		Payload: &inboxv1.ItemSchema{
@@ -135,6 +178,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 				{Label: "List", Value: "OFAC SDN"},
 				{Label: "Matched Entity", Value: "Ahmad Al-Rashid (DOB: 1965-03-12)"},
 				{Label: "Customer DOB", Value: "1990-07-22"},
+				{Type: "alert", Variant: "warning", Value: "High confidence name match. Compare dates of birth and nationality before clearing."},
 			},
 			Fields: []*inboxv1.FormField{
 				{Name: "result", Type: "select", Label: "Decision", Options: []string{"cleared", "true_match", "inconclusive"}, Required: true},
@@ -149,7 +193,35 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		return err
 	}
 
-	// Generic item (no schema — falls back to JSON view)
+	// --- Operator: PEP screening with document checklist ---
+	if _, err := ib.Create(ctx, inbox.Meta{
+		Title:       "PEP screening review",
+		Description: "Customer flagged as PEP during onboarding. Verify provided documents.",
+		Tags:        []string{"type:review", "priority:urgent", "team:compliance"},
+		Actor:       "workflow:onboarding-001",
+		Deadline:    &deadline,
+		Payload: &inboxv1.ItemSchema{
+			Display: []*inboxv1.DisplayField{
+				{Label: "Customer", Value: "CUST-5678"},
+				{Label: "Risk Level", Value: "High"},
+				{Label: "Screening Source", Value: "World-Check"},
+				{Type: "alert", Variant: "error", Value: "Enhanced due diligence required. At least 2 verification documents must be confirmed."},
+			},
+			Fields: []*inboxv1.FormField{
+				{Name: "docs_verified", Type: "multiselect", Label: "Verified Documents", Options: []string{"Government ID", "Proof of Address", "Bank Statement", "Company Registration", "Tax ID"}},
+				{Name: "notes", Type: "textarea", Label: "Review Notes", Placeholder: "Document your findings..."},
+			},
+			Actions: []*inboxv1.Action{
+				{Name: "clear", Label: "Clear — Low Risk", Variant: "success"},
+				{Name: "escalate", Label: "Escalate to MLRO", Variant: "warning"},
+				{Name: "reject", Label: "Reject — High Risk", Variant: "error"},
+			},
+		},
+	}); err != nil {
+		return err
+	}
+
+	// --- Generic item (no schema — JSON fallback) ---
 	genericPayload, _ := structpb.NewStruct(map[string]interface{}{
 		"source": "system",
 		"note":   "Travel expenses submitted for Q1 conference",

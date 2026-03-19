@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/dsx/ui/button"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
@@ -11,16 +13,9 @@ templ schemaPayload(schema *inboxv1.ItemSchema, itemID string, basePath string) 
 	<div class="space-y-4" data-signals={ signals }>
 		// Display fields
 		if len(schema.Display) > 0 {
-			<div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
+			<div class="space-y-3">
 				for _, d := range schema.Display {
-					<div>
-						<div class="text-[11px] uppercase tracking-widest text-base-content/30 font-medium">{ d.Label }</div>
-						if d.Mono {
-							<div class="text-sm font-mono mt-0.5">{ d.Value }</div>
-						} else {
-							<div class="text-sm mt-0.5">{ d.Value }</div>
-						}
-					</div>
+					@displayField(d)
 				}
 			</div>
 		}
@@ -43,14 +38,63 @@ templ schemaPayload(schema *inboxv1.ItemSchema, itemID string, basePath string) 
 	</div>
 }
 
+// Display field rendering — dispatches by type
+templ displayField(d *inboxv1.DisplayField) {
+	switch d.Type {
+	case "image":
+		<div>
+			if d.Label != "" {
+				@fieldLabel(d.Label, false)
+			}
+			<img src={ d.Value } alt={ d.Label } class="mt-1.5 rounded-lg max-h-48 object-contain border border-base-300"/>
+		</div>
+	case "document":
+		<div>
+			if d.Label != "" {
+				@fieldLabel(d.Label, false)
+			}
+			<a href={ templ.SafeURL(d.Value) } target="_blank" class="mt-1.5 inline-flex items-center gap-2 text-sm text-accent hover:underline">
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+				{ d.Label }
+			</a>
+		</div>
+	case "markdown":
+		<div class="prose prose-sm max-w-none text-base-content/70">
+			{ d.Value }
+		</div>
+	case "alert":
+		<div class={ "rounded-lg px-3 py-2.5 text-sm border", alertClasses(d.Variant) }>
+			if d.Label != "" {
+				<span class="font-medium">{ d.Label }: </span>
+			}
+			{ d.Value }
+		</div>
+	default:
+		// Plain label/value
+		<div>
+			<div class="text-[11px] uppercase tracking-widest text-base-content/30 font-medium">{ d.Label }</div>
+			if d.Mono {
+				<div class="text-sm font-mono mt-0.5">{ d.Value }</div>
+			} else {
+				<div class="text-sm mt-0.5">{ d.Value }</div>
+			}
+		</div>
+	}
+}
+
+templ fieldLabel(label string, required bool) {
+	<label class="text-xs font-medium">
+		{ label }
+		if required {
+			<span class="text-error ml-0.5">*</span>
+		}
+	</label>
+}
+
+// Form field rendering — dispatches by type
 templ schemaField(f *inboxv1.FormField) {
 	<div>
-		<label class="text-xs font-medium">
-			{ f.Label }
-			if f.Required {
-				<span class="text-error ml-0.5">*</span>
-			}
-		</label>
+		@fieldLabel(f.Label, f.Required)
 		if f.Description != "" {
 			<p class="text-[11px] text-base-content/40 mt-0.5 leading-relaxed">{ f.Description }</p>
 		}
@@ -86,6 +130,95 @@ templ schemaField(f *inboxv1.FormField) {
 					<span class="text-xs text-base-content/60">{ f.Placeholder }</span>
 				}
 			</label>
+		case "multiselect":
+			<div class="space-y-1.5 mt-1.5">
+				for _, opt := range f.Options {
+					<label class="flex items-center gap-2 cursor-pointer">
+						<input
+							type="checkbox"
+							class="checkbox checkbox-xs"
+							data-bind={ "schema." + f.Name + "_" + opt }
+						/>
+						<span class="text-xs">{ opt }</span>
+					</label>
+				}
+			</div>
+		case "file":
+			<input
+				type="file"
+				class="file-input file-input-bordered file-input-sm w-full mt-1.5"
+				accept={ f.Accept }
+				multiple?={ f.Multiple }
+			/>
+			if f.MaxSizeMb > 0 {
+				<p class="text-[11px] text-base-content/30 mt-1">{ fmt.Sprintf("Max %d MB", f.MaxSizeMb) }</p>
+			}
+		case "image":
+			<input
+				type="file"
+				class="file-input file-input-bordered file-input-sm w-full mt-1.5"
+				accept={ fileAccept(f.Accept, "image/*") }
+				multiple?={ f.Multiple }
+			/>
+			if f.MaxSizeMb > 0 {
+				<p class="text-[11px] text-base-content/30 mt-1">{ fmt.Sprintf("Max %d MB", f.MaxSizeMb) }</p>
+			}
+		case "date":
+			<input
+				type="date"
+				class="input input-bordered input-sm w-full mt-1.5"
+				value={ f.DefaultValue }
+				data-bind={ "schema." + f.Name }
+			/>
+		case "phone":
+			<input
+				type="tel"
+				class="input input-bordered input-sm w-full mt-1.5"
+				placeholder={ fieldPlaceholder(f.Placeholder, "+1 (555) 000-0000") }
+				value={ f.DefaultValue }
+				data-bind={ "schema." + f.Name }
+			/>
+		case "email":
+			<input
+				type="email"
+				class="input input-bordered input-sm w-full mt-1.5"
+				placeholder={ fieldPlaceholder(f.Placeholder, "name@example.com") }
+				value={ f.DefaultValue }
+				data-bind={ "schema." + f.Name }
+			/>
+		case "number":
+			<input
+				type="number"
+				class="input input-bordered input-sm w-full mt-1.5"
+				placeholder={ f.Placeholder }
+				value={ f.DefaultValue }
+				data-bind={ "schema." + f.Name }
+			/>
+		case "otp":
+			<input
+				type="text"
+				class="input input-bordered input-sm w-full mt-1.5 tracking-[0.5em] text-center font-mono"
+				placeholder="000000"
+				maxlength="6"
+				inputmode="numeric"
+				autocomplete="one-time-code"
+				data-bind={ "schema." + f.Name }
+			/>
+		case "signature":
+			<div class="mt-1.5 border border-base-300 rounded-lg bg-base-200/30 h-24 flex items-center justify-center">
+				<span class="text-xs text-base-content/30">Signature pad</span>
+			</div>
+		case "rating":
+			<div class="flex gap-1 mt-1.5">
+				for i := 1; i <= 5; i++ {
+					<input
+						type="radio"
+						class="mask mask-star-2 bg-warning"
+						name={ "schema_" + f.Name }
+						checked?={ fmt.Sprintf("%d", i) == f.DefaultValue }
+					/>
+				}
+			</div>
 		default:
 			<input
 				type="text"
@@ -107,6 +240,33 @@ templ schemaActionButton(a *inboxv1.Action, itemID string, basePath string) {
 	}) {
 		{ a.Label }
 	}
+}
+
+func alertClasses(variant string) string {
+	switch variant {
+	case "error":
+		return "bg-error/10 text-error border-error/20"
+	case "warning":
+		return "bg-warning/10 text-warning-content border-warning/20"
+	case "success":
+		return "bg-success/10 text-success border-success/20"
+	default:
+		return "bg-info/10 text-info-content border-info/20"
+	}
+}
+
+func fileAccept(custom, fallback string) string {
+	if custom != "" {
+		return custom
+	}
+	return fallback
+}
+
+func fieldPlaceholder(custom, fallback string) string {
+	if custom != "" {
+		return custom
+	}
+	return fallback
 }
 
 func buttonVariant(v string) button.Variant {

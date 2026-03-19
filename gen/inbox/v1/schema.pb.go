@@ -51,9 +51,9 @@ const (
 // renders it generically based on the field definitions.
 type ItemSchema struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Read-only key/value pairs displayed to the operator.
+	// Read-only display elements shown to the user.
 	Display []*DisplayField `protobuf:"bytes,1,rep,name=display,proto3" json:"display,omitempty"`
-	// Input fields the operator fills in before responding.
+	// Input fields the user fills in before responding.
 	Fields []*FormField `protobuf:"bytes,2,rep,name=fields,proto3" json:"fields,omitempty"`
 	// Available response actions (buttons).
 	Actions []*Action `protobuf:"bytes,3,rep,name=actions,proto3" json:"actions,omitempty"`
@@ -122,13 +122,25 @@ func (x *ItemSchema) GetClientCompletable() bool {
 	return false
 }
 
-// DisplayField shows a read-only label/value pair in the item detail view.
+// DisplayField shows read-only content in the item detail view.
+//
+// Types:
+//
+//	""         — plain label/value pair (default)
+//	"image"    — renders value as an image URL
+//	"document" — renders value as a downloadable link
+//	"markdown" — renders value as formatted markdown
+//	"alert"    — renders value as a callout (use variant for color)
 type DisplayField struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Label string                 `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
 	Value string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	// If true, render the value in a monospace font (e.g. IDs, codes).
-	Mono          bool `protobuf:"varint,3,opt,name=mono,proto3" json:"mono,omitempty"`
+	Mono bool `protobuf:"varint,3,opt,name=mono,proto3" json:"mono,omitempty"`
+	// Display type: "", "image", "document", "markdown", "alert".
+	Type string `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
+	// Variant for typed displays (e.g. alert: "info", "warning", "error", "success").
+	Variant       string `protobuf:"bytes,5,opt,name=variant,proto3" json:"variant,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -184,27 +196,66 @@ func (x *DisplayField) GetMono() bool {
 	return false
 }
 
+func (x *DisplayField) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *DisplayField) GetVariant() string {
+	if x != nil {
+		return x.Variant
+	}
+	return ""
+}
+
 // FormField defines a single input field in the response form.
+//
+// Types:
+//
+//	"text"        — single-line text input
+//	"textarea"    — multi-line text input
+//	"select"      — dropdown select (use options)
+//	"checkbox"    — single checkbox toggle
+//	"multiselect" — checkbox group returning list of selected values (use options)
+//	"file"        — file upload
+//	"image"       — image capture/upload
+//	"date"        — date picker
+//	"phone"       — phone number with country code
+//	"email"       — email address with validation
+//	"number"      — numeric input
+//	"otp"         — one-time password code (6 digits)
+//	"signature"   — signature capture pad
+//	"rating"      — star rating (1-5)
 type FormField struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Field name used as the key in the response payload.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// Field type: "text", "textarea", "select", "checkbox".
+	// Field type (see message comment for all types).
 	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	// Human-readable label shown above the field.
 	Label string `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
 	// Optional description shown below the label.
 	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	// Placeholder text for text/textarea fields.
+	// Placeholder text for text/textarea/email/phone fields.
 	Placeholder string `protobuf:"bytes,5,opt,name=placeholder,proto3" json:"placeholder,omitempty"`
 	// Whether the field must be filled before submitting.
 	Required bool `protobuf:"varint,6,opt,name=required,proto3" json:"required,omitempty"`
-	// Options for select fields.
+	// Options for select and multiselect fields.
 	Options []string `protobuf:"bytes,7,rep,name=options,proto3" json:"options,omitempty"`
 	// Optional validation rules.
 	Validation *FieldValidation `protobuf:"bytes,8,opt,name=validation,proto3" json:"validation,omitempty"`
 	// Default value (pre-filled).
-	DefaultValue  string `protobuf:"bytes,9,opt,name=default_value,json=defaultValue,proto3" json:"default_value,omitempty"`
+	DefaultValue string `protobuf:"bytes,9,opt,name=default_value,json=defaultValue,proto3" json:"default_value,omitempty"`
+	// Accepted file types for file/image fields (e.g. ".pdf,.doc", "image/*").
+	Accept string `protobuf:"bytes,10,opt,name=accept,proto3" json:"accept,omitempty"`
+	// Maximum file size in MB for file/image fields.
+	MaxSizeMb int32 `protobuf:"varint,11,opt,name=max_size_mb,json=maxSizeMb,proto3" json:"max_size_mb,omitempty"`
+	// Allow multiple files for file/image fields.
+	Multiple bool `protobuf:"varint,12,opt,name=multiple,proto3" json:"multiple,omitempty"`
+	// Pre-selected values for multiselect fields.
+	Values        []string `protobuf:"bytes,13,rep,name=values,proto3" json:"values,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -302,14 +353,42 @@ func (x *FormField) GetDefaultValue() string {
 	return ""
 }
 
+func (x *FormField) GetAccept() string {
+	if x != nil {
+		return x.Accept
+	}
+	return ""
+}
+
+func (x *FormField) GetMaxSizeMb() int32 {
+	if x != nil {
+		return x.MaxSizeMb
+	}
+	return 0
+}
+
+func (x *FormField) GetMultiple() bool {
+	if x != nil {
+		return x.Multiple
+	}
+	return false
+}
+
+func (x *FormField) GetValues() []string {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
 // FieldValidation defines validation constraints for a form field.
 type FieldValidation struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Regex pattern the value must match.
 	Pattern string `protobuf:"bytes,1,opt,name=pattern,proto3" json:"pattern,omitempty"`
-	// Minimum length for text/textarea fields.
+	// Minimum length for text/textarea fields, or minimum value for number.
 	MinLength int32 `protobuf:"varint,2,opt,name=min_length,json=minLength,proto3" json:"min_length,omitempty"`
-	// Maximum length for text/textarea fields.
+	// Maximum length for text/textarea fields, or maximum value for number.
 	MaxLength     int32 `protobuf:"varint,3,opt,name=max_length,json=maxLength,proto3" json:"max_length,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -440,11 +519,13 @@ const file_inbox_v1_schema_proto_rawDesc = "" +
 	"\adisplay\x18\x01 \x03(\v2\x16.inbox.v1.DisplayFieldR\adisplay\x12+\n" +
 	"\x06fields\x18\x02 \x03(\v2\x13.inbox.v1.FormFieldR\x06fields\x12*\n" +
 	"\aactions\x18\x03 \x03(\v2\x10.inbox.v1.ActionR\aactions\x12-\n" +
-	"\x12client_completable\x18\x04 \x01(\bR\x11clientCompletable\"N\n" +
+	"\x12client_completable\x18\x04 \x01(\bR\x11clientCompletable\"|\n" +
 	"\fDisplayField\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12\x12\n" +
-	"\x04mono\x18\x03 \x01(\bR\x04mono\"\xa3\x02\n" +
+	"\x04mono\x18\x03 \x01(\bR\x04mono\x12\x12\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\x12\x18\n" +
+	"\avariant\x18\x05 \x01(\tR\avariant\"\x8f\x03\n" +
 	"\tFormField\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x14\n" +
@@ -456,7 +537,12 @@ const file_inbox_v1_schema_proto_rawDesc = "" +
 	"\n" +
 	"validation\x18\b \x01(\v2\x19.inbox.v1.FieldValidationR\n" +
 	"validation\x12#\n" +
-	"\rdefault_value\x18\t \x01(\tR\fdefaultValue\"i\n" +
+	"\rdefault_value\x18\t \x01(\tR\fdefaultValue\x12\x16\n" +
+	"\x06accept\x18\n" +
+	" \x01(\tR\x06accept\x12\x1e\n" +
+	"\vmax_size_mb\x18\v \x01(\x05R\tmaxSizeMb\x12\x1a\n" +
+	"\bmultiple\x18\f \x01(\bR\bmultiple\x12\x16\n" +
+	"\x06values\x18\r \x03(\tR\x06values\"i\n" +
 	"\x0fFieldValidation\x12\x18\n" +
 	"\apattern\x18\x01 \x01(\tR\apattern\x12\x1d\n" +
 	"\n" +

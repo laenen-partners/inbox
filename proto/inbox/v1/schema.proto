@@ -32,10 +32,10 @@ option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
 // It is used as the item's payload (proto.Message) and the inbox UI
 // renders it generically based on the field definitions.
 message ItemSchema {
-  // Read-only key/value pairs displayed to the operator.
+  // Read-only display elements shown to the user.
   repeated DisplayField display = 1;
 
-  // Input fields the operator fills in before responding.
+  // Input fields the user fills in before responding.
   repeated FormField fields = 2;
 
   // Available response actions (buttons).
@@ -46,21 +46,50 @@ message ItemSchema {
   bool client_completable = 4;
 }
 
-// DisplayField shows a read-only label/value pair in the item detail view.
+// DisplayField shows read-only content in the item detail view.
+//
+// Types:
+//   ""         — plain label/value pair (default)
+//   "image"    — renders value as an image URL
+//   "document" — renders value as a downloadable link
+//   "markdown" — renders value as formatted markdown
+//   "alert"    — renders value as a callout (use variant for color)
 message DisplayField {
   string label = 1;
   string value = 2;
 
   // If true, render the value in a monospace font (e.g. IDs, codes).
   bool mono = 3;
+
+  // Display type: "", "image", "document", "markdown", "alert".
+  string type = 4;
+
+  // Variant for typed displays (e.g. alert: "info", "warning", "error", "success").
+  string variant = 5;
 }
 
 // FormField defines a single input field in the response form.
+//
+// Types:
+//   "text"        — single-line text input
+//   "textarea"    — multi-line text input
+//   "select"      — dropdown select (use options)
+//   "checkbox"    — single checkbox toggle
+//   "multiselect" — checkbox group returning list of selected values (use options)
+//   "file"        — file upload
+//   "image"       — image capture/upload
+//   "date"        — date picker
+//   "phone"       — phone number with country code
+//   "email"       — email address with validation
+//   "number"      — numeric input
+//   "otp"         — one-time password code (6 digits)
+//   "signature"   — signature capture pad
+//   "rating"      — star rating (1-5)
 message FormField {
   // Field name used as the key in the response payload.
   string name = 1;
 
-  // Field type: "text", "textarea", "select", "checkbox".
+  // Field type (see message comment for all types).
   string type = 2;
 
   // Human-readable label shown above the field.
@@ -69,13 +98,13 @@ message FormField {
   // Optional description shown below the label.
   string description = 4;
 
-  // Placeholder text for text/textarea fields.
+  // Placeholder text for text/textarea/email/phone fields.
   string placeholder = 5;
 
   // Whether the field must be filled before submitting.
   bool required = 6;
 
-  // Options for select fields.
+  // Options for select and multiselect fields.
   repeated string options = 7;
 
   // Optional validation rules.
@@ -83,6 +112,18 @@ message FormField {
 
   // Default value (pre-filled).
   string default_value = 9;
+
+  // Accepted file types for file/image fields (e.g. ".pdf,.doc", "image/*").
+  string accept = 10;
+
+  // Maximum file size in MB for file/image fields.
+  int32 max_size_mb = 11;
+
+  // Allow multiple files for file/image fields.
+  bool multiple = 12;
+
+  // Pre-selected values for multiselect fields.
+  repeated string values = 13;
 }
 
 // FieldValidation defines validation constraints for a form field.
@@ -90,10 +131,10 @@ message FieldValidation {
   // Regex pattern the value must match.
   string pattern = 1;
 
-  // Minimum length for text/textarea fields.
+  // Minimum length for text/textarea fields, or minimum value for number.
   int32 min_length = 2;
 
-  // Maximum length for text/textarea fields.
+  // Maximum length for text/textarea fields, or maximum value for number.
   int32 max_length = 3;
 }
 
