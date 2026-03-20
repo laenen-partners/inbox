@@ -1,3 +1,5 @@
+connectrpc.com/connect v1.19.1 h1:R5M57z05+90EfEvCY1b7hBxDVOUl45PrtXtAV2fOC14=
+connectrpc.com/connect v1.19.1/go.mod h1:tN20fjdGlewnSFeZxLKb0xwIZ6ozc3OQs2hTXy4du9w=
 dario.cat/mergo v1.0.2 h1:85+piFYR1tMbRrLcDwR18y4UKJ3aH1Tbzi24VRW1TK8=
 dario.cat/mergo v1.0.2/go.mod h1:E/hbnu0NxMFBjpMIE34DRGLWqDy0g5FuKDhCb31ngxA=
 entgo.io/ent v0.14.3 h1:wokAV/kIlH9TeklJWGGS7AYJdVckr0DloWjIcO9iIIQ=
@@ -99,6 +101,8 @@ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
 github.com/laenen-partners/dsx v0.2.0 h1:o+o4Oys7k1gOXKx23h8TtZcQrFeYwXqsbEtrc9ntBy4=
 github.com/laenen-partners/dsx v0.2.0/go.mod h1:btSCW6Fhd9nmG1eRqg8oigP1GjCh2BPGeMTjyzIO6tM=
+github.com/laenen-partners/dsx v0.6.0 h1:9Y0wkSMFXOTIYoYOb3v8tKU8buXS6hKxSnTYKl74x9U=
+github.com/laenen-partners/dsx v0.6.0/go.mod h1:EOdNgJQbHLhZC6+rZGczcT6/mq/adVUwIg2ch1QWtYc=
 github.com/laenen-partners/entitystore v0.10.0 h1:9lBCIWTxdW0qwl120dMvZHZ5MVO3kUHAIwKKfXj3EXc=
 github.com/laenen-partners/entitystore v0.10.0/go.mod h1:YSCq2T4MrvNY6EzlGj0XrZ8w7ia67IKqD/sFhQ+U5Gs=
 github.com/laenen-partners/identity v0.1.0 h1:K7qav/S68+qRyqgiId29r9U95k4wEtMVLsArJgmDLWw=
@@ -252,6 +256,7 @@ google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57 h1:
 google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57/go.mod h1:j9x/tPzZkyxcgEFkiKEEGxfvyumM01BEtsW8xzOahRQ=
 google.golang.org/grpc v1.79.1 h1:zGhSi45ODB9/p3VAawt9a+O/MULLl9dpizzNNpq7flY=
 google.golang.org/grpc v1.79.1/go.mod h1:KmT0Kjez+0dde/v2j9vzwoAScgEPx/Bw1CYChhHLrHQ=
+google.golang.org/grpc v1.79.3 h1:sybAEdRIEtvcD68Gx7dmnwjZKlyfuc61Dyo9pGXXkKE=
 google.golang.org/protobuf v1.36.11 h1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=
 google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j23XfzDpco=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=

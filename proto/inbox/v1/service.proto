@@ -1,0 +1,140 @@
+syntax = "proto3";
+package inbox.v1;
+
+option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
+
+import "inbox/v1/item.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// Identity is carried on every request.
+message Identity {
+  string tenant_id = 1;
+  string workspace_id = 2;
+  string principal_id = 3;
+  string principal_type = 4;
+  repeated string roles = 5;
+}
+
+// InboxItem wraps the stored Item with entity metadata.
+message InboxItem {
+  string id = 1;
+  Item data = 2;
+  repeated string tags = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// ─── Requests & Responses ───
+
+message GetItemRequest {
+  Identity identity = 1;
+  string id = 2;
+}
+message GetItemResponse {
+  InboxItem item = 1;
+}
+
+message ListItemsRequest {
+  Identity identity = 1;
+  repeated string tags = 2;
+  int32 page_size = 3;
+  google.protobuf.Timestamp cursor = 4;
+}
+message ListItemsResponse {
+  repeated InboxItem items = 1;
+  google.protobuf.Timestamp next_cursor = 2;
+}
+
+message SearchItemsRequest {
+  Identity identity = 1;
+  string query = 2;
+  int32 page_size = 3;
+}
+message SearchItemsResponse {
+  repeated InboxItem items = 1;
+}
+
+message ClaimItemRequest {
+  Identity identity = 1;
+  string id = 2;
+}
+message ClaimItemResponse {
+  InboxItem item = 1;
+}
+
+message ReleaseItemRequest {
+  Identity identity = 1;
+  string id = 2;
+}
+message ReleaseItemResponse {
+  InboxItem item = 1;
+}
+
+message RespondToItemRequest {
+  Identity identity = 1;
+  string id = 2;
+  string action = 3;
+  string comment = 4;
+  string on_behalf_of = 5;
+  string override_reason = 6;
+}
+message RespondToItemResponse {
+  InboxItem item = 1;
+}
+
+message CompleteItemRequest {
+  Identity identity = 1;
+  string id = 2;
+}
+message CompleteItemResponse {
+  InboxItem item = 1;
+}
+
+message CancelItemRequest {
+  Identity identity = 1;
+  string id = 2;
+  string reason = 3;
+}
+message CancelItemResponse {
+  InboxItem item = 1;
+}
+
+message CommentOnItemRequest {
+  Identity identity = 1;
+  string id = 2;
+  string body = 3;
+  repeated string visibility = 4;
+  repeated string refs = 5;
+}
+message CommentOnItemResponse {
+  InboxItem item = 1;
+}
+
+message TagItemRequest {
+  Identity identity = 1;
+  string id = 2;
+  repeated string tags = 3;
+}
+
+message UntagItemRequest {
+  Identity identity = 1;
+  string id = 2;
+  string tag = 3;
+}
+
+// ─── Service ───
+
+service InboxService {
+  rpc GetItem(GetItemRequest) returns (GetItemResponse);
+  rpc ListItems(ListItemsRequest) returns (ListItemsResponse);
+  rpc SearchItems(SearchItemsRequest) returns (SearchItemsResponse);
+  rpc ClaimItem(ClaimItemRequest) returns (ClaimItemResponse);
+  rpc ReleaseItem(ReleaseItemRequest) returns (ReleaseItemResponse);
+  rpc RespondToItem(RespondToItemRequest) returns (RespondToItemResponse);
+  rpc CompleteItem(CompleteItemRequest) returns (CompleteItemResponse);
+  rpc CancelItem(CancelItemRequest) returns (CancelItemResponse);
+  rpc CommentOnItem(CommentOnItemRequest) returns (CommentOnItemResponse);
+  rpc TagItem(TagItemRequest) returns (google.protobuf.Empty);
+  rpc UntagItem(UntagItemRequest) returns (google.protobuf.Empty);
+}
