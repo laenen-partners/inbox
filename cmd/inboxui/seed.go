@@ -28,7 +28,7 @@ func seedData(parentCtx context.Context, ib *inbox.Inbox) error {
 		Description: "Please upload your identity document and a recent proof of address to continue opening your account.",
 		Tags:        tags.MustNew("type:input_required", "priority:high", tags.Team("ops"), "assignee:customer:cust-1234"),
 
-		Deadline:    &deadline,
+		Deadline: &deadline,
 		Payload: &schemav1.ItemSchema{
 			Display: []*schemav1.DisplayField{
 				{Label: "Customer", Value: "CUST-1234"},
@@ -209,7 +209,7 @@ func seedData(parentCtx context.Context, ib *inbox.Inbox) error {
 		Description: "Customer flagged as PEP during onboarding. Verify provided documents.",
 		Tags:        tags.MustNew("type:review", "priority:urgent", tags.Team("compliance")),
 
-		Deadline:    &deadline,
+		Deadline: &deadline,
 		Payload: &schemav1.ItemSchema{
 			Display: []*schemav1.DisplayField{
 				{Label: "Customer", Value: "CUST-5678"},
@@ -242,7 +242,7 @@ func seedData(parentCtx context.Context, ib *inbox.Inbox) error {
 		Description: "Travel expenses submitted for Q1 conference.",
 		Tags:        tags.MustNew("type:approval", "priority:low", tags.Team("finance")),
 
-		Payload:     genericPayload,
+		Payload: genericPayload,
 	}); err != nil {
 		return err
 	}

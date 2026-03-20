@@ -270,4 +270,3 @@ func (op *Op) Apply() (Item, error) {
 
 	return item, nil
 }
-

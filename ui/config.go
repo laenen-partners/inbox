@@ -66,4 +66,3 @@ func WithBasePath(path string) Option {
 func WithLayout(fn LayoutFunc) Option {
 	return func(c *config) { c.layoutFn = fn }
 }
-

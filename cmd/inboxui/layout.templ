@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/laenen-partners/dsx"
 	"github.com/laenen-partners/dsx/layouts"
+	"github.com/laenen-partners/dsx/showcase"
 	"github.com/laenen-partners/dsx/ui/icon"
 )
 
@@ -40,8 +41,9 @@ templ showcaseLayoutTempl(currentPath string, content templ.Component) {
 			Name: "Neo",
 			Href: "/inbox",
 		},
-		Nav:         inboxNav,
-		CurrentPath: "/inbox" + currentPath,
+		Nav:           inboxNav,
+		CurrentPath:   "/inbox" + currentPath,
+		HeaderActions: identitySwitcherFragment(),
 		ThemeToggle: &layouts.ThemeToggleConfig{
 			DarkTheme:  "neo-dark",
 			LightTheme: "neo-light",
@@ -49,4 +51,8 @@ templ showcaseLayoutTempl(currentPath string, content templ.Component) {
 	}) {
 		@content
 	}
+}
+
+templ identitySwitcherFragment() {
+	@showcase.Fragment("identity-switcher", "/showcase/identities")
 }

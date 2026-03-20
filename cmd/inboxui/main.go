@@ -23,6 +23,12 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	port := flag.Int("port", 8080, "listen port")
 	seed := flag.Bool("seed", false, "seed test data on startup")
 	flag.Parse()
@@ -36,29 +42,29 @@ func main() {
 
 	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
-		log.Fatalf("connect to database: %v", err)
+		return err
 	}
 	defer pool.Close()
 
 	if err := store.Migrate(ctx, pool); err != nil {
-		log.Fatalf("migrate: %v", err)
+		return err
 	}
 
 	es, err := entitystore.New(entitystore.WithPgStore(pool))
 	if err != nil {
-		log.Fatalf("create entity store: %v", err)
+		return err
 	}
 
 	ib := inbox.New(es)
 
 	if *seed {
 		if err := seedData(ctx, ib); err != nil {
-			log.Fatalf("seed data: %v", err)
+			return err
 		}
 		log.Println("test data seeded")
 	}
 
-	if err := showcase.Run(showcase.Config{
+	return showcase.Run(showcase.Config{
 		Port: *port,
 		Identities: []showcase.Identity{
 			{Name: "Operator", TenantID: "demo", WorkspaceID: "demo", PrincipalID: "operator"},
@@ -112,7 +118,5 @@ func main() {
 
 			return nil
 		},
-	}); err != nil {
-		log.Fatalf("server error: %v", err)
-	}
+	})
 }

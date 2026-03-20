@@ -982,7 +982,7 @@ func TestLifecycleHooks(t *testing.T) {
 type hookRecorder struct {
 	inbox.DefaultHooks
 	claimCount, releaseCount, completeCount, cancelCount, expireCount int
-	lastItemID                                                       string
+	lastItemID                                                        string
 }
 
 func (h *hookRecorder) OnClaim(_ context.Context, itemID, _ string) error {
@@ -990,21 +990,25 @@ func (h *hookRecorder) OnClaim(_ context.Context, itemID, _ string) error {
 	h.lastItemID = itemID
 	return nil
 }
+
 func (h *hookRecorder) OnRelease(_ context.Context, itemID, _ string) error {
 	h.releaseCount++
 	h.lastItemID = itemID
 	return nil
 }
+
 func (h *hookRecorder) OnComplete(_ context.Context, itemID, _ string) error {
 	h.completeCount++
 	h.lastItemID = itemID
 	return nil
 }
+
 func (h *hookRecorder) OnCancel(_ context.Context, itemID, _, _ string) error {
 	h.cancelCount++
 	h.lastItemID = itemID
 	return nil
 }
+
 func (h *hookRecorder) OnExpire(_ context.Context, itemID string) error {
 	h.expireCount++
 	h.lastItemID = itemID

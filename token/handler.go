@@ -69,7 +69,7 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Render directly — bypass the app layout (no dashboard for client-facing pages)
-	clientStandalonePage(data).Render(r.Context(), w)
+	_ = clientStandalonePage(data).Render(r.Context(), w)
 }
 
 func (h *Handler) handlePost(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +95,7 @@ func (h *Handler) handlePost(w http.ResponseWriter, r *http.Request) {
 
 	// Read the schema field values
 	var rawSignals map[string]json.RawMessage
-	ds.ReadRaw(r, &rawSignals)
+	_ = ds.ReadRaw(r, &rawSignals)
 
 	// Build response comment from schema fields
 	comment := "Submitted via presigned link"
@@ -124,16 +124,14 @@ func (h *Handler) handlePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Complete the item
-	_, err = h.inbox.Complete(ctx, claims.ItemID)
-	if err != nil {
-		// Item may already be completed or not claimable — just log
-	}
+	// Item may already be completed or not claimable — ignore error.
+	_, _ = h.inbox.Complete(ctx, claims.ItemID)
 
 	sse := datastar.NewSSE(w, r)
-	ds.Send.Toast(sse, ds.ToastSuccess, "Response submitted. You can close this page.")
+	_ = ds.Send.Toast(sse, ds.ToastSuccess, "Response submitted. You can close this page.")
 }
 
 func sseError(w http.ResponseWriter, r *http.Request, err error) {
 	sse := datastar.NewSSE(w, r)
-	ds.Send.Toast(sse, ds.ToastError, err.Error())
+	_ = ds.Send.Toast(sse, ds.ToastError, err.Error())
 }
