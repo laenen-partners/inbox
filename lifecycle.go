@@ -15,15 +15,35 @@ import (
 // status "open" can be claimed. Returns the updated item.
 func (ib *Inbox) Claim(ctx context.Context, itemID string) (Item, error) {
 	actor := actorFromCtx(ctx)
-	return ib.transition(ctx, itemID, StatusOpen, StatusClaimed,
+	item, err := ib.transition(ctx, itemID, StatusOpen, StatusClaimed,
 		newProtoEvent(actor, &inboxv1.ItemClaimed{ClaimedBy: actor}))
+	if err != nil {
+		return Item{}, err
+	}
+	// Hook error does not roll back the transition.
+	if hookErr := ib.fireHook(item, func(h LifecycleHooks) error {
+		return h.OnClaim(ctx, itemID, actor)
+	}); hookErr != nil {
+		return item, hookErr
+	}
+	return item, nil
 }
 
 // Release returns a claimed item to "open" status.
 func (ib *Inbox) Release(ctx context.Context, itemID string) (Item, error) {
 	actor := actorFromCtx(ctx)
-	return ib.transition(ctx, itemID, StatusClaimed, StatusOpen,
+	item, err := ib.transition(ctx, itemID, StatusClaimed, StatusOpen,
 		newProtoEvent(actor, &inboxv1.ItemReleased{ReleasedBy: actor}))
+	if err != nil {
+		return Item{}, err
+	}
+	// Hook error does not roll back the transition.
+	if hookErr := ib.fireHook(item, func(h LifecycleHooks) error {
+		return h.OnRelease(ctx, itemID, actor)
+	}); hookErr != nil {
+		return item, hookErr
+	}
+	return item, nil
 }
 
 // Respond records a response on an item. This does NOT automatically
@@ -62,7 +82,7 @@ func (ib *Inbox) Respond(ctx context.Context, itemID string, resp Response) (Ite
 
 	// Fire callback if dispatcher is configured.
 	if ib.dispatcher != nil {
-		if cb := findCallbackTag(item.Tags); cb != "" {
+		if cb := callbackValue(item.Tags); cb != "" {
 			_ = ib.dispatcher.Dispatch(ctx, cb, itemID, resp)
 		}
 	}
@@ -81,8 +101,18 @@ func (ib *Inbox) Complete(ctx context.Context, itemID string) (Item, error) {
 	if IsTerminal(item.Proto.Status) {
 		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Proto.Status)
 	}
-	return ib.doTransition(ctx, item, StatusCompleted,
+	item, err = ib.doTransition(ctx, item, StatusCompleted,
 		newProtoEvent(actor, &inboxv1.ItemCompleted{CompletedBy: actor}))
+	if err != nil {
+		return Item{}, err
+	}
+	// Hook error does not roll back the transition.
+	if hookErr := ib.fireHook(item, func(h LifecycleHooks) error {
+		return h.OnComplete(ctx, itemID, actor)
+	}); hookErr != nil {
+		return item, hookErr
+	}
+	return item, nil
 }
 
 // Cancel marks an item as cancelled.
@@ -95,8 +125,18 @@ func (ib *Inbox) Cancel(ctx context.Context, itemID string, reason string) (Item
 	if IsTerminal(item.Proto.Status) {
 		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Proto.Status)
 	}
-	return ib.doTransition(ctx, item, StatusCancelled,
+	item, err = ib.doTransition(ctx, item, StatusCancelled,
 		newProtoEventWithDetail(actor, reason, &inboxv1.ItemCancelled{CancelledBy: actor, Reason: reason}))
+	if err != nil {
+		return Item{}, err
+	}
+	// Hook error does not roll back the transition.
+	if hookErr := ib.fireHook(item, func(h LifecycleHooks) error {
+		return h.OnCancel(ctx, itemID, actor, reason)
+	}); hookErr != nil {
+		return item, hookErr
+	}
+	return item, nil
 }
 
 // Expire marks an item as expired. Typically called by a background
@@ -110,8 +150,18 @@ func (ib *Inbox) Expire(ctx context.Context, itemID string) (Item, error) {
 	if IsTerminal(item.Proto.Status) {
 		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Proto.Status)
 	}
-	return ib.doTransition(ctx, item, StatusExpired,
+	item, err = ib.doTransition(ctx, item, StatusExpired,
 		newProtoEvent(actor, &inboxv1.ItemExpired{}))
+	if err != nil {
+		return Item{}, err
+	}
+	// Hook error does not roll back the transition.
+	if hookErr := ib.fireHook(item, func(h LifecycleHooks) error {
+		return h.OnExpire(ctx, itemID)
+	}); hookErr != nil {
+		return item, hookErr
+	}
+	return item, nil
 }
 
 // UpdatePayload replaces the payload on an item and records a
@@ -162,13 +212,12 @@ func (ib *Inbox) transition(ctx context.Context, itemID string, fromStatus strin
 
 // doTransition writes the status change + event to the entity store.
 func (ib *Inbox) doTransition(ctx context.Context, item Item, toStatus string, evt *inboxv1.Event) (Item, error) {
-	oldStatus := item.Proto.Status
 	item.Proto.Status = toStatus
 	if evt.GetAt() == nil {
 		evt.At = timestamppb.New(time.Now().UTC())
 	}
 	item.Proto.Events = append(item.Proto.Events, evt)
-	item.Tags = replaceStatusTag(item.Tags, oldStatus, toStatus)
+	item.Tags = item.Tags.With("status", toStatus)
 
 	_, err := ib.es.BatchWrite(ctx, []store.BatchWriteOp{
 		{
@@ -176,7 +225,7 @@ func (ib *Inbox) doTransition(ctx context.Context, item Item, toStatus string, e
 				Action:          store.WriteActionUpdate,
 				MatchedEntityID: item.ID,
 				Data:            item.Proto,
-				Tags:            item.Tags,
+				Tags:            item.Tags.Strings(),
 			},
 		},
 	})

@@ -11,3 +11,15 @@ func WithDispatcher(d Dispatcher) Option {
 		ib.dispatcher = d
 	}
 }
+
+// WithLifecycleHooks registers lifecycle hooks for items whose
+// PayloadType matches payloadType. Hooks fire after successful
+// state transitions (claim, release, complete, cancel, expire).
+func WithLifecycleHooks(payloadType string, hooks LifecycleHooks) Option {
+	return func(ib *Inbox) {
+		if ib.hooks == nil {
+			ib.hooks = make(map[string]LifecycleHooks)
+		}
+		ib.hooks[payloadType] = hooks
+	}
+}

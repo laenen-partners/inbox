@@ -31,6 +31,7 @@ var EntityType = inboxv1.ItemMatchConfig().EntityType
 type Inbox struct {
 	es         *entitystore.EntityStore
 	dispatcher Dispatcher
+	hooks      map[string]LifecycleHooks
 }
 
 // New creates an Inbox backed by the given entity store.

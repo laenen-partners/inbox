@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -14,13 +15,14 @@ import (
 	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	"github.com/laenen-partners/tags"
 )
 
 // ─── Test infrastructure ───
 
 var _sharedConnStr string
 
-func sharedInbox(t *testing.T) *inbox.Inbox {
+func sharedEntityStore(t *testing.T) *entitystore.EntityStore {
 	t.Helper()
 	ctx := context.Background()
 
@@ -65,7 +67,12 @@ func sharedInbox(t *testing.T) *inbox.Inbox {
 		t.Fatalf("create entity store: %v", err)
 	}
 
-	return inbox.New(es)
+	return es
+}
+
+func sharedInbox(t *testing.T) *inbox.Inbox {
+	t.Helper()
+	return inbox.New(sharedEntityStore(t))
 }
 
 func ctxWithActor(principalID string, pt identity.PrincipalType) context.Context {
@@ -100,13 +107,13 @@ func TestCustomerMissingDocuments(t *testing.T) {
 		Title:       "Upload your identity document",
 		Description: "To continue opening your Current Account, please upload a valid passport or Emirates ID.",
 		Payload:     payload,
-		Tags: []string{
+		Tags: tags.MustNew(
 			"type:input_required",
-			"assignee:customer:CUST-1234",
+			"assignee:customer:cust-1234",
 			"workflow:onboarding-456",
-			"ref:subscription:SUB-2026-0042",
+			"ref:subscription:sub-2026-0042",
 			"priority:normal",
-		},
+		),
 	})
 	if err != nil {
 		t.Fatalf("create item: %v", err)
@@ -124,7 +131,7 @@ func TestCustomerMissingDocuments(t *testing.T) {
 
 	// 2. Customer queries their inbox -- finds the open item.
 	custCtx := ctxWithActor("customer:CUST-1234", identity.PrincipalUser)
-	items, err := ib.ListByTags(custCtx, []string{"assignee:customer:CUST-1234", "status:open"}, inbox.ListOpts{})
+	items, err := ib.ListByTags(custCtx, []string{"assignee:customer:cust-1234", "status:open"}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list items: %v", err)
 	}
@@ -201,15 +208,15 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 		Title:       "PEP screening review -- Ahmed K.",
 		Description: "Customer flagged as Politically Exposed Person during onboarding for Current Account -- AED. Review screening report and decide.",
 		Payload:     payload,
-		Tags: []string{
+		Tags: tags.MustNew(
 			"type:review",
 			"team:compliance",
 			"priority:high",
 			"assignee:team:compliance",
-			"ref:subscription:SUB-2026-0042",
-			"ref:customer:CUST-1234",
+			"ref:subscription:sub-2026-0042",
+			"ref:customer:cust-1234",
 			"workflow:onboarding-456",
-		},
+		),
 	})
 	if err != nil {
 		t.Fatalf("create item: %v", err)
@@ -299,13 +306,13 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 		Title:       "Accept Terms & Conditions",
 		Description: "Please review and accept the General Terms & Conditions to continue your account opening.",
 		Payload:     payload,
-		Tags: []string{
+		Tags: tags.MustNew(
 			"type:action",
-			"assignee:customer:CUST-5678",
+			"assignee:customer:cust-5678",
 			"rm:user:sarah",
 			"workflow:onboarding-789",
 			"priority:normal",
-		},
+		),
 	})
 	if err != nil {
 		t.Fatalf("create item: %v", err)
@@ -400,12 +407,12 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 		Title:       "Source of funds verification -- Large deposit",
 		Description: "Customer deposited $250,000. Source of funds documentation required per AML policy.",
 		Payload:     payload,
-		Tags: []string{
+		Tags: tags.MustNew(
 			"type:review",
 			"team:ops",
 			"priority:high",
-			"ref:customer:CUST-9999",
-		},
+			"ref:customer:cust-9999",
+		),
 	})
 	if err != nil {
 		t.Fatalf("create item: %v", err)
@@ -518,17 +525,17 @@ func TestItemExpiry(t *testing.T) {
 		Title:       "Verify your email address",
 		Description: "Please verify your email to continue account opening.",
 		Deadline:    &deadline,
-		Tags: []string{
+		Tags: tags.MustNew(
 			"type:action",
-			"assignee:customer:CUST-0001",
+			"assignee:customer:cust-0001",
 			"priority:normal",
-		},
+		),
 	})
 	if err != nil {
 		t.Fatalf("create item: %v", err)
 	}
 
-	if !inbox.HasTag(item, "deadline:"+deadline.Format(time.RFC3339)) {
+	if inbox.TagValue(item, "deadline") == "" {
 		t.Error("expected deadline tag")
 	}
 
@@ -579,7 +586,7 @@ func TestCancelDuplicateItem(t *testing.T) {
 	item, err := ib.Create(wfCtx, inbox.Meta{
 		Title:       "Upload Emirates ID (duplicate)",
 		Description: "This was created in error.",
-		Tags:        []string{"type:input_required", "assignee:customer:CUST-1234"},
+		Tags:        tags.MustNew("type:input_required", "assignee:customer:cust-1234"),
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -637,13 +644,13 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 		{
 			title:       "Verify your email address",
 			failureMode: "actionable",
-			assignee:    "assignee:customer:CUST-2000",
+			assignee:    "assignee:customer:cust-2000",
 			requirement: "email_verified",
 		},
 		{
 			title:       "Upload identity document",
 			failureMode: "input_required",
-			assignee:    "assignee:customer:CUST-2000",
+			assignee:    "assignee:customer:cust-2000",
 			requirement: "valid_passport",
 		},
 		{
@@ -657,16 +664,16 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 
 	var itemIDs []string
 	for _, req := range requirements {
-		tags := []string{
-			"type:" + req.failureMode,
+		itemTags := tags.MustNew(
+			"type:"+req.failureMode,
 			"workflow:onboarding-multi",
-			"ref:subscription:SUB-MULTI",
+			"ref:subscription:sub-multi",
 			"priority:normal",
-		}
+		)
 		if req.team != "" {
-			tags = append(tags, req.team)
+			itemTags = itemTags.Merge(tags.MustNew(req.team))
 		}
-		tags = append(tags, req.assignee)
+		itemTags = itemTags.Merge(tags.MustNew(req.assignee))
 
 		payload, err := structpb.NewStruct(map[string]any{
 			"subscription_id":  "SUB-MULTI",
@@ -684,7 +691,7 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 			Title:       req.title,
 			Description: "Required for Current Account opening.",
 			Payload:     payload,
-			Tags:        tags,
+			Tags:        itemTags,
 		})
 		if err != nil {
 			t.Fatalf("create %s: %v", req.requirement, err)
@@ -693,7 +700,7 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 	}
 
 	// Customer sees their 2 items.
-	customerItems, err := ib.ListByTags(ctx, []string{"assignee:customer:CUST-2000", "status:open"}, inbox.ListOpts{})
+	customerItems, err := ib.ListByTags(ctx, []string{"assignee:customer:cust-2000", "status:open"}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list customer items: %v", err)
 	}
@@ -751,12 +758,12 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 		Title:       "Sanctions screening -- Customer Z",
 		Description: "Automated screening flagged a potential match.",
 		Payload:     payload,
-		Tags: []string{
+		Tags: tags.MustNew(
 			"type:review",
 			"team:compliance",
 			"priority:high",
 			"workflow:onboarding-op",
-		},
+		),
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -842,7 +849,7 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 	wfCtx := ctxWithActor("kyc-001", identity.PrincipalService)
 	item, err := ib.Create(wfCtx, inbox.Meta{
 		Title: "KYC verification -- Customer Y",
-		Tags:  []string{"type:review", "team:ops"},
+		Tags:  tags.MustNew("type:review", "team:ops"),
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -894,4 +901,111 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 	if events[1].Actor != "service:kyc-bot" {
 		t.Errorf("expected service:kyc-bot, got %s", events[1].Actor)
 	}
+}
+
+// ─── Lifecycle hooks tests ───
+
+func TestLifecycleHooks(t *testing.T) {
+	es := sharedEntityStore(t)
+	recorder := &hookRecorder{}
+	ib := inbox.New(es,
+		inbox.WithLifecycleHooks("inbox.v1.ItemSchema", recorder),
+	)
+
+	actorCtx := ctxWithActor("hook-tester", identity.PrincipalUser)
+
+	item, err := ib.Create(actorCtx, inbox.Meta{
+		Title: "Hook Test Item",
+		Payload: &inboxv1.ItemSchema{
+			Display: []*inboxv1.DisplayField{{Label: "Test", Value: "Value"}},
+		},
+	})
+	require.NoError(t, err)
+
+	// Claim → OnClaim
+	_, err = ib.Claim(actorCtx, item.ID)
+	require.NoError(t, err)
+	require.Equal(t, 1, recorder.claimCount)
+	require.Equal(t, item.ID, recorder.lastItemID)
+
+	// Release → OnRelease
+	_, err = ib.Release(actorCtx, item.ID)
+	require.NoError(t, err)
+	require.Equal(t, 1, recorder.releaseCount)
+
+	// Complete → OnComplete
+	_, err = ib.Complete(actorCtx, item.ID)
+	require.NoError(t, err)
+	require.Equal(t, 1, recorder.completeCount)
+
+	// Cancel → OnCancel
+	cancelItem, err := ib.Create(actorCtx, inbox.Meta{
+		Title: "Hook Test Cancel Item",
+		Payload: &inboxv1.ItemSchema{
+			Display: []*inboxv1.DisplayField{{Label: "Test", Value: "Value"}},
+		},
+	})
+	require.NoError(t, err)
+	_, err = ib.Cancel(actorCtx, cancelItem.ID, "test cancellation")
+	require.NoError(t, err)
+	require.Equal(t, 1, recorder.cancelCount)
+	require.Equal(t, cancelItem.ID, recorder.lastItemID)
+
+	// Expire → OnExpire
+	expireItem, err := ib.Create(actorCtx, inbox.Meta{
+		Title: "Hook Test Expire Item",
+		Payload: &inboxv1.ItemSchema{
+			Display: []*inboxv1.DisplayField{{Label: "Test", Value: "Value"}},
+		},
+	})
+	require.NoError(t, err)
+	_, err = ib.Expire(actorCtx, expireItem.ID)
+	require.NoError(t, err)
+	require.Equal(t, 1, recorder.expireCount)
+	require.Equal(t, expireItem.ID, recorder.lastItemID)
+
+	// Op path → hooks fire through the Op builder too
+	opItem, err := ib.Create(actorCtx, inbox.Meta{
+		Title: "Hook Test Op Item",
+		Payload: &inboxv1.ItemSchema{
+			Display: []*inboxv1.DisplayField{{Label: "Test", Value: "Value"}},
+		},
+	})
+	require.NoError(t, err)
+	prevCompleteCount := recorder.completeCount
+	_, err = ib.On(actorCtx, opItem.ID).TransitionTo(inbox.StatusCompleted).Apply()
+	require.NoError(t, err)
+	require.Equal(t, prevCompleteCount+1, recorder.completeCount)
+}
+
+type hookRecorder struct {
+	inbox.DefaultHooks
+	claimCount, releaseCount, completeCount, cancelCount, expireCount int
+	lastItemID                                                       string
+}
+
+func (h *hookRecorder) OnClaim(_ context.Context, itemID, _ string) error {
+	h.claimCount++
+	h.lastItemID = itemID
+	return nil
+}
+func (h *hookRecorder) OnRelease(_ context.Context, itemID, _ string) error {
+	h.releaseCount++
+	h.lastItemID = itemID
+	return nil
+}
+func (h *hookRecorder) OnComplete(_ context.Context, itemID, _ string) error {
+	h.completeCount++
+	h.lastItemID = itemID
+	return nil
+}
+func (h *hookRecorder) OnCancel(_ context.Context, itemID, _, _ string) error {
+	h.cancelCount++
+	h.lastItemID = itemID
+	return nil
+}
+func (h *hookRecorder) OnExpire(_ context.Context, itemID string) error {
+	h.expireCount++
+	h.lastItemID = itemID
+	return nil
 }

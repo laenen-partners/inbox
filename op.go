@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/laenen-partners/entitystore/store"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	"github.com/laenen-partners/tags"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -201,18 +203,18 @@ func (op *Op) Apply() (Item, error) {
 
 	// Apply status transition.
 	if op.newStatus != "" {
-		item.Tags = replaceStatusTag(item.Tags, item.Proto.Status, op.newStatus)
+		item.Tags = item.Tags.With("status", op.newStatus)
 		item.Proto.Status = op.newStatus
 	}
 
 	// Apply tag changes.
 	for _, t := range op.tagsAdd {
-		if !hasTagInSlice(item.Tags, t) {
-			item.Tags = append(item.Tags, t)
-		}
+		item.Tags = item.Tags.Merge(tags.MustNew(t))
 	}
 	for _, t := range op.tagsRemove {
-		item.Tags = removeFromSlice(item.Tags, t)
+		if k, _, ok := strings.Cut(t, ":"); ok {
+			item.Tags = item.Tags.Without(k)
+		}
 	}
 
 	// Stamp and append all events.
@@ -230,7 +232,7 @@ func (op *Op) Apply() (Item, error) {
 				Action:          store.WriteActionUpdate,
 				MatchedEntityID: item.ID,
 				Data:            item.Proto,
-				Tags:            item.Tags,
+				Tags:            item.Tags.Strings(),
 			},
 		},
 	})
@@ -240,31 +242,32 @@ func (op *Op) Apply() (Item, error) {
 
 	// Fire dispatcher if we have a response and dispatcher is configured.
 	if op.response != nil && op.ib.dispatcher != nil {
-		if cb := findCallbackTag(item.Tags); cb != "" {
+		if cb := callbackValue(item.Tags); cb != "" {
 			_ = op.ib.dispatcher.Dispatch(op.ctx, cb, item.ID, *op.response)
+		}
+	}
+
+	// Fire lifecycle hooks if a status transition occurred.
+	// Hook error does not roll back the transition.
+	if op.newStatus != "" {
+		var hookErr error
+		switch op.newStatus {
+		case StatusCompleted:
+			hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnComplete(op.ctx, item.ID, op.actor) })
+		case StatusCancelled:
+			hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnCancel(op.ctx, item.ID, op.actor, "") })
+		case StatusExpired:
+			hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnExpire(op.ctx, item.ID) })
+		case StatusClaimed:
+			hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnClaim(op.ctx, item.ID, op.actor) })
+		case StatusOpen:
+			hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnRelease(op.ctx, item.ID, op.actor) })
+		}
+		if hookErr != nil {
+			return item, hookErr
 		}
 	}
 
 	return item, nil
 }
 
-// ─── Internal helpers ───
-
-func hasTagInSlice(tags []string, tag string) bool {
-	for _, t := range tags {
-		if t == tag {
-			return true
-		}
-	}
-	return false
-}
-
-func removeFromSlice(tags []string, tag string) []string {
-	result := make([]string, 0, len(tags))
-	for _, t := range tags {
-		if t != tag {
-			result = append(result, t)
-		}
-	}
-	return result
-}
