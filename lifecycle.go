@@ -56,7 +56,7 @@ func (ib *Inbox) Respond(ctx context.Context, itemID string, resp Response) (Ite
 		return Item{}, err
 	}
 	if IsTerminal(item.Proto.Status) {
-		return Item{}, fmt.Errorf("inbox: item %s is in terminal status %s", itemID, item.Proto.Status)
+		return Item{}, fmt.Errorf("%w: item %s is in status %s", ErrTerminalStatus, itemID, item.Proto.Status)
 	}
 
 	evtData := &inboxv1.ItemResponded{
@@ -100,7 +100,7 @@ func (ib *Inbox) Complete(ctx context.Context, itemID string) (Item, error) {
 		return Item{}, err
 	}
 	if IsTerminal(item.Proto.Status) {
-		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Proto.Status)
+		return Item{}, fmt.Errorf("%w: item %s is in status %s", ErrTerminalStatus, itemID, item.Proto.Status)
 	}
 	item, err = ib.doTransition(ctx, item, StatusCompleted,
 		newProtoEvent(actor, &inboxv1.ItemCompleted{CompletedBy: actor}))
@@ -124,7 +124,7 @@ func (ib *Inbox) Cancel(ctx context.Context, itemID string, reason string) (Item
 		return Item{}, err
 	}
 	if IsTerminal(item.Proto.Status) {
-		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Proto.Status)
+		return Item{}, fmt.Errorf("%w: item %s is in status %s", ErrTerminalStatus, itemID, item.Proto.Status)
 	}
 	item, err = ib.doTransition(ctx, item, StatusCancelled,
 		newProtoEventWithDetail(actor, reason, &inboxv1.ItemCancelled{CancelledBy: actor, Reason: reason}))
@@ -149,7 +149,7 @@ func (ib *Inbox) Expire(ctx context.Context, itemID string) (Item, error) {
 		return Item{}, err
 	}
 	if IsTerminal(item.Proto.Status) {
-		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Proto.Status)
+		return Item{}, fmt.Errorf("%w: item %s is in status %s", ErrTerminalStatus, itemID, item.Proto.Status)
 	}
 	item, err = ib.doTransition(ctx, item, StatusExpired,
 		newProtoEvent(actor, &inboxv1.ItemExpired{}))
@@ -206,7 +206,7 @@ func (ib *Inbox) transition(ctx context.Context, itemID string, fromStatus strin
 		return Item{}, err
 	}
 	if item.Proto.Status != fromStatus {
-		return Item{}, fmt.Errorf("inbox: item %s has status %s, expected %s", itemID, item.Proto.Status, fromStatus)
+		return Item{}, fmt.Errorf("%w: item %s has status %s, expected %s", ErrInvalidTransition, itemID, item.Proto.Status, fromStatus)
 	}
 	return ib.doTransition(ctx, item, toStatus, evt)
 }

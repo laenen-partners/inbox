@@ -13,10 +13,10 @@ import (
 func (ib *Inbox) Get(ctx context.Context, itemID string) (Item, error) {
 	e, err := ib.es.GetEntity(ctx, itemID)
 	if err != nil {
-		return Item{}, fmt.Errorf("inbox: get item: %w", err)
+		return Item{}, fmt.Errorf("%w: %v", ErrNotFound, err)
 	}
 	if e.EntityType != EntityType {
-		return Item{}, fmt.Errorf("inbox: entity %s is not an inbox item", itemID)
+		return Item{}, fmt.Errorf("%w: entity %s is not an inbox item", ErrNotFound, itemID)
 	}
 	return itemFromEntity(e)
 }
