@@ -1,13 +1,11 @@
 package ui
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/inbox"
-	inboxtoken "github.com/laenen-partners/inbox/token"
 	"github.com/laenen-partners/tags"
 	"github.com/starfederation/datastar-go/datastar"
 )
@@ -143,43 +141,6 @@ func (s *server) refreshDetailAndToast(w http.ResponseWriter, r *http.Request, i
 	ds.Send.Drawer(sse, detailDrawer(data))
 	sse.PatchElementTempl(queueRow(item, s.cfg.basePath))
 	ds.Send.Toast(sse, ds.ToastSuccess, msg)
-}
-
-func (s *server) handleGenerateLink(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.signer == nil {
-		s.sseError(w, r, fmt.Errorf("link generation not configured"))
-		return
-	}
-
-	ctx := r.Context()
-	id := chi.URLParam(r, "id")
-
-	item, err := s.ib.Get(ctx, id)
-	if err != nil {
-		s.sseError(w, r, err)
-		return
-	}
-
-	// Use assignee as the token actor, or fall back to a generic client actor
-	actor := inbox.TagValue(item, "assignee")
-	if actor == "" {
-		actor = "client:" + id
-	}
-
-	token, _, err := s.cfg.signer.Sign(ctx, id, actor, inboxtoken.ScopeRespond, s.cfg.linkExpiry)
-	if err != nil {
-		s.sseError(w, r, err)
-		return
-	}
-
-	link := s.cfg.linkBaseURL + "?token=" + token
-
-	sse := datastar.NewSSE(w, r)
-	// Patch the link into a signal; the client-side effect copies it to clipboard
-	sse.MarshalAndPatchSignals(map[string]any{
-		"__link": link,
-	})
-	ds.Send.Toast(sse, ds.ToastSuccess, "Link copied to clipboard")
 }
 
 func (s *server) sseError(w http.ResponseWriter, r *http.Request, err error) {

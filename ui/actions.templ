@@ -114,16 +114,6 @@ templ cancelButton(data detailData) {
 	</div>
 }
 
-templ sendLinkButton(data detailData) {
-	@button.Button(button.Props{
-		Variant: button.VariantGhost,
-		Size:    button.SizeXs,
-		OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/link"),
-	}) {
-		Send Link
-	}
-}
-
 templ commentForm(data detailData) {
 	{{ signals := ds.NewSignals("comment-form", struct {
 		Body string `json:"body"`

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"github.com/laenen-partners/dsx/ui/badge"
-	"github.com/laenen-partners/dsx/ui/jsonview"
 	"github.com/laenen-partners/inbox"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 )
@@ -53,22 +52,6 @@ templ detailDrawer(data detailData) {
 		if data.Content != nil {
 			<div class="py-4">
 				@data.Content
-			</div>
-		} else if data.PayloadComponent != nil || data.Item.Proto.GetPayload() != nil {
-			<div class="py-4">
-				if data.PayloadComponent != nil {
-					@sectionLabel("Payload")
-					<div class="mt-2.5">
-						@data.PayloadComponent
-					</div>
-				} else if data.Item.Proto.GetPayload() != nil {
-					@sectionLabel("Payload")
-					<div class="mt-2.5">
-						@jsonview.JSONView(jsonview.Props{
-							Value: string(data.Item.Proto.GetPayload().GetValue()),
-						})
-					</div>
-				}
 			</div>
 		}
 

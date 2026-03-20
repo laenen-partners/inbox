@@ -2,11 +2,9 @@ package ui
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/a-h/templ"
 	"github.com/laenen-partners/identity"
-	inboxtoken "github.com/laenen-partners/inbox/token"
 )
 
 // FilterConfig defines a preset tag filter shown in the filter bar.
@@ -15,10 +13,6 @@ type FilterConfig struct {
 	TagPrefix string   // Tag prefix to filter by (e.g. "team:")
 	Options   []string // Available values (e.g. ["compliance", "ops"])
 }
-
-// PayloadRendererFunc renders a typed payload into a templ component.
-// It receives the raw proto Any bytes and the payload type URL.
-type PayloadRendererFunc func(payloadType string, data []byte) templ.Component
 
 // LayoutFunc wraps page content in an application layout.
 // currentPath is the active route (e.g. "/", "/mywork", "/search").
@@ -31,20 +25,15 @@ type Option func(*config)
 type config struct {
 	identityFn       func(r *http.Request) identity.Context
 	filters          []FilterConfig
-	payloadRenderers map[string]PayloadRendererFunc
 	contentProviders map[string]ContentProvider
 	basePath         string
 	layoutFn         LayoutFunc
-	signer           inboxtoken.Signer
-	linkBaseURL      string        // base URL for presigned links (e.g. "https://app.example.com/respond")
-	linkExpiry       time.Duration // how long presigned links are valid
 }
 
 func defaultConfig() *config {
 	defaultID, _ := identity.New("default", "default", "anonymous", identity.PrincipalService, nil)
 	return &config{
 		identityFn:       func(r *http.Request) identity.Context { return defaultID },
-		payloadRenderers: make(map[string]PayloadRendererFunc),
 		contentProviders: make(map[string]ContentProvider),
 	}
 }
@@ -57,11 +46,6 @@ func WithIdentity(fn func(r *http.Request) identity.Context) Option {
 // WithFilter adds a preset tag filter to the filter bar.
 func WithFilter(f FilterConfig) Option {
 	return func(c *config) { c.filters = append(c.filters, f) }
-}
-
-// WithPayloadRenderer registers a custom renderer for a specific payload type.
-func WithPayloadRenderer(payloadType string, fn PayloadRendererFunc) Option {
-	return func(c *config) { c.payloadRenderers[payloadType] = fn }
 }
 
 // WithContentProvider registers a content provider for a specific payload type.
@@ -83,14 +67,3 @@ func WithLayout(fn LayoutFunc) Option {
 	return func(c *config) { c.layoutFn = fn }
 }
 
-// WithSigner enables presigned link generation for inbox items.
-// linkBaseURL is the public URL prefix for the client-facing endpoint
-// (e.g. "https://app.example.com/respond"). The generated link appends ?token=<jwt>.
-// expiry controls how long the links are valid.
-func WithSigner(signer inboxtoken.Signer, linkBaseURL string, expiry time.Duration) Option {
-	return func(c *config) {
-		c.signer = signer
-		c.linkBaseURL = linkBaseURL
-		c.linkExpiry = expiry
-	}
-}

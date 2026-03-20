@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -91,7 +90,6 @@ func main() {
 		inboxui.WithLayout(showcaseLayout),
 		inboxui.WithContentProvider("schema.v1.ItemSchema", schemaProvider{}),
 		inboxui.WithContentProvider("inbox.v1.ItemSchema", schemaProvider{}),
-		inboxui.WithSigner(tokens, "http://localhost:8080/respond", 24*time.Hour),
 		inboxui.WithIdentity(func(r *http.Request) identity.Context {
 			// Check if identity was already set (e.g. by auth middleware)
 			if id, ok := identity.FromContext(r.Context()); ok {

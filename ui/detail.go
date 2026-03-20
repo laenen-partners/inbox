@@ -29,37 +29,26 @@ func (s *server) handleDetail(w http.ResponseWriter, r *http.Request) {
 
 // buildDetailData constructs the detailData for rendering the detail drawer.
 // When a ContentProvider is registered for the item's payload type, it delegates
-// rendering to the provider. Otherwise it falls back to legacy schema/payload rendering.
+// rendering to the provider.
 func (s *server) buildDetailData(ctx context.Context, item inbox.Item, actor string) detailData {
 	data := detailData{
 		Item:     item,
 		Actor:    actor,
 		BasePath: s.cfg.basePath,
 	}
-
-	// Try ContentProvider first
 	if provider, ok := s.cfg.contentProviders[item.PayloadType()]; ok {
 		rc := RenderContext{Item: item, Actor: actor, BasePath: s.cfg.basePath}
 		data.Content = provider.Render(ctx, rc)
-	} else {
-		// Legacy: custom payload renderer only
-		if fn, ok := s.cfg.payloadRenderers[item.PayloadType()]; ok {
-			if item.Proto.GetPayload() != nil {
-				data.PayloadComponent = fn(item.PayloadType(), item.Proto.GetPayload().GetValue())
-			}
-		}
 	}
-
 	assignee := inbox.TagValue(item, "assignee")
 	data.IsClaimant = assignee == actor
 	return data
 }
 
 type detailData struct {
-	Item             inbox.Item
-	Actor            string
-	IsClaimant       bool
-	BasePath         string
-	Content          templ.Component
-	PayloadComponent templ.Component
+	Item       inbox.Item
+	Actor      string
+	IsClaimant bool
+	BasePath   string
+	Content    templ.Component
 }
