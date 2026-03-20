@@ -3,13 +3,14 @@ package ui
 import (
 	"net/http"
 
+	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/inbox"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
 func (s *server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	query := r.URL.Query().Get("q")
+	query := s.readSearchQuery(r)
 
 	var items []inbox.Item
 	var err error
@@ -48,4 +49,17 @@ type searchData struct {
 	Query    string
 	Items    []inbox.Item
 	BasePath string
+}
+
+// readSearchQuery extracts the search query from a request. Datastar sends
+// signals in a ?datastar= JSON query param for GET requests, so we check
+// there first, then fall back to a plain ?q= param for direct navigation.
+func (s *server) readSearchQuery(r *http.Request) string {
+	var signals struct {
+		Q string `json:"q"`
+	}
+	if err := ds.ReadSignals("search", r, &signals); err == nil && signals.Q != "" {
+		return signals.Q
+	}
+	return r.URL.Query().Get("q")
 }

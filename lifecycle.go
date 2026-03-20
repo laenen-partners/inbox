@@ -64,6 +64,7 @@ func (ib *Inbox) Respond(ctx context.Context, itemID string, resp Response) (Ite
 		Comment: resp.Comment,
 	}
 	evt := newProtoEventWithDetail(actor, resp.Action, evtData)
+	evt.At = timestamppb.New(time.Now().UTC())
 
 	item.Proto.Events = append(item.Proto.Events, evt)
 

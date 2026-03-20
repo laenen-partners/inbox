@@ -7,6 +7,7 @@ import (
 
 	"github.com/laenen-partners/entitystore/store"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	"github.com/laenen-partners/tags"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -61,10 +62,10 @@ func (ib *Inbox) Comment(ctx context.Context, itemID string, body string, opts *
 func (ib *Inbox) Escalate(ctx context.Context, itemID string, fromTeam string, toTeam string, reason string) (Item, error) {
 	actor := actorFromCtx(ctx)
 	if fromTeam != "" {
-		_ = ib.es.RemoveTag(ctx, itemID, "team:"+fromTeam)
+		_ = ib.es.RemoveTag(ctx, itemID, tags.Team(fromTeam))
 	}
 	if toTeam != "" {
-		_ = ib.es.AddTags(ctx, itemID, []string{"team:" + toTeam})
+		_ = ib.es.AddTags(ctx, itemID, []string{tags.Team(toTeam)})
 	}
 
 	return ib.AddEvent(ctx, itemID, newProtoEventWithDetail(actor, reason, &inboxv1.ItemEscalated{
@@ -79,10 +80,10 @@ func (ib *Inbox) Escalate(ctx context.Context, itemID string, fromTeam string, t
 func (ib *Inbox) Reassign(ctx context.Context, itemID string, fromActor string, toActor string, reason string) (Item, error) {
 	actor := actorFromCtx(ctx)
 	if fromActor != "" {
-		_ = ib.es.RemoveTag(ctx, itemID, "assignee:"+fromActor)
+		_ = ib.es.RemoveTag(ctx, itemID, tags.Build("assignee", fromActor))
 	}
 	if toActor != "" {
-		_ = ib.es.AddTags(ctx, itemID, []string{"assignee:" + toActor})
+		_ = ib.es.AddTags(ctx, itemID, []string{tags.Build("assignee", toActor)})
 	}
 
 	return ib.AddEvent(ctx, itemID, newProtoEventWithDetail(actor, reason, &inboxv1.ItemReassigned{

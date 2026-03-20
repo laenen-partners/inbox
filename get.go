@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/laenen-partners/entitystore/matching"
+	"github.com/laenen-partners/tags"
 )
 
 // Get returns a single inbox item by ID.
@@ -87,27 +88,15 @@ func (ib *Inbox) Stale(ctx context.Context, tags []string, age time.Duration, op
 
 // ─── Internal helpers ───
 
-func filterByTags(entities []matching.StoredEntity, tags []string) []matching.StoredEntity {
+func filterByTags(entities []matching.StoredEntity, required []string) []matching.StoredEntity {
+	req := tags.MustNew(required...)
 	var filtered []matching.StoredEntity
 	for _, e := range entities {
-		if hasAllTags(e.Tags, tags) {
+		if tags.FromStrings(e.Tags).HasAll(req) {
 			filtered = append(filtered, e)
 		}
 	}
 	return filtered
-}
-
-func hasAllTags(entityTags, required []string) bool {
-	tagSet := make(map[string]struct{}, len(entityTags))
-	for _, t := range entityTags {
-		tagSet[t] = struct{}{}
-	}
-	for _, t := range required {
-		if _, ok := tagSet[t]; !ok {
-			return false
-		}
-	}
-	return true
 }
 
 func lastEventBefore(item Item, cutoff time.Time) bool {

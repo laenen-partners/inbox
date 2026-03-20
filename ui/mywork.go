@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/laenen-partners/inbox"
+	"github.com/laenen-partners/tags"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
@@ -13,10 +14,10 @@ func (s *server) handleMyWork(w http.ResponseWriter, r *http.Request) {
 	actor := actorStr(ctx)
 
 	filterValues := s.readFilterValues(r)
-	tags := []string{"status:claimed", "assignee:" + actor}
+	filterTags := []string{tags.Status(inbox.StatusClaimed), tags.Build("assignee", actor)}
 	for _, f := range s.cfg.filters {
 		if v := filterValues[filterKey(f.TagPrefix)]; v != "" {
-			tags = append(tags, f.TagPrefix+v)
+			filterTags = append(filterTags, f.TagPrefix+v)
 		}
 	}
 
@@ -27,7 +28,7 @@ func (s *server) handleMyWork(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	items, err := s.ib.ListByTags(ctx, tags, inbox.ListOpts{
+	items, err := s.ib.ListByTags(ctx, filterTags, inbox.ListOpts{
 		PageSize: 50,
 		Cursor:   cursor,
 	})

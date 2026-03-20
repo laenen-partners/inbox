@@ -18,11 +18,22 @@ type PayloadContext struct {
 
 templ Payload(schema *schemav1.ItemSchema, pc PayloadContext) {
 	{{ signals := BuildSignals(schema) }}
+	{{ info, blocks := splitDisplay(schema.Display) }}
 	<div class="space-y-4" data-signals={ signals }>
-		// Display fields
-		if len(schema.Display) > 0 {
-			<div class="space-y-3">
-				for _, d := range schema.Display {
+		// Info fields — grouped in a subtle card with grid layout
+		if len(info) > 0 {
+			<div class="rounded-lg bg-base-200/30 border border-base-200 px-3 py-2.5">
+				<div class={ infoGridClass(len(info)) }>
+					for _, d := range info {
+						@DisplayField(d)
+					}
+				</div>
+			</div>
+		}
+		// Block fields — alerts, documents, images, markdown
+		if len(blocks) > 0 {
+			<div class="space-y-2.5">
+				for _, d := range blocks {
 					@DisplayField(d)
 				}
 			</div>
@@ -256,7 +267,7 @@ templ ActionButton(a *schemav1.Action, itemID string, basePath string) {
 		Variant: ButtonVariant(a.Variant),
 		Size:    button.SizeSm,
 		OnClick: ds.Post(basePath + "/items/" + itemID + "/respond"),
-		Attributes: ds.RawSignals(`{"schema":{"_action":"` + a.Name + `"}}`),
+		Attributes: ds.RawSignals(`{"respond-form":{"action":"` + a.Name + `"},"schema":{"_action":"` + a.Name + `"}}`),
 	}) {
 		{ a.Label }
 	}
@@ -287,6 +298,24 @@ func fieldPlaceholder(custom, fallback string) string {
 		return custom
 	}
 	return fallback
+}
+
+func splitDisplay(fields []*schemav1.DisplayField) (info, blocks []*schemav1.DisplayField) {
+	for _, f := range fields {
+		if f.Type == "" {
+			info = append(info, f)
+		} else {
+			blocks = append(blocks, f)
+		}
+	}
+	return
+}
+
+func infoGridClass(count int) string {
+	if count > 1 {
+		return "grid grid-cols-2 gap-x-4 gap-y-2"
+	}
+	return ""
 }
 
 // ButtonVariant converts a string variant name to a button.Variant.

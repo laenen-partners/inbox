@@ -10,6 +10,7 @@ import (
 	"github.com/laenen-partners/entitystore/store"
 	"github.com/laenen-partners/identity"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	"github.com/laenen-partners/tags"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -29,9 +30,9 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 	createdEvt := newProtoEvent(actor, &inboxv1.ItemCreated{PayloadType: payloadTypeFromMsg(meta.Payload)})
 	createdEvt.At = timestamppb.New(now)
 
-	tags := appendStatusTag(meta.Tags, StatusOpen)
+	t := meta.Tags.With("status", StatusOpen)
 	if meta.Deadline != nil {
-		tags = append(tags, "deadline:"+meta.Deadline.Format(time.RFC3339))
+		t = t.With("deadline", meta.Deadline.Format(time.RFC3339))
 	}
 
 	p := &inboxv1.Item{
@@ -51,7 +52,7 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 		Action: store.WriteActionCreate,
 		ID:     id,
 		Data:   p,
-		Tags:   tags,
+		Tags:   t.Strings(),
 		Tokens: tokens,
 	}
 
@@ -72,7 +73,7 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 	return Item{
 		ID:        id,
 		Proto:     p,
-		Tags:      tags,
+		Tags:      t,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}, nil
@@ -103,17 +104,6 @@ func newProtoEventWithDetail(actor, detail string, msg proto.Message) *inboxv1.E
 func actorFromCtx(ctx context.Context) string {
 	id := identity.MustFromContext(ctx)
 	return string(id.PrincipalType()) + ":" + id.PrincipalID()
-}
-
-// appendStatusTag ensures a "status:<s>" tag is present.
-func appendStatusTag(tags []string, s string) []string {
-	tag := "status:" + s
-	for _, t := range tags {
-		if t == tag {
-			return tags
-		}
-	}
-	return append(tags, tag)
 }
 
 // buildTokens creates the token map for fuzzy text search.
@@ -169,33 +159,7 @@ func lower(c byte) byte {
 	return c
 }
 
-// findCallbackTag extracts the callback address from item tags.
-func findCallbackTag(tags []string) string {
-	const prefix = "callback:"
-	for _, t := range tags {
-		if len(t) > len(prefix) && t[:len(prefix)] == prefix {
-			return t[len(prefix):]
-		}
-	}
-	return ""
-}
-
-// replaceStatusTag swaps the old status tag for the new one.
-func replaceStatusTag(tags []string, oldStatus, newStatus string) []string {
-	oldTag := "status:" + oldStatus
-	newTag := "status:" + newStatus
-	result := make([]string, 0, len(tags))
-	found := false
-	for _, t := range tags {
-		if t == oldTag {
-			result = append(result, newTag)
-			found = true
-		} else {
-			result = append(result, t)
-		}
-	}
-	if !found {
-		result = append(result, newTag)
-	}
-	return result
+// callbackValue extracts the callback address from item tags.
+func callbackValue(t tags.Set) string {
+	return t.Value("callback")
 }

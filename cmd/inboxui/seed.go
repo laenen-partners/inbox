@@ -26,7 +26,7 @@ func seedData(parentCtx context.Context, ib *inbox.Inbox) error {
 	if _, err := ib.Create(ctx, inbox.Meta{
 		Title:       "Upload identity documents",
 		Description: "Please upload your identity document and a recent proof of address to continue opening your account.",
-		Tags:        tags.MustNew("type:input_required", "priority:high", tags.Team("ops"), "assignee:customer:CUST-1234"),
+		Tags:        tags.MustNew("type:input_required", "priority:high", tags.Team("ops"), "assignee:customer:cust-1234"),
 
 		Deadline:    &deadline,
 		Payload: &schemav1.ItemSchema{
@@ -53,7 +53,7 @@ func seedData(parentCtx context.Context, ib *inbox.Inbox) error {
 	if _, err := ib.Create(ctx, inbox.Meta{
 		Title:       "Review and sign service agreement",
 		Description: "Please review the service agreement and sign to activate your account.",
-		Tags:        tags.MustNew("type:approval", "priority:normal", tags.Team("ops"), "assignee:customer:CUST-1234"),
+		Tags:        tags.MustNew("type:approval", "priority:normal", tags.Team("ops"), "assignee:customer:cust-1234"),
 
 		Payload: &schemav1.ItemSchema{
 			Display: []*schemav1.DisplayField{
@@ -79,7 +79,7 @@ func seedData(parentCtx context.Context, ib *inbox.Inbox) error {
 	if _, err := ib.Create(ctx, inbox.Meta{
 		Title:       "Verify your email address",
 		Description: "We sent a 6-digit code to your email. Enter it below to verify your address.",
-		Tags:        tags.MustNew("type:action", "priority:high", tags.Team("ops"), "assignee:customer:CUST-2000"),
+		Tags:        tags.MustNew("type:action", "priority:high", tags.Team("ops"), "assignee:customer:cust-2000"),
 
 		Payload: &schemav1.ItemSchema{
 			Display: []*schemav1.DisplayField{
@@ -102,7 +102,7 @@ func seedData(parentCtx context.Context, ib *inbox.Inbox) error {
 	if _, err := ib.Create(ctx, inbox.Meta{
 		Title:       "Document vehicle damage",
 		Description: "Please provide photos and details of the damage for your insurance claim.",
-		Tags:        tags.MustNew("type:input_required", "priority:normal", tags.Team("ops"), "assignee:customer:CUST-3000"),
+		Tags:        tags.MustNew("type:input_required", "priority:normal", tags.Team("ops"), "assignee:customer:cust-3000"),
 
 		Payload: &schemav1.ItemSchema{
 			Display: []*schemav1.DisplayField{
@@ -128,7 +128,7 @@ func seedData(parentCtx context.Context, ib *inbox.Inbox) error {
 	if _, err := ib.Create(ctx, inbox.Meta{
 		Title:       "Rate your onboarding experience",
 		Description: "We'd love to hear your feedback on the account opening process.",
-		Tags:        tags.MustNew("type:action", "priority:low", tags.Team("ops"), "assignee:customer:CUST-4000"),
+		Tags:        tags.MustNew("type:action", "priority:low", tags.Team("ops"), "assignee:customer:cust-4000"),
 
 		Payload: &schemav1.ItemSchema{
 			Display: []*schemav1.DisplayField{
@@ -152,7 +152,7 @@ func seedData(parentCtx context.Context, ib *inbox.Inbox) error {
 	if _, err := ib.Create(ctx, inbox.Meta{
 		Title:       "Provide employment details",
 		Description: "We need your employment and income information for the account assessment.",
-		Tags:        tags.MustNew("type:input_required", "priority:normal", tags.Team("ops"), "assignee:customer:CUST-1234"),
+		Tags:        tags.MustNew("type:input_required", "priority:normal", tags.Team("ops"), "assignee:customer:cust-1234"),
 
 		Payload: &schemav1.ItemSchema{
 			Display: []*schemav1.DisplayField{

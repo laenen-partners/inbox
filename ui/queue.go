@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/laenen-partners/inbox"
+	"github.com/laenen-partners/tags"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
@@ -12,10 +13,10 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	filterValues := s.readFilterValues(r)
 
-	tags := []string{"status:open"}
+	filterTags := []string{tags.Status(inbox.StatusOpen)}
 	for _, f := range s.cfg.filters {
 		if v := filterValues[filterKey(f.TagPrefix)]; v != "" {
-			tags = append(tags, f.TagPrefix+v)
+			filterTags = append(filterTags, f.TagPrefix+v)
 		}
 	}
 
@@ -26,7 +27,7 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	items, err := s.ib.ListByTags(ctx, tags, inbox.ListOpts{
+	items, err := s.ib.ListByTags(ctx, filterTags, inbox.ListOpts{
 		PageSize: 50,
 		Cursor:   cursor,
 	})
@@ -46,7 +47,7 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 	// Count by priority for stat cards
 	counts := make(map[string]int)
 	for _, item := range items {
-		p := inbox.TagValue(item, "priority:")
+		p := inbox.TagValue(item, "priority")
 		if p != "" {
 			counts[p]++
 		}

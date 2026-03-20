@@ -109,7 +109,7 @@ templ queueRow(item inbox.Item, basePath string) {
 	<tr
 		id={ "row-" + item.ID }
 		class={ "hover:bg-base-200/50 cursor-pointer transition-colors border-b border-base-200/60 last:border-0",
-			templ.KV("border-l-2 border-l-error", inbox.TagValue(item, "priority:") == "urgent") }
+			templ.KV("border-l-2 border-l-error", inbox.TagValue(item, "priority") == "urgent") }
 		{ ds.OnClick(ds.Get(basePath + "/items/" + item.ID))... }
 	>
 		<td class="py-3">
@@ -128,10 +128,10 @@ templ queueRow(item inbox.Item, basePath string) {
 			}
 		</td>
 		<td class="py-3">
-			@priorityBadge(inbox.TagValue(item, "priority:"))
+			@priorityBadge(inbox.TagValue(item, "priority"))
 		</td>
-		<td class="py-3 text-xs text-base-content/60">{ inbox.TagValue(item, "team:") }</td>
-		<td class="py-3 text-xs text-base-content/60">{ actorDisplayName(inbox.TagValue(item, "assignee:")) }</td>
+		<td class="py-3 text-xs text-base-content/60">{ inbox.TagValue(item, "team") }</td>
+		<td class="py-3 text-xs text-base-content/60">{ actorDisplayName(inbox.TagValue(item, "assignee")) }</td>
 		<td class="py-3 text-xs text-base-content/40 tabular-nums">{ formatAge(item.CreatedAt) }</td>
 		<td class="py-3 text-xs text-base-content/40 tabular-nums">
 			if dl := item.Deadline(); dl != nil {

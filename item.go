@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/laenen-partners/entitystore/matching"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	"github.com/laenen-partners/tags"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"github.com/laenen-partners/entitystore/matching"
 )
 
 // Item is the domain representation of an inbox item.
@@ -18,7 +18,7 @@ import (
 type Item struct {
 	ID        string
 	Proto     *inboxv1.Item
-	Tags      []string
+	Tags      tags.Set
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -45,7 +45,7 @@ type Meta struct {
 	Description    string
 	Deadline       *time.Time
 	Payload        proto.Message
-	Tags           []string
+	Tags           tags.Set
 	IdempotencyKey string
 }
 
@@ -78,7 +78,7 @@ func itemFromEntity(e matching.StoredEntity) (Item, error) {
 	return Item{
 		ID:        e.ID,
 		Proto:     p,
-		Tags:      e.Tags,
+		Tags:      tags.FromStrings(e.Tags),
 		CreatedAt: e.CreatedAt,
 		UpdatedAt: e.UpdatedAt,
 	}, nil
