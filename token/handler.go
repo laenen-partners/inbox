@@ -1,4 +1,4 @@
-package ui
+package token
 
 import (
 	"encoding/json"
@@ -14,25 +14,43 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 )
 
-func (s *server) handleClientRespond(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.verifier == nil {
-		http.Error(w, "not configured", http.StatusNotFound)
-		return
-	}
+// Handler serves the client-facing presigned link endpoint (GET + POST /respond).
+type Handler struct {
+	inbox    *inbox.Inbox
+	verifier Verifier
+}
 
-	token := r.URL.Query().Get("token")
-	if token == "" {
+// NewHandler creates a new presigned link handler.
+func NewHandler(ib *inbox.Inbox, v Verifier) *Handler {
+	return &Handler{inbox: ib, verifier: v}
+}
+
+// ServeHTTP dispatches GET and POST for the /respond endpoint.
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.handleGet(w, r)
+	case http.MethodPost:
+		h.handlePost(w, r)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
+	tok := r.URL.Query().Get("token")
+	if tok == "" {
 		http.Error(w, "missing token", http.StatusBadRequest)
 		return
 	}
 
-	claims, err := s.cfg.verifier.Verify(r.Context(), token)
+	claims, err := h.verifier.Verify(r.Context(), tok)
 	if err != nil {
 		http.Error(w, "invalid or expired link", http.StatusForbidden)
 		return
 	}
 
-	item, err := s.ib.Get(r.Context(), claims.ItemID)
+	item, err := h.inbox.Get(r.Context(), claims.ItemID)
 	if err != nil {
 		http.Error(w, "item not found", http.StatusNotFound)
 		return
@@ -44,50 +62,40 @@ func (s *server) handleClientRespond(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := clientData{
-		Item:     item,
-		Schema:   sch,
-		Token:    token,
-		BasePath: s.cfg.basePath,
-		Scope:    claims.Scope,
+		Item:   item,
+		Schema: sch,
+		Token:  tok,
+		Scope:  claims.Scope,
 	}
 
 	// Render directly — bypass the app layout (no dashboard for client-facing pages)
 	clientStandalonePage(data).Render(r.Context(), w)
 }
 
-func (s *server) handleClientRespondSubmit(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.verifier == nil {
-		http.Error(w, "not configured", http.StatusNotFound)
-		return
-	}
-
+func (h *Handler) handlePost(w http.ResponseWriter, r *http.Request) {
 	// Read the token from signals
 	var signals struct {
 		Token string `json:"token"`
 	}
 	if err := ds.ReadSignals("client", r, &signals); err != nil {
-		s.sseError(w, r, err)
+		sseError(w, r, err)
 		return
 	}
 
-	claims, err := s.cfg.verifier.Verify(r.Context(), signals.Token)
+	claims, err := h.verifier.Verify(r.Context(), signals.Token)
 	if err != nil {
-		s.sseError(w, r, fmt.Errorf("invalid or expired link"))
+		sseError(w, r, fmt.Errorf("invalid or expired link"))
 		return
 	}
 
-	if claims.Scope != inbox.ScopeRespond {
-		s.sseError(w, r, fmt.Errorf("this link is view-only"))
+	if claims.Scope != ScopeRespond {
+		sseError(w, r, fmt.Errorf("this link is view-only"))
 		return
 	}
 
 	// Read the schema field values
-	var schemaSignals map[string]interface{}
 	var rawSignals map[string]json.RawMessage
 	ds.ReadRaw(r, &rawSignals)
-	if raw, ok := rawSignals["schema"]; ok {
-		json.Unmarshal(raw, &schemaSignals)
-	}
 
 	// Build response comment from schema fields
 	comment := "Submitted via presigned link"
@@ -106,21 +114,26 @@ func (s *server) handleClientRespondSubmit(w http.ResponseWriter, r *http.Reques
 	claimsID, _ := identity.New("token", "token", pid, pt, nil)
 	ctx = identity.WithContext(ctx, claimsID)
 
-	_, err = s.ib.Respond(ctx, claims.ItemID, inbox.Response{
+	_, err = h.inbox.Respond(ctx, claims.ItemID, inbox.Response{
 		Action:  "submit",
 		Comment: comment,
 	})
 	if err != nil {
-		s.sseError(w, r, err)
+		sseError(w, r, err)
 		return
 	}
 
 	// Complete the item
-	_, err = s.ib.Complete(ctx, claims.ItemID)
+	_, err = h.inbox.Complete(ctx, claims.ItemID)
 	if err != nil {
 		// Item may already be completed or not claimable — just log
 	}
 
 	sse := datastar.NewSSE(w, r)
 	ds.Send.Toast(sse, ds.ToastSuccess, "Response submitted. You can close this page.")
+}
+
+func sseError(w http.ResponseWriter, r *http.Request, err error) {
+	sse := datastar.NewSSE(w, r)
+	ds.Send.Toast(sse, ds.ToastError, err.Error())
 }

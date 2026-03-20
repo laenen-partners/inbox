@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/laenen-partners/inbox"
+	inboxtoken "github.com/laenen-partners/inbox/token"
 )
 
 func TestHMACTokens(t *testing.T) {
@@ -13,7 +13,7 @@ func TestHMACTokens(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("sign_and_verify", func(t *testing.T) {
-		token, exp, err := tokens.Sign(ctx, "item-123", "user:alice", inbox.ScopeRespond, time.Hour)
+		token, exp, err := tokens.Sign(ctx, "item-123", "user:alice", inboxtoken.ScopeRespond, time.Hour)
 		if err != nil {
 			t.Fatalf("sign: %v", err)
 		}
@@ -34,8 +34,8 @@ func TestHMACTokens(t *testing.T) {
 		if claims.Actor != "user:alice" {
 			t.Errorf("Actor = %q, want %q", claims.Actor, "user:alice")
 		}
-		if claims.Scope != inbox.ScopeRespond {
-			t.Errorf("Scope = %q, want %q", claims.Scope, inbox.ScopeRespond)
+		if claims.Scope != inboxtoken.ScopeRespond {
+			t.Errorf("Scope = %q, want %q", claims.Scope, inboxtoken.ScopeRespond)
 		}
 		if claims.IssuedAt.IsZero() {
 			t.Error("IssuedAt should be set")
@@ -43,7 +43,7 @@ func TestHMACTokens(t *testing.T) {
 	})
 
 	t.Run("expired_token", func(t *testing.T) {
-		token, _, err := tokens.Sign(ctx, "item-456", "user:bob", inbox.ScopeView, -time.Hour)
+		token, _, err := tokens.Sign(ctx, "item-456", "user:bob", inboxtoken.ScopeView, -time.Hour)
 		if err != nil {
 			t.Fatalf("sign: %v", err)
 		}
@@ -62,7 +62,7 @@ func TestHMACTokens(t *testing.T) {
 
 	t.Run("wrong_secret", func(t *testing.T) {
 		other := NewHMACTokens([]byte("different-secret-also-32-bytes!!"))
-		token, _, _ := tokens.Sign(ctx, "item-789", "user:eve", inbox.ScopeRespond, time.Hour)
+		token, _, _ := tokens.Sign(ctx, "item-789", "user:eve", inboxtoken.ScopeRespond, time.Hour)
 		_, err := other.Verify(ctx, token)
 		if err == nil {
 			t.Fatal("expected error for wrong secret")

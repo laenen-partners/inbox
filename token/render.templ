@@ -1,4 +1,4 @@
-package ui
+package token
 
 import (
 	"github.com/laenen-partners/dsx"
@@ -11,11 +11,16 @@ import (
 )
 
 type clientData struct {
-	Item     inbox.Item
-	Schema   *schemav1.ItemSchema
-	Token    string
-	BasePath string
-	Scope    string
+	Item   inbox.Item
+	Schema *schemav1.ItemSchema
+	Token  string
+	Scope  string
+}
+
+templ tokenHead() {
+	<link rel="stylesheet" href="/assets/css/output.css"/>
+	<link rel="stylesheet" href="/theme/theme.css"/>
+	<script type="module" src="/assets/js/datastar.js"></script>
 }
 
 templ clientStandalonePage(data clientData) {
@@ -28,7 +33,7 @@ templ clientStandalonePage(data clientData) {
 		Title:     data.Item.Title(),
 		CSRFToken: dsxCtx.CSRFToken,
 		Theme:     theme,
-		Head:      defaultHead(),
+		Head:      tokenHead(),
 	}) {
 		<div class="min-h-screen bg-base-200/40">
 			// Minimal top bar
@@ -104,7 +109,7 @@ templ clientSchemaForm(data clientData) {
 					@button.Button(button.Props{
 						Variant: schema.ButtonVariant(a.Variant),
 						Class:   "flex-1",
-						OnClick: ds.Post(data.BasePath + "/respond"),
+						OnClick: ds.Post("/respond"),
 					}) {
 						{ a.Label }
 					}
@@ -114,7 +119,7 @@ templ clientSchemaForm(data clientData) {
 			@button.Button(button.Props{
 				Variant: button.VariantNeutral,
 				Class:   "w-full",
-				OnClick: ds.Post(data.BasePath + "/respond"),
+				OnClick: ds.Post("/respond"),
 			}) {
 				Submit
 			}

@@ -19,6 +19,7 @@ import (
 	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
 	appstatic "github.com/laenen-partners/inbox/cmd/inboxui/static"
+	inboxtoken "github.com/laenen-partners/inbox/token"
 	inboxui "github.com/laenen-partners/inbox/ui"
 )
 
@@ -81,13 +82,16 @@ func main() {
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/inbox", http.StatusFound)
 	})
+	// Mount the presigned link handler independently
+	tokenHandler := inboxtoken.NewHandler(ib, tokens)
+	r.Handle("/respond", tokenHandler)
+
 	r.Mount("/inbox", inboxui.Handler(ib,
 		inboxui.WithBasePath("/inbox"),
 		inboxui.WithLayout(showcaseLayout),
 		inboxui.WithContentProvider("schema.v1.ItemSchema", schemaProvider{}),
 		inboxui.WithContentProvider("inbox.v1.ItemSchema", schemaProvider{}),
-		inboxui.WithSigner(tokens, "http://localhost:8080/inbox/respond", 24*time.Hour),
-		inboxui.WithVerifier(tokens),
+		inboxui.WithSigner(tokens, "http://localhost:8080/respond", 24*time.Hour),
 		inboxui.WithIdentity(func(r *http.Request) identity.Context {
 			// Check if identity was already set (e.g. by auth middleware)
 			if id, ok := identity.FromContext(r.Context()); ok {

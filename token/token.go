@@ -1,4 +1,4 @@
-package inbox
+package token
 
 import (
 	"context"
@@ -12,8 +12,8 @@ const (
 	ScopeView = "view"
 )
 
-// TokenClaims carries the verified claims from a presigned token.
-type TokenClaims struct {
+// Claims carries the verified claims from a presigned token.
+type Claims struct {
 	ItemID   string
 	Actor    string
 	Scope    string
@@ -28,5 +28,5 @@ type Signer interface {
 
 // Verifier validates presigned tokens and returns the claims.
 type Verifier interface {
-	Verify(ctx context.Context, token string) (*TokenClaims, error)
+	Verify(ctx context.Context, token string) (*Claims, error)
 }

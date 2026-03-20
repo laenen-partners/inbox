@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/laenen-partners/inbox"
+	inboxtoken "github.com/laenen-partners/inbox/token"
 )
 
-// HMACTokens implements inbox.Signer and inbox.Verifier using HMAC-SHA256 JWTs.
+// HMACTokens implements token.Signer and token.Verifier using HMAC-SHA256 JWTs.
 type HMACTokens struct {
 	secret []byte
 }
@@ -39,7 +39,7 @@ func (h *HMACTokens) Sign(_ context.Context, itemID, actor, scope string, expiry
 	return signed, exp, nil
 }
 
-func (h *HMACTokens) Verify(_ context.Context, tokenStr string) (*inbox.TokenClaims, error) {
+func (h *HMACTokens) Verify(_ context.Context, tokenStr string) (*inboxtoken.Claims, error) {
 	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
@@ -65,7 +65,7 @@ func (h *HMACTokens) Verify(_ context.Context, tokenStr string) (*inbox.TokenCla
 		return nil, fmt.Errorf("token missing required claims")
 	}
 
-	result := &inbox.TokenClaims{
+	result := &inboxtoken.Claims{
 		ItemID: itemID,
 		Actor:  actor,
 		Scope:  scope,

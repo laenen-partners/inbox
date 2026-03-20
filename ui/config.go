@@ -6,7 +6,7 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/laenen-partners/identity"
-	"github.com/laenen-partners/inbox"
+	inboxtoken "github.com/laenen-partners/inbox/token"
 )
 
 // FilterConfig defines a preset tag filter shown in the filter bar.
@@ -35,8 +35,7 @@ type config struct {
 	contentProviders map[string]ContentProvider
 	basePath         string
 	layoutFn         LayoutFunc
-	signer           inbox.Signer
-	verifier         inbox.Verifier
+	signer           inboxtoken.Signer
 	linkBaseURL      string        // base URL for presigned links (e.g. "https://app.example.com/respond")
 	linkExpiry       time.Duration // how long presigned links are valid
 }
@@ -88,16 +87,10 @@ func WithLayout(fn LayoutFunc) Option {
 // linkBaseURL is the public URL prefix for the client-facing endpoint
 // (e.g. "https://app.example.com/respond"). The generated link appends ?token=<jwt>.
 // expiry controls how long the links are valid.
-func WithSigner(signer inbox.Signer, linkBaseURL string, expiry time.Duration) Option {
+func WithSigner(signer inboxtoken.Signer, linkBaseURL string, expiry time.Duration) Option {
 	return func(c *config) {
 		c.signer = signer
 		c.linkBaseURL = linkBaseURL
 		c.linkExpiry = expiry
 	}
-}
-
-// WithVerifier enables the client-facing /respond endpoint that accepts
-// presigned JWT tokens. The verifier validates the token and extracts claims.
-func WithVerifier(v inbox.Verifier) Option {
-	return func(c *config) { c.verifier = v }
 }

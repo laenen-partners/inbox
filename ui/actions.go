@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/inbox"
+	inboxtoken "github.com/laenen-partners/inbox/token"
 	"github.com/laenen-partners/tags"
 	"github.com/starfederation/datastar-go/datastar"
 )
@@ -165,7 +166,7 @@ func (s *server) handleGenerateLink(w http.ResponseWriter, r *http.Request) {
 		actor = "client:" + id
 	}
 
-	token, _, err := s.cfg.signer.Sign(ctx, id, actor, inbox.ScopeRespond, s.cfg.linkExpiry)
+	token, _, err := s.cfg.signer.Sign(ctx, id, actor, inboxtoken.ScopeRespond, s.cfg.linkExpiry)
 	if err != nil {
 		s.sseError(w, r, err)
 		return
