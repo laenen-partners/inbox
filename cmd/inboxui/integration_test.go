@@ -214,6 +214,7 @@ func TestSchemaRendererIntegration(t *testing.T) {
 		handler.ServeHTTP(rec, req)
 		body := rec.Body.String()
 
+		// Schema ContentProvider renders display fields (labels and values).
 		for _, want := range []string{"Customer", "CUST-1234", "Transaction", "TXN-9999", "font-mono"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("missing %q in response", want)
@@ -241,6 +242,7 @@ func TestSchemaRendererIntegration(t *testing.T) {
 		handler.ServeHTTP(rec, req)
 		body := rec.Body.String()
 
+		// Schema ContentProvider renders all form field types.
 		for _, want := range []string{"Full Name", "John Doe", "textarea", "Country", "NL", "checkbox", "I agree"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("missing %q in response", want)
@@ -248,7 +250,9 @@ func TestSchemaRendererIntegration(t *testing.T) {
 		}
 	})
 
-	t.Run("actions", func(t *testing.T) {
+	t.Run("actions_in_provider_content", func(t *testing.T) {
+		// Schema action buttons (Approve/Reject) are rendered by the ContentProvider,
+		// not by the shell. The shell only renders Claim/Release/Cancel.
 		item, _ := ib.Create(ctx, inbox.Meta{
 			Title: "Schema actions test",
 			Tags:  tags.MustNew("type:approval"),
@@ -266,11 +270,167 @@ func TestSchemaRendererIntegration(t *testing.T) {
 		handler.ServeHTTP(rec, req)
 		body := rec.Body.String()
 
+		// Provider action buttons with their variant CSS classes must be present.
 		for _, want := range []string{"Approve", "Reject", "btn-success", "btn-error"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("missing %q in response", want)
 			}
 		}
 	})
+
+	t.Run("shell_buttons_open_item", func(t *testing.T) {
+		// For an open item the shell renders Claim and Cancel; the schema
+		// ContentProvider does not inject those shell-level buttons.
+		item, err := ib.Create(ctx, inbox.Meta{
+			Title: "Shell buttons test",
+			Tags:  tags.MustNew("type:review"),
+			Payload: &schemav1.ItemSchema{
+				Display: []*schemav1.DisplayField{
+					{Label: "Ref", Value: "REF-001"},
+				},
+			},
+		})
+		if err != nil {
+			t.Fatalf("create: %v", err)
+		}
+
+		req := httptest.NewRequest("GET", "/items/"+item.ID, nil)
+		req.Header.Set("Accept", "text/event-stream")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		body := rec.Body.String()
+
+		// Shell must contain Claim and Cancel for an open item.
+		if !strings.Contains(body, "Claim") {
+			t.Error("missing Claim button for open item")
+		}
+		if !strings.Contains(body, "Cancel") {
+			t.Error("missing Cancel button for open item")
+		}
+		// Ref content from provider must also be present.
+		if !strings.Contains(body, "REF-001") {
+			t.Error("missing provider-rendered display content")
+		}
+	})
+}
+
+// TestClaimReleaseCompleteFlow verifies the end-to-end lifecycle:
+// create → view (Claim shown) → claim → view (Release shown, no Respond in shell) →
+// respond → complete.
+func TestClaimReleaseCompleteFlow(t *testing.T) {
+	ib := testInbox(t)
+	ctx := testCtx()
+
+	// Use actor "user:test" — matches identity principal "test:test" in testCtx.
+	actor := "user:test"
+
+	handler := inboxui.Handler(ib,
+		inboxui.WithIdentity(func(r *http.Request) identity.Context {
+			id, _ := identity.New("test", "test", "test", identity.PrincipalUser, nil)
+			return id
+		}),
+		inboxui.WithContentProvider("schema.v1.ItemSchema", schemaProvider{}),
+		inboxui.WithContentProvider("inbox.v1.ItemSchema", schemaProvider{}),
+	)
+
+	item, err := ib.Create(ctx, inbox.Meta{
+		Title: "Lifecycle flow test",
+		Tags:  tags.MustNew("type:approval"),
+		Payload: &schemav1.ItemSchema{
+			Actions: []*schemav1.Action{
+				{Name: "approve", Label: "Approve", Variant: "success"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create item: %v", err)
+	}
+
+	// Step 1: open item → Claim button present in shell.
+	{
+		req := httptest.NewRequest("GET", "/items/"+item.ID, nil)
+		req.Header.Set("Accept", "text/event-stream")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		body := rec.Body.String()
+		if !strings.Contains(body, "Claim") {
+			t.Error("open item: expected Claim button in shell")
+		}
+		if !strings.Contains(body, "Approve") {
+			t.Error("open item: expected Approve action from provider")
+		}
+	}
+
+	// Step 2: claim the item via the POST endpoint.
+	{
+		req := httptest.NewRequest("POST", "/items/"+item.ID+"/claim", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("claim: expected 200, got %d", rec.Code)
+		}
+		body := rec.Body.String()
+		if !strings.Contains(body, "Item claimed") {
+			t.Error("claim: expected toast 'Item claimed'")
+		}
+	}
+
+	// Step 3: tag the assignee (mirrors what handleClaim does) so IsClaimant is true.
+	if err := ib.Tag(ctx, item.ID, "assignee:"+actor); err != nil {
+		t.Fatalf("tag assignee: %v", err)
+	}
+
+	// Step 4: claimed item → Release and Cancel in shell; Respond/Complete NOT in shell
+	//         because a ContentProvider is registered; provider's Approve button present.
+	{
+		req := httptest.NewRequest("GET", "/items/"+item.ID, nil)
+		req.Header.Set("Accept", "text/event-stream")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		body := rec.Body.String()
+		if !strings.Contains(body, "Release") {
+			t.Error("claimed item: expected Release button in shell")
+		}
+		if !strings.Contains(body, "Cancel") {
+			t.Error("claimed item: expected Cancel button in shell")
+		}
+		// With a ContentProvider the shell must NOT render its own Respond/Complete.
+		if strings.Contains(body, ">Respond<") {
+			t.Error("claimed item with provider: shell must not render Respond button")
+		}
+		// Provider action still present.
+		if !strings.Contains(body, "Approve") {
+			t.Error("claimed item: expected Approve action from provider")
+		}
+	}
+
+	// Step 5: complete the item via the POST endpoint.
+	{
+		req := httptest.NewRequest("POST", "/items/"+item.ID+"/complete", nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("complete: expected 200, got %d", rec.Code)
+		}
+		body := rec.Body.String()
+		if !strings.Contains(body, "Item completed") {
+			t.Error("complete: expected toast 'Item completed'")
+		}
+	}
+
+	// Step 6: completed item → no action buttons in shell.
+	{
+		req := httptest.NewRequest("GET", "/items/"+item.ID, nil)
+		req.Header.Set("Accept", "text/event-stream")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		body := rec.Body.String()
+		if strings.Contains(body, "btn-neutral\">Claim") || strings.Contains(body, "btn-ghost\">Release") {
+			t.Error("completed item: Claim/Release must not appear")
+		}
+		if !strings.Contains(body, "completed") {
+			t.Error("completed item: expected status 'completed'")
+		}
+	}
 }
 
