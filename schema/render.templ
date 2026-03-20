@@ -1,21 +1,21 @@
-package ui
+package schema
 
 import (
 	"fmt"
 
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/dsx/ui/button"
-	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
 )
 
-templ schemaPayload(schema *inboxv1.ItemSchema, itemID string, basePath string) {
-	{{ signals := buildSchemaSignals(schema) }}
+templ Payload(schema *schemav1.ItemSchema, itemID string, basePath string) {
+	{{ signals := BuildSignals(schema) }}
 	<div class="space-y-4" data-signals={ signals }>
 		// Display fields
 		if len(schema.Display) > 0 {
 			<div class="space-y-3">
 				for _, d := range schema.Display {
-					@displayField(d)
+					@DisplayField(d)
 				}
 			</div>
 		}
@@ -23,7 +23,7 @@ templ schemaPayload(schema *inboxv1.ItemSchema, itemID string, basePath string) 
 		if len(schema.Fields) > 0 {
 			<div class="space-y-3">
 				for _, f := range schema.Fields {
-					@schemaField(f)
+					@Field(f)
 				}
 			</div>
 		}
@@ -31,27 +31,27 @@ templ schemaPayload(schema *inboxv1.ItemSchema, itemID string, basePath string) 
 		if len(schema.Actions) > 0 {
 			<div class="flex flex-wrap gap-2">
 				for _, a := range schema.Actions {
-					@schemaActionButton(a, itemID, basePath)
+					@ActionButton(a, itemID, basePath)
 				}
 			</div>
 		}
 	</div>
 }
 
-// Display field rendering — dispatches by type
-templ displayField(d *inboxv1.DisplayField) {
+// DisplayField renders a read-only display element, dispatching by type.
+templ DisplayField(d *schemav1.DisplayField) {
 	switch d.Type {
 	case "image":
 		<div>
 			if d.Label != "" {
-				@fieldLabel(d.Label, false)
+				@FieldLabel(d.Label, false)
 			}
 			<img src={ d.Value } alt={ d.Label } class="mt-1.5 rounded-lg max-h-48 object-contain border border-base-300"/>
 		</div>
 	case "document":
 		<div>
 			if d.Label != "" {
-				@fieldLabel(d.Label, false)
+				@FieldLabel(d.Label, false)
 			}
 			<a href={ templ.SafeURL(d.Value) } target="_blank" class="mt-1.5 inline-flex items-center gap-2 text-sm text-accent hover:underline">
 				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -82,7 +82,7 @@ templ displayField(d *inboxv1.DisplayField) {
 	}
 }
 
-templ fieldLabel(label string, required bool) {
+templ FieldLabel(label string, required bool) {
 	<label class="text-xs font-medium">
 		{ label }
 		if required {
@@ -91,10 +91,10 @@ templ fieldLabel(label string, required bool) {
 	</label>
 }
 
-// Form field rendering — dispatches by type
-templ schemaField(f *inboxv1.FormField) {
+// Field renders a form input field, dispatching by type.
+templ Field(f *schemav1.FormField) {
 	<div>
-		@fieldLabel(f.Label, f.Required)
+		@FieldLabel(f.Label, f.Required)
 		if f.Description != "" {
 			<p class="text-[11px] text-base-content/40 mt-0.5 leading-relaxed">{ f.Description }</p>
 		}
@@ -231,9 +231,9 @@ templ schemaField(f *inboxv1.FormField) {
 	</div>
 }
 
-templ schemaActionButton(a *inboxv1.Action, itemID string, basePath string) {
+templ ActionButton(a *schemav1.Action, itemID string, basePath string) {
 	@button.Button(button.Props{
-		Variant: buttonVariant(a.Variant),
+		Variant: ButtonVariant(a.Variant),
 		Size:    button.SizeSm,
 		OnClick: ds.Post(basePath + "/items/" + itemID + "/respond"),
 		Attributes: ds.RawSignals(`{"schema":{"_action":"` + a.Name + `"}}`),
@@ -269,7 +269,8 @@ func fieldPlaceholder(custom, fallback string) string {
 	return fallback
 }
 
-func buttonVariant(v string) button.Variant {
+// ButtonVariant converts a string variant name to a button.Variant.
+func ButtonVariant(v string) button.Variant {
 	switch v {
 	case "success":
 		return button.VariantSuccess

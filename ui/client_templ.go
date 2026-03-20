@@ -14,12 +14,13 @@ import (
 	"github.com/laenen-partners/dsx/layouts"
 	"github.com/laenen-partners/dsx/ui/button"
 	"github.com/laenen-partners/inbox"
-	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	"github.com/laenen-partners/inbox/schema"
+	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
 )
 
 type clientData struct {
 	Item     inbox.Item
-	Schema   *inboxv1.ItemSchema
+	Schema   *schemav1.ItemSchema
 	Token    string
 	BasePath string
 	Scope    string
@@ -70,7 +71,7 @@ func clientStandalonePage(data clientData) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(data.Item.Title())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 44, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 45, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -88,7 +89,7 @@ func clientStandalonePage(data clientData) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(data.Item.Description())
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 47, Col: 33}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 48, Col: 33}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -159,7 +160,7 @@ func clientSchemaForm(data clientData) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		signals := buildSchemaSignals(data.Schema)
+		signals := schema.BuildSignals(data.Schema)
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<div class=\"space-y-6\" data-signals=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -167,7 +168,7 @@ func clientSchemaForm(data clientData) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(signals)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 75, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 76, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -180,7 +181,7 @@ func clientSchemaForm(data clientData) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(`{"token":"` + data.Token + `"}`)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 75, Col: 104}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 76, Col: 104}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -203,7 +204,7 @@ func clientSchemaForm(data clientData) templ.Component {
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(d.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 80, Col: 99}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 81, Col: 99}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -221,7 +222,7 @@ func clientSchemaForm(data clientData) templ.Component {
 					var templ_7745c5c3_Var9 string
 					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(d.Value)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 82, Col: 52}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 83, Col: 52}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 					if templ_7745c5c3_Err != nil {
@@ -239,7 +240,7 @@ func clientSchemaForm(data clientData) templ.Component {
 					var templ_7745c5c3_Var10 string
 					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(d.Value)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 84, Col: 54}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 85, Col: 54}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 					if templ_7745c5c3_Err != nil {
@@ -272,7 +273,7 @@ func clientSchemaForm(data clientData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			for _, f := range data.Schema.Fields {
-				templ_7745c5c3_Err = schemaField(f).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = schema.Field(f).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -303,7 +304,7 @@ func clientSchemaForm(data clientData) templ.Component {
 					var templ_7745c5c3_Var12 string
 					templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(a.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 108, Col: 15}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/client.templ`, Line: 109, Col: 15}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 					if templ_7745c5c3_Err != nil {
@@ -312,7 +313,7 @@ func clientSchemaForm(data clientData) templ.Component {
 					return nil
 				})
 				templ_7745c5c3_Err = button.Button(button.Props{
-					Variant: buttonVariant(a.Variant),
+					Variant: schema.ButtonVariant(a.Variant),
 					Class:   "flex-1",
 					OnClick: ds.Post(data.BasePath + "/respond"),
 				}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var11), templ_7745c5c3_Buffer)

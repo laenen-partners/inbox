@@ -8,15 +8,15 @@
 //
 // Usage: pass an ItemSchema as the payload when creating an inbox item:
 //
-//   schema := &inboxv1.ItemSchema{
-//       Display: []*inboxv1.DisplayField{
+//   schema := &schemav1.ItemSchema{
+//       Display: []*schemav1.DisplayField{
 //           {Label: "Customer", Value: "CUST-1234"},
 //       },
-//       Fields: []*inboxv1.FormField{
+//       Fields: []*schemav1.FormField{
 //           {Name: "decision", Type: "select", Label: "Decision",
 //            Options: []string{"approve", "reject"}, Required: true},
 //       },
-//       Actions: []*inboxv1.Action{
+//       Actions: []*schemav1.Action{
 //           {Name: "approve", Label: "Approve", Variant: "success"},
 //           {Name: "reject", Label: "Reject", Variant: "error"},
 //       },
@@ -24,9 +24,9 @@
 //   ib.Create(ctx, inbox.Meta{Payload: schema, ...})
 syntax = "proto3";
 
-package inbox.v1;
+package schema.v1;
 
-option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
+option go_package = "github.com/laenen-partners/inbox/schema/gen/schema/v1;schemav1";
 
 // ItemSchema defines the UI rendering schema for an inbox item.
 // It is used as the item's payload (proto.Message) and the inbox UI

@@ -84,6 +84,8 @@ func main() {
 	r.Mount("/inbox", inboxui.Handler(ib,
 		inboxui.WithBasePath("/inbox"),
 		inboxui.WithLayout(showcaseLayout),
+		inboxui.WithContentProvider("schema.v1.ItemSchema", schemaProvider{}),
+		inboxui.WithContentProvider("inbox.v1.ItemSchema", schemaProvider{}),
 		inboxui.WithSigner(tokens, "http://localhost:8080/inbox/respond", 24*time.Hour),
 		inboxui.WithVerifier(tokens),
 		inboxui.WithIdentity(func(r *http.Request) identity.Context {

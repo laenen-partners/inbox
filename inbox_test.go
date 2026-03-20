@@ -15,6 +15,7 @@ import (
 	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
 	"github.com/laenen-partners/tags"
 )
 
@@ -131,7 +132,7 @@ func TestCustomerMissingDocuments(t *testing.T) {
 
 	// 2. Customer queries their inbox -- finds the open item.
 	custCtx := ctxWithActor("customer:CUST-1234", identity.PrincipalUser)
-	items, err := ib.ListByTags(custCtx, []string{"assignee:customer:cust-1234", "status:open"}, inbox.ListOpts{})
+	items, err := ib.ListByTags(custCtx, []string{"assignee:customer:cust-1234", tags.Status(inbox.StatusOpen)}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list items: %v", err)
 	}
@@ -176,7 +177,7 @@ func TestCustomerMissingDocuments(t *testing.T) {
 	if item.Proto.Status != inbox.StatusCompleted {
 		t.Errorf("expected completed, got %s", item.Proto.Status)
 	}
-	if !inbox.HasTag(item, "status:completed") {
+	if !inbox.HasTag(item, tags.Status(inbox.StatusCompleted)) {
 		t.Error("expected status:completed tag")
 	}
 }
@@ -210,7 +211,7 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 		Payload:     payload,
 		Tags: tags.MustNew(
 			"type:review",
-			"team:compliance",
+			tags.Team("compliance"),
 			"priority:high",
 			"assignee:team:compliance",
 			"ref:subscription:sub-2026-0042",
@@ -224,7 +225,7 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 
 	// 2. Compliance officer finds items needing review.
 	fatimaCtx := ctxWithActor("compliance:fatima", identity.PrincipalUser)
-	items, err := ib.ListByTags(fatimaCtx, []string{"team:compliance", "status:open"}, inbox.ListOpts{})
+	items, err := ib.ListByTags(fatimaCtx, []string{tags.Team("compliance"), tags.Status(inbox.StatusOpen)}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list items: %v", err)
 	}
@@ -250,7 +251,7 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	// 4. Compliance officer adds an internal note.
 	item, err = ib.Comment(fatimaCtx, item.ID,
 		"Checked screening report. PEP status is historical -- former deputy minister, left office 2019. Low risk.",
-		&inbox.CommentOpts{Visibility: []string{"team:compliance"}},
+		&inbox.CommentOpts{Visibility: []string{tags.Team("compliance")}},
 	)
 	if err != nil {
 		t.Fatalf("comment: %v", err)
@@ -320,7 +321,7 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 
 	// 2. Customer doesn't respond for a while. RM sees it in their view.
 	sarahCtx := ctxWithActor("rm:sarah", identity.PrincipalUser)
-	items, err := ib.ListByTags(sarahCtx, []string{"rm:user:sarah", "status:open"}, inbox.ListOpts{})
+	items, err := ib.ListByTags(sarahCtx, []string{"rm:user:sarah", tags.Status(inbox.StatusOpen)}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list items: %v", err)
 	}
@@ -409,7 +410,7 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 		Payload:     payload,
 		Tags: tags.MustNew(
 			"type:review",
-			"team:ops",
+			tags.Team("ops"),
 			"priority:high",
 			"ref:customer:cust-9999",
 		),
@@ -446,10 +447,10 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 		t.Fatalf("get: %v", err)
 	}
 
-	if inbox.HasTag(item, "team:ops") {
+	if inbox.HasTag(item, tags.Team("ops")) {
 		t.Error("expected team:ops tag to be removed")
 	}
-	if !inbox.HasTag(item, "team:compliance") {
+	if !inbox.HasTag(item, tags.Team("compliance")) {
 		t.Error("expected team:compliance tag")
 	}
 
@@ -541,7 +542,7 @@ func TestItemExpiry(t *testing.T) {
 
 	// Background job finds stale items and expires them.
 	sysCtx := ctxWithActor("expiry-job", identity.PrincipalService)
-	stale, err := ib.Stale(sysCtx, []string{"status:open"}, 0, inbox.ListOpts{})
+	stale, err := ib.Stale(sysCtx, []string{tags.Status(inbox.StatusOpen)}, 0, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("stale: %v", err)
 	}
@@ -565,7 +566,7 @@ func TestItemExpiry(t *testing.T) {
 	if item.Proto.Status != inbox.StatusExpired {
 		t.Errorf("expected expired, got %s", item.Proto.Status)
 	}
-	if !inbox.HasTag(item, "status:expired") {
+	if !inbox.HasTag(item, tags.Status(inbox.StatusExpired)) {
 		t.Error("expected status:expired tag")
 	}
 
@@ -656,7 +657,7 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 		{
 			title:       "Sanctions screening review",
 			failureMode: "manual_review",
-			team:        "team:compliance",
+			team:        tags.Team("compliance"),
 			assignee:    "assignee:team:compliance",
 			requirement: "sanctions_screening_clear",
 		},
@@ -700,7 +701,7 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 	}
 
 	// Customer sees their 2 items.
-	customerItems, err := ib.ListByTags(ctx, []string{"assignee:customer:cust-2000", "status:open"}, inbox.ListOpts{})
+	customerItems, err := ib.ListByTags(ctx, []string{"assignee:customer:cust-2000", tags.Status(inbox.StatusOpen)}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list customer items: %v", err)
 	}
@@ -709,7 +710,7 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 	}
 
 	// Compliance sees their 1 item.
-	complianceItems, err := ib.ListByTags(ctx, []string{"team:compliance", "status:open"}, inbox.ListOpts{})
+	complianceItems, err := ib.ListByTags(ctx, []string{tags.Team("compliance"), tags.Status(inbox.StatusOpen)}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list compliance items: %v", err)
 	}
@@ -760,7 +761,7 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 		Payload:     payload,
 		Tags: tags.MustNew(
 			"type:review",
-			"team:compliance",
+			tags.Team("compliance"),
 			"priority:high",
 			"workflow:onboarding-op",
 		),
@@ -813,7 +814,7 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 	if !inbox.HasTag(item, "resolved:cleared") {
 		t.Error("expected resolved:cleared tag")
 	}
-	if !inbox.HasTag(item, "status:completed") {
+	if !inbox.HasTag(item, tags.Status(inbox.StatusCompleted)) {
 		t.Error("expected status:completed tag")
 	}
 
@@ -849,7 +850,7 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 	wfCtx := ctxWithActor("kyc-001", identity.PrincipalService)
 	item, err := ib.Create(wfCtx, inbox.Meta{
 		Title: "KYC verification -- Customer Y",
-		Tags:  tags.MustNew("type:review", "team:ops"),
+		Tags:  tags.MustNew("type:review", tags.Team("ops")),
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -909,15 +910,15 @@ func TestLifecycleHooks(t *testing.T) {
 	es := sharedEntityStore(t)
 	recorder := &hookRecorder{}
 	ib := inbox.New(es,
-		inbox.WithLifecycleHooks("inbox.v1.ItemSchema", recorder),
+		inbox.WithLifecycleHooks("schema.v1.ItemSchema", recorder),
 	)
 
 	actorCtx := ctxWithActor("hook-tester", identity.PrincipalUser)
 
 	item, err := ib.Create(actorCtx, inbox.Meta{
 		Title: "Hook Test Item",
-		Payload: &inboxv1.ItemSchema{
-			Display: []*inboxv1.DisplayField{{Label: "Test", Value: "Value"}},
+		Payload: &schemav1.ItemSchema{
+			Display: []*schemav1.DisplayField{{Label: "Test", Value: "Value"}},
 		},
 	})
 	require.NoError(t, err)
@@ -941,8 +942,8 @@ func TestLifecycleHooks(t *testing.T) {
 	// Cancel → OnCancel
 	cancelItem, err := ib.Create(actorCtx, inbox.Meta{
 		Title: "Hook Test Cancel Item",
-		Payload: &inboxv1.ItemSchema{
-			Display: []*inboxv1.DisplayField{{Label: "Test", Value: "Value"}},
+		Payload: &schemav1.ItemSchema{
+			Display: []*schemav1.DisplayField{{Label: "Test", Value: "Value"}},
 		},
 	})
 	require.NoError(t, err)
@@ -954,8 +955,8 @@ func TestLifecycleHooks(t *testing.T) {
 	// Expire → OnExpire
 	expireItem, err := ib.Create(actorCtx, inbox.Meta{
 		Title: "Hook Test Expire Item",
-		Payload: &inboxv1.ItemSchema{
-			Display: []*inboxv1.DisplayField{{Label: "Test", Value: "Value"}},
+		Payload: &schemav1.ItemSchema{
+			Display: []*schemav1.DisplayField{{Label: "Test", Value: "Value"}},
 		},
 	})
 	require.NoError(t, err)
@@ -967,8 +968,8 @@ func TestLifecycleHooks(t *testing.T) {
 	// Op path → hooks fire through the Op builder too
 	opItem, err := ib.Create(actorCtx, inbox.Meta{
 		Title: "Hook Test Op Item",
-		Payload: &inboxv1.ItemSchema{
-			Display: []*inboxv1.DisplayField{{Label: "Test", Value: "Value"}},
+		Payload: &schemav1.ItemSchema{
+			Display: []*schemav1.DisplayField{{Label: "Test", Value: "Value"}},
 		},
 	})
 	require.NoError(t, err)

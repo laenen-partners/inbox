@@ -14,9 +14,6 @@ templ detailDrawer(data detailData) {
 			<div class="flex items-start justify-between gap-3">
 				<h2 class="text-base font-semibold tracking-tight leading-snug">{ data.Item.Title() }</h2>
 				<div class="flex items-center gap-1.5 shrink-0">
-					if data.CanLink && !inbox.IsTerminal(data.Item.Status()) {
-						@sendLinkButton(data)
-					}
 					@badge.Badge(badge.Props{
 						Variant: badge.Variant(statusBadgeVariant(data.Item.Status())),
 						Style:   badge.StyleSoft,
@@ -57,12 +54,9 @@ templ detailDrawer(data detailData) {
 			<div class="py-4">
 				@data.Content
 			</div>
-		} else if data.Schema != nil || data.PayloadComponent != nil || data.Item.Proto.GetPayload() != nil {
-			// Legacy payload / schema rendering
+		} else if data.PayloadComponent != nil || data.Item.Proto.GetPayload() != nil {
 			<div class="py-4">
-				if data.Schema != nil {
-					@schemaPayload(data.Schema, data.Item.ID, data.BasePath)
-				} else if data.PayloadComponent != nil {
+				if data.PayloadComponent != nil {
 					@sectionLabel("Payload")
 					<div class="mt-2.5">
 						@data.PayloadComponent

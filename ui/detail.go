@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/inbox"
-	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
@@ -43,16 +42,10 @@ func (s *server) buildDetailData(ctx context.Context, item inbox.Item, actor str
 		rc := RenderContext{Item: item, Actor: actor, BasePath: s.cfg.basePath}
 		data.Content = provider.Render(ctx, rc)
 	} else {
-		// Legacy fallback: try to parse as ItemSchema (renders interactive form)
-		if item.Proto.GetPayload() != nil {
-			data.Schema = tryParseSchema(item.PayloadType(), item.Proto.GetPayload().GetValue())
-		}
-		data.CanLink = s.cfg.signer != nil && data.Schema != nil && data.Schema.ClientCompletable
-		if data.Schema == nil {
-			if fn, ok := s.cfg.payloadRenderers[item.PayloadType()]; ok {
-				if item.Proto.GetPayload() != nil {
-					data.PayloadComponent = fn(item.PayloadType(), item.Proto.GetPayload().GetValue())
-				}
+		// Legacy: custom payload renderer only
+		if fn, ok := s.cfg.payloadRenderers[item.PayloadType()]; ok {
+			if item.Proto.GetPayload() != nil {
+				data.PayloadComponent = fn(item.PayloadType(), item.Proto.GetPayload().GetValue())
 			}
 		}
 	}
@@ -69,6 +62,4 @@ type detailData struct {
 	BasePath         string
 	Content          templ.Component
 	PayloadComponent templ.Component
-	Schema           *inboxv1.ItemSchema
-	CanLink          bool
 }

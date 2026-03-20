@@ -14,7 +14,8 @@ import (
 	"github.com/laenen-partners/entitystore/store"
 	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
-	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
+	"github.com/laenen-partners/tags"
 	inboxui "github.com/laenen-partners/inbox/ui"
 )
 
@@ -96,7 +97,7 @@ func TestFilterDropdowns(t *testing.T) {
 	for _, p := range []string{"urgent", "normal"} {
 		_, err := ib.Create(ctx, inbox.Meta{
 			Title: "Item " + p,
-			Tags:  []string{"type:review", "priority:" + p, "team:compliance"},
+			Tags:  tags.MustNew("type:review", "priority:"+p, tags.Team("compliance")),
 		})
 		if err != nil {
 			t.Fatalf("create: %v", err)
@@ -173,8 +174,8 @@ func TestFilterDropdowns(t *testing.T) {
 		if strings.Contains(body, "Item urgent") || strings.Contains(body, "Item normal") {
 			t.Error("SSE response should have no items for team:finance")
 		}
-		if !strings.Contains(body, "No items found") {
-			t.Error("SSE response missing 'No items found' empty state")
+		if !strings.Contains(body, "Queue is empty") {
+			t.Error("SSE response missing empty state")
 		}
 	})
 }
@@ -188,14 +189,16 @@ func TestSchemaRendererIntegration(t *testing.T) {
 			id, _ := identity.New("test", "test", "test", identity.PrincipalUser, nil)
 			return id
 		}),
+		inboxui.WithContentProvider("schema.v1.ItemSchema", schemaProvider{}),
+		inboxui.WithContentProvider("inbox.v1.ItemSchema", schemaProvider{}),
 	)
 
 	t.Run("display_fields", func(t *testing.T) {
 		item, err := ib.Create(ctx, inbox.Meta{
 			Title: "Schema display test",
-			Tags:  []string{"type:review"},
-			Payload: &inboxv1.ItemSchema{
-				Display: []*inboxv1.DisplayField{
+			Tags:  tags.MustNew("type:review"),
+			Payload: &schemav1.ItemSchema{
+				Display: []*schemav1.DisplayField{
 					{Label: "Customer", Value: "CUST-1234"},
 					{Label: "Transaction", Value: "TXN-9999", Mono: true},
 				},
@@ -221,9 +224,9 @@ func TestSchemaRendererIntegration(t *testing.T) {
 	t.Run("form_fields", func(t *testing.T) {
 		item, _ := ib.Create(ctx, inbox.Meta{
 			Title: "Schema form test",
-			Tags:  []string{"type:input_required"},
-			Payload: &inboxv1.ItemSchema{
-				Fields: []*inboxv1.FormField{
+			Tags:  tags.MustNew("type:input_required"),
+			Payload: &schemav1.ItemSchema{
+				Fields: []*schemav1.FormField{
 					{Name: "name", Type: "text", Label: "Full Name", Placeholder: "John Doe", Required: true},
 					{Name: "notes", Type: "textarea", Label: "Notes"},
 					{Name: "country", Type: "select", Label: "Country", Options: []string{"NL", "BE", "DE"}},
@@ -248,9 +251,9 @@ func TestSchemaRendererIntegration(t *testing.T) {
 	t.Run("actions", func(t *testing.T) {
 		item, _ := ib.Create(ctx, inbox.Meta{
 			Title: "Schema actions test",
-			Tags:  []string{"type:approval"},
-			Payload: &inboxv1.ItemSchema{
-				Actions: []*inboxv1.Action{
+			Tags:  tags.MustNew("type:approval"),
+			Payload: &schemav1.ItemSchema{
+				Actions: []*schemav1.Action{
 					{Name: "approve", Label: "Approve", Variant: "success"},
 					{Name: "reject", Label: "Reject", Variant: "error"},
 				},

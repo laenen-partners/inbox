@@ -6,12 +6,13 @@ import (
 	"github.com/laenen-partners/dsx/layouts"
 	"github.com/laenen-partners/dsx/ui/button"
 	"github.com/laenen-partners/inbox"
-	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	"github.com/laenen-partners/inbox/schema"
+	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
 )
 
 type clientData struct {
 	Item     inbox.Item
-	Schema   *inboxv1.ItemSchema
+	Schema   *schemav1.ItemSchema
 	Token    string
 	BasePath string
 	Scope    string
@@ -71,7 +72,7 @@ templ clientStandalonePage(data clientData) {
 }
 
 templ clientSchemaForm(data clientData) {
-	{{ signals := buildSchemaSignals(data.Schema) }}
+	{{ signals := schema.BuildSignals(data.Schema) }}
 	<div class="space-y-6" data-signals={ signals } data-signals__client={ `{"token":"` + data.Token + `"}` }>
 		if len(data.Schema.Display) > 0 {
 			<div class="grid grid-cols-2 gap-x-6 gap-y-3">
@@ -93,7 +94,7 @@ templ clientSchemaForm(data clientData) {
 		if len(data.Schema.Fields) > 0 && data.Scope == "respond" {
 			<div class="space-y-5">
 				for _, f := range data.Schema.Fields {
-					@schemaField(f)
+					@schema.Field(f)
 				}
 			</div>
 		}
@@ -101,7 +102,7 @@ templ clientSchemaForm(data clientData) {
 			<div class="flex gap-3 pt-2">
 				for _, a := range data.Schema.Actions {
 					@button.Button(button.Props{
-						Variant: buttonVariant(a.Variant),
+						Variant: schema.ButtonVariant(a.Variant),
 						Class:   "flex-1",
 						OnClick: ds.Post(data.BasePath + "/respond"),
 					}) {

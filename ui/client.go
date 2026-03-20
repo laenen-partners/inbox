@@ -9,7 +9,8 @@ import (
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
-	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
+	"github.com/laenen-partners/inbox/schema"
+	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
@@ -37,14 +38,14 @@ func (s *server) handleClientRespond(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var schema *inboxv1.ItemSchema
+	var sch *schemav1.ItemSchema
 	if item.Proto.GetPayload() != nil {
-		schema = tryParseSchema(item.PayloadType(), item.Proto.GetPayload().GetValue())
+		sch = schema.TryParse(item.PayloadType(), item.Proto.GetPayload().GetValue())
 	}
 
 	data := clientData{
 		Item:     item,
-		Schema:   schema,
+		Schema:   sch,
 		Token:    token,
 		BasePath: s.cfg.basePath,
 		Scope:    claims.Scope,

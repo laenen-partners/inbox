@@ -8,15 +8,15 @@
 //
 // Usage: pass an ItemSchema as the payload when creating an inbox item:
 //
-//   schema := &inboxv1.ItemSchema{
-//       Display: []*inboxv1.DisplayField{
+//   schema := &schemav1.ItemSchema{
+//       Display: []*schemav1.DisplayField{
 //           {Label: "Customer", Value: "CUST-1234"},
 //       },
-//       Fields: []*inboxv1.FormField{
+//       Fields: []*schemav1.FormField{
 //           {Name: "decision", Type: "select", Label: "Decision",
 //            Options: []string{"approve", "reject"}, Required: true},
 //       },
-//       Actions: []*inboxv1.Action{
+//       Actions: []*schemav1.Action{
 //           {Name: "approve", Label: "Approve", Variant: "success"},
 //           {Name: "reject", Label: "Reject", Variant: "error"},
 //       },
@@ -27,9 +27,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        (unknown)
-// source: inbox/v1/schema.proto
+// source: schema/v1/schema.proto
 
-package inboxv1
+package schemav1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -66,7 +66,7 @@ type ItemSchema struct {
 
 func (x *ItemSchema) Reset() {
 	*x = ItemSchema{}
-	mi := &file_inbox_v1_schema_proto_msgTypes[0]
+	mi := &file_schema_v1_schema_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -78,7 +78,7 @@ func (x *ItemSchema) String() string {
 func (*ItemSchema) ProtoMessage() {}
 
 func (x *ItemSchema) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_schema_proto_msgTypes[0]
+	mi := &file_schema_v1_schema_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -91,7 +91,7 @@ func (x *ItemSchema) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ItemSchema.ProtoReflect.Descriptor instead.
 func (*ItemSchema) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_schema_proto_rawDescGZIP(), []int{0}
+	return file_schema_v1_schema_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ItemSchema) GetDisplay() []*DisplayField {
@@ -147,7 +147,7 @@ type DisplayField struct {
 
 func (x *DisplayField) Reset() {
 	*x = DisplayField{}
-	mi := &file_inbox_v1_schema_proto_msgTypes[1]
+	mi := &file_schema_v1_schema_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -159,7 +159,7 @@ func (x *DisplayField) String() string {
 func (*DisplayField) ProtoMessage() {}
 
 func (x *DisplayField) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_schema_proto_msgTypes[1]
+	mi := &file_schema_v1_schema_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -172,7 +172,7 @@ func (x *DisplayField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisplayField.ProtoReflect.Descriptor instead.
 func (*DisplayField) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_schema_proto_rawDescGZIP(), []int{1}
+	return file_schema_v1_schema_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *DisplayField) GetLabel() string {
@@ -262,7 +262,7 @@ type FormField struct {
 
 func (x *FormField) Reset() {
 	*x = FormField{}
-	mi := &file_inbox_v1_schema_proto_msgTypes[2]
+	mi := &file_schema_v1_schema_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -274,7 +274,7 @@ func (x *FormField) String() string {
 func (*FormField) ProtoMessage() {}
 
 func (x *FormField) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_schema_proto_msgTypes[2]
+	mi := &file_schema_v1_schema_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -287,7 +287,7 @@ func (x *FormField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FormField.ProtoReflect.Descriptor instead.
 func (*FormField) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_schema_proto_rawDescGZIP(), []int{2}
+	return file_schema_v1_schema_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *FormField) GetName() string {
@@ -396,7 +396,7 @@ type FieldValidation struct {
 
 func (x *FieldValidation) Reset() {
 	*x = FieldValidation{}
-	mi := &file_inbox_v1_schema_proto_msgTypes[3]
+	mi := &file_schema_v1_schema_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -408,7 +408,7 @@ func (x *FieldValidation) String() string {
 func (*FieldValidation) ProtoMessage() {}
 
 func (x *FieldValidation) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_schema_proto_msgTypes[3]
+	mi := &file_schema_v1_schema_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -421,7 +421,7 @@ func (x *FieldValidation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FieldValidation.ProtoReflect.Descriptor instead.
 func (*FieldValidation) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_schema_proto_rawDescGZIP(), []int{3}
+	return file_schema_v1_schema_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *FieldValidation) GetPattern() string {
@@ -460,7 +460,7 @@ type Action struct {
 
 func (x *Action) Reset() {
 	*x = Action{}
-	mi := &file_inbox_v1_schema_proto_msgTypes[4]
+	mi := &file_schema_v1_schema_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -472,7 +472,7 @@ func (x *Action) String() string {
 func (*Action) ProtoMessage() {}
 
 func (x *Action) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_schema_proto_msgTypes[4]
+	mi := &file_schema_v1_schema_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -485,7 +485,7 @@ func (x *Action) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Action.ProtoReflect.Descriptor instead.
 func (*Action) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_schema_proto_rawDescGZIP(), []int{4}
+	return file_schema_v1_schema_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Action) GetName() string {
@@ -509,23 +509,23 @@ func (x *Action) GetVariant() string {
 	return ""
 }
 
-var File_inbox_v1_schema_proto protoreflect.FileDescriptor
+var File_schema_v1_schema_proto protoreflect.FileDescriptor
 
-const file_inbox_v1_schema_proto_rawDesc = "" +
+const file_schema_v1_schema_proto_rawDesc = "" +
 	"\n" +
-	"\x15inbox/v1/schema.proto\x12\binbox.v1\"\xc6\x01\n" +
+	"\x16schema/v1/schema.proto\x12\tschema.v1\"\xc9\x01\n" +
 	"\n" +
-	"ItemSchema\x120\n" +
-	"\adisplay\x18\x01 \x03(\v2\x16.inbox.v1.DisplayFieldR\adisplay\x12+\n" +
-	"\x06fields\x18\x02 \x03(\v2\x13.inbox.v1.FormFieldR\x06fields\x12*\n" +
-	"\aactions\x18\x03 \x03(\v2\x10.inbox.v1.ActionR\aactions\x12-\n" +
+	"ItemSchema\x121\n" +
+	"\adisplay\x18\x01 \x03(\v2\x17.schema.v1.DisplayFieldR\adisplay\x12,\n" +
+	"\x06fields\x18\x02 \x03(\v2\x14.schema.v1.FormFieldR\x06fields\x12+\n" +
+	"\aactions\x18\x03 \x03(\v2\x11.schema.v1.ActionR\aactions\x12-\n" +
 	"\x12client_completable\x18\x04 \x01(\bR\x11clientCompletable\"|\n" +
 	"\fDisplayField\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value\x12\x12\n" +
 	"\x04mono\x18\x03 \x01(\bR\x04mono\x12\x12\n" +
 	"\x04type\x18\x04 \x01(\tR\x04type\x12\x18\n" +
-	"\avariant\x18\x05 \x01(\tR\avariant\"\x8f\x03\n" +
+	"\avariant\x18\x05 \x01(\tR\avariant\"\x90\x03\n" +
 	"\tFormField\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x14\n" +
@@ -533,9 +533,9 @@ const file_inbox_v1_schema_proto_rawDesc = "" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12 \n" +
 	"\vplaceholder\x18\x05 \x01(\tR\vplaceholder\x12\x1a\n" +
 	"\brequired\x18\x06 \x01(\bR\brequired\x12\x18\n" +
-	"\aoptions\x18\a \x03(\tR\aoptions\x129\n" +
+	"\aoptions\x18\a \x03(\tR\aoptions\x12:\n" +
 	"\n" +
-	"validation\x18\b \x01(\v2\x19.inbox.v1.FieldValidationR\n" +
+	"validation\x18\b \x01(\v2\x1a.schema.v1.FieldValidationR\n" +
 	"validation\x12#\n" +
 	"\rdefault_value\x18\t \x01(\tR\fdefaultValue\x12\x16\n" +
 	"\x06accept\x18\n" +
@@ -552,33 +552,33 @@ const file_inbox_v1_schema_proto_rawDesc = "" +
 	"\x06Action\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x18\n" +
-	"\avariant\x18\x03 \x01(\tR\avariantB7Z5github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1b\x06proto3"
+	"\avariant\x18\x03 \x01(\tR\avariantB@Z>github.com/laenen-partners/inbox/schema/gen/schema/v1;schemav1b\x06proto3"
 
 var (
-	file_inbox_v1_schema_proto_rawDescOnce sync.Once
-	file_inbox_v1_schema_proto_rawDescData []byte
+	file_schema_v1_schema_proto_rawDescOnce sync.Once
+	file_schema_v1_schema_proto_rawDescData []byte
 )
 
-func file_inbox_v1_schema_proto_rawDescGZIP() []byte {
-	file_inbox_v1_schema_proto_rawDescOnce.Do(func() {
-		file_inbox_v1_schema_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_inbox_v1_schema_proto_rawDesc), len(file_inbox_v1_schema_proto_rawDesc)))
+func file_schema_v1_schema_proto_rawDescGZIP() []byte {
+	file_schema_v1_schema_proto_rawDescOnce.Do(func() {
+		file_schema_v1_schema_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_schema_v1_schema_proto_rawDesc), len(file_schema_v1_schema_proto_rawDesc)))
 	})
-	return file_inbox_v1_schema_proto_rawDescData
+	return file_schema_v1_schema_proto_rawDescData
 }
 
-var file_inbox_v1_schema_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-var file_inbox_v1_schema_proto_goTypes = []any{
-	(*ItemSchema)(nil),      // 0: inbox.v1.ItemSchema
-	(*DisplayField)(nil),    // 1: inbox.v1.DisplayField
-	(*FormField)(nil),       // 2: inbox.v1.FormField
-	(*FieldValidation)(nil), // 3: inbox.v1.FieldValidation
-	(*Action)(nil),          // 4: inbox.v1.Action
+var file_schema_v1_schema_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_schema_v1_schema_proto_goTypes = []any{
+	(*ItemSchema)(nil),      // 0: schema.v1.ItemSchema
+	(*DisplayField)(nil),    // 1: schema.v1.DisplayField
+	(*FormField)(nil),       // 2: schema.v1.FormField
+	(*FieldValidation)(nil), // 3: schema.v1.FieldValidation
+	(*Action)(nil),          // 4: schema.v1.Action
 }
-var file_inbox_v1_schema_proto_depIdxs = []int32{
-	1, // 0: inbox.v1.ItemSchema.display:type_name -> inbox.v1.DisplayField
-	2, // 1: inbox.v1.ItemSchema.fields:type_name -> inbox.v1.FormField
-	4, // 2: inbox.v1.ItemSchema.actions:type_name -> inbox.v1.Action
-	3, // 3: inbox.v1.FormField.validation:type_name -> inbox.v1.FieldValidation
+var file_schema_v1_schema_proto_depIdxs = []int32{
+	1, // 0: schema.v1.ItemSchema.display:type_name -> schema.v1.DisplayField
+	2, // 1: schema.v1.ItemSchema.fields:type_name -> schema.v1.FormField
+	4, // 2: schema.v1.ItemSchema.actions:type_name -> schema.v1.Action
+	3, // 3: schema.v1.FormField.validation:type_name -> schema.v1.FieldValidation
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
@@ -586,26 +586,26 @@ var file_inbox_v1_schema_proto_depIdxs = []int32{
 	0, // [0:4] is the sub-list for field type_name
 }
 
-func init() { file_inbox_v1_schema_proto_init() }
-func file_inbox_v1_schema_proto_init() {
-	if File_inbox_v1_schema_proto != nil {
+func init() { file_schema_v1_schema_proto_init() }
+func file_schema_v1_schema_proto_init() {
+	if File_schema_v1_schema_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_inbox_v1_schema_proto_rawDesc), len(file_inbox_v1_schema_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_schema_v1_schema_proto_rawDesc), len(file_schema_v1_schema_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_inbox_v1_schema_proto_goTypes,
-		DependencyIndexes: file_inbox_v1_schema_proto_depIdxs,
-		MessageInfos:      file_inbox_v1_schema_proto_msgTypes,
+		GoTypes:           file_schema_v1_schema_proto_goTypes,
+		DependencyIndexes: file_schema_v1_schema_proto_depIdxs,
+		MessageInfos:      file_schema_v1_schema_proto_msgTypes,
 	}.Build()
-	File_inbox_v1_schema_proto = out.File
-	file_inbox_v1_schema_proto_goTypes = nil
-	file_inbox_v1_schema_proto_depIdxs = nil
+	File_schema_v1_schema_proto = out.File
+	file_schema_v1_schema_proto_goTypes = nil
+	file_schema_v1_schema_proto_depIdxs = nil
 }
