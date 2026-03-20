@@ -4,10 +4,12 @@ import (
 	"context"
 	"net/http"
 
+	"connectrpc.com/connect"
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/inbox"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
@@ -16,15 +18,19 @@ func (s *server) handleDetail(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	actor := actorStr(ctx)
 
-	item, err := s.ib.Get(ctx, id)
+	resp, err := s.client.GetItem(ctx, connect.NewRequest(&inboxv1.GetItemRequest{
+		Identity: identityToProto(ctx),
+		Id:       id,
+	}))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+	item := fromProto(resp.Msg.Item)
 
 	data := s.buildDetailData(ctx, item, actor)
 	sse := datastar.NewSSE(w, r)
-	ds.Send.Drawer(sse, detailDrawer(data))
+	_ = ds.Send.Drawer(sse, detailDrawer(data))
 }
 
 // buildDetailData constructs the detailData for rendering the detail drawer.

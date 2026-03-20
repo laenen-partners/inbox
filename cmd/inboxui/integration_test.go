@@ -14,9 +14,11 @@ import (
 	"github.com/laenen-partners/entitystore/store"
 	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
+	"github.com/laenen-partners/inbox/gen/inbox/v1/inboxv1connect"
 	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
-	"github.com/laenen-partners/tags"
+	"github.com/laenen-partners/inbox/service"
 	inboxui "github.com/laenen-partners/inbox/ui"
+	"github.com/laenen-partners/tags"
 )
 
 var _sharedConnStr string
@@ -69,6 +71,10 @@ func testInbox(t *testing.T) *inbox.Inbox {
 	return inbox.New(es)
 }
 
+func testClient(ib *inbox.Inbox) inboxv1connect.InboxServiceClient {
+	return service.NewLocalClient(service.NewHandler(ib))
+}
+
 func testCtx() context.Context {
 	id, _ := identity.New("test", "test", "test", identity.PrincipalUser, nil)
 	return identity.WithContext(context.Background(), id)
@@ -78,7 +84,7 @@ func TestFilterDropdowns(t *testing.T) {
 	ib := testInbox(t)
 	ctx := testCtx()
 
-	handler := inboxui.Handler(ib,
+	handler := inboxui.Handler(testClient(ib),
 		inboxui.WithIdentity(func(r *http.Request) identity.Context {
 			id, _ := identity.New("test", "test", "test", identity.PrincipalUser, nil)
 			return id
@@ -184,7 +190,7 @@ func TestSchemaRendererIntegration(t *testing.T) {
 	ib := testInbox(t)
 	ctx := testCtx()
 
-	handler := inboxui.Handler(ib,
+	handler := inboxui.Handler(testClient(ib),
 		inboxui.WithIdentity(func(r *http.Request) identity.Context {
 			id, _ := identity.New("test", "test", "test", identity.PrincipalUser, nil)
 			return id
@@ -324,7 +330,7 @@ func TestClaimReleaseCompleteFlow(t *testing.T) {
 	// Use actor "user:test" — matches identity principal "test:test" in testCtx.
 	actor := "user:test"
 
-	handler := inboxui.Handler(ib,
+	handler := inboxui.Handler(testClient(ib),
 		inboxui.WithIdentity(func(r *http.Request) identity.Context {
 			id, _ := identity.New("test", "test", "test", identity.PrincipalUser, nil)
 			return id
@@ -433,4 +439,3 @@ func TestClaimReleaseCompleteFlow(t *testing.T) {
 		}
 	}
 }
-

@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/laenen-partners/inbox"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/tags"
 	"github.com/starfederation/datastar-go/datastar"
 )
@@ -28,29 +30,32 @@ func (s *server) handleMyWork(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	items, err := s.ib.ListByTags(ctx, filterTags, inbox.ListOpts{
+	resp, err := s.client.ListItems(ctx, connect.NewRequest(&inboxv1.ListItemsRequest{
+		Identity: identityToProto(ctx),
+		Tags:     filterTags,
 		PageSize: 50,
-		Cursor:   cursor,
-	})
+		Cursor:   cursorToProto(cursor),
+	}))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	items := fromProtoSlice(resp.Msg.Items)
 
 	data := queueData{
 		Items:    items,
 		Filters:  s.cfg.filters,
 		BasePath: s.cfg.basePath,
 	}
-	if len(items) == 50 {
-		last := items[len(items)-1].UpdatedAt
-		data.NextCursor = &last
+	if resp.Msg.NextCursor != nil {
+		t := resp.Msg.NextCursor.AsTime()
+		data.NextCursor = &t
 	}
 
 	// SSE fragment for Datastar filter/pagination, full page otherwise
 	if r.Header.Get("Accept") == "text/event-stream" {
 		sse := datastar.NewSSE(w, r)
-		sse.PatchElementTempl(queueTable(data))
+		_ = sse.PatchElementTempl(queueTable(data))
 		return
 	}
 

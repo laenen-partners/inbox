@@ -3,8 +3,10 @@ package ui
 import (
 	"net/http"
 
+	"connectrpc.com/connect"
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/inbox"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
@@ -13,17 +15,18 @@ func (s *server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	query := s.readSearchQuery(r)
 
 	var items []inbox.Item
-	var err error
 
 	if query != "" {
-		// Note: Search backend does not support cursor-based pagination
-		items, err = s.ib.Search(ctx, query, inbox.ListOpts{
+		resp, err := s.client.SearchItems(ctx, connect.NewRequest(&inboxv1.SearchItemsRequest{
+			Identity: identityToProto(ctx),
+			Query:    query,
 			PageSize: 50,
-		})
+		}))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		items = fromProtoSlice(resp.Msg.Items)
 	}
 
 	data := searchData{
@@ -35,10 +38,7 @@ func (s *server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	// SSE fragment for Datastar search submit, full page otherwise
 	if r.Header.Get("Accept") == "text/event-stream" {
 		sse := datastar.NewSSE(w, r)
-		sse.PatchElementTempl(queueTable(queueData{
-			Items:    data.Items,
-			BasePath: data.BasePath,
-		}))
+		_ = sse.PatchElementTempl(searchResults(data))
 		return
 	}
 

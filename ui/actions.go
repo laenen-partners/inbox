@@ -3,45 +3,46 @@ package ui
 import (
 	"net/http"
 
+	"connectrpc.com/connect"
 	"github.com/go-chi/chi/v5"
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/inbox"
-	"github.com/laenen-partners/tags"
+	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
 func (s *server) handleClaim(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := actorStr(ctx)
 
-	_, err := s.ib.Claim(ctx, id)
+	resp, err := s.client.ClaimItem(ctx, connect.NewRequest(&inboxv1.ClaimItemRequest{
+		Identity: identityToProto(ctx),
+		Id:       id,
+	}))
 	if err != nil {
 		s.sseError(w, r, err)
 		return
 	}
-	if err := s.ib.Tag(ctx, id, tags.Build("assignee", actor)); err != nil {
-		s.sseError(w, r, err)
-		return
-	}
+	item := fromProto(resp.Msg.Item)
 
-	s.refreshDetailAndToast(w, r, id, "Item claimed")
+	s.renderDetailAndToast(w, r, item, "Item claimed")
 }
 
 func (s *server) handleRelease(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
 
-	item, err := s.ib.Release(ctx, id)
+	resp, err := s.client.ReleaseItem(ctx, connect.NewRequest(&inboxv1.ReleaseItemRequest{
+		Identity: identityToProto(ctx),
+		Id:       id,
+	}))
 	if err != nil {
 		s.sseError(w, r, err)
 		return
 	}
-	if assignee := inbox.TagValue(item, "assignee"); assignee != "" {
-		_ = s.ib.Untag(ctx, id, tags.Build("assignee", assignee))
-	}
+	item := fromProto(resp.Msg.Item)
 
-	s.refreshDetailAndToast(w, r, id, "Item released")
+	s.renderDetailAndToast(w, r, item, "Item released")
 }
 
 func (s *server) handleRespond(w http.ResponseWriter, r *http.Request) {
@@ -57,29 +58,36 @@ func (s *server) handleRespond(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := s.ib.Respond(ctx, id, inbox.Response{
-		Action:  signals.Action,
-		Comment: signals.Comment,
-	})
+	resp, err := s.client.RespondToItem(ctx, connect.NewRequest(&inboxv1.RespondToItemRequest{
+		Identity: identityToProto(ctx),
+		Id:       id,
+		Action:   signals.Action,
+		Comment:  signals.Comment,
+	}))
 	if err != nil {
 		s.sseError(w, r, err)
 		return
 	}
+	item := fromProto(resp.Msg.Item)
 
-	s.refreshDetailAndToast(w, r, id, "Response recorded")
+	s.renderDetailAndToast(w, r, item, "Response recorded")
 }
 
 func (s *server) handleComplete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
 
-	_, err := s.ib.Complete(ctx, id)
+	resp, err := s.client.CompleteItem(ctx, connect.NewRequest(&inboxv1.CompleteItemRequest{
+		Identity: identityToProto(ctx),
+		Id:       id,
+	}))
 	if err != nil {
 		s.sseError(w, r, err)
 		return
 	}
+	item := fromProto(resp.Msg.Item)
 
-	s.refreshDetailAndToast(w, r, id, "Item completed")
+	s.renderDetailAndToast(w, r, item, "Item completed")
 }
 
 func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
@@ -94,13 +102,18 @@ func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := s.ib.Cancel(ctx, id, signals.Reason)
+	resp, err := s.client.CancelItem(ctx, connect.NewRequest(&inboxv1.CancelItemRequest{
+		Identity: identityToProto(ctx),
+		Id:       id,
+		Reason:   signals.Reason,
+	}))
 	if err != nil {
 		s.sseError(w, r, err)
 		return
 	}
+	item := fromProto(resp.Msg.Item)
 
-	s.refreshDetailAndToast(w, r, id, "Item cancelled")
+	s.renderDetailAndToast(w, r, item, "Item cancelled")
 }
 
 func (s *server) handleComment(w http.ResponseWriter, r *http.Request) {
@@ -115,35 +128,31 @@ func (s *server) handleComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := s.ib.Comment(ctx, id, signals.Body, nil)
+	resp, err := s.client.CommentOnItem(ctx, connect.NewRequest(&inboxv1.CommentOnItemRequest{
+		Identity: identityToProto(ctx),
+		Id:       id,
+		Body:     signals.Body,
+	}))
 	if err != nil {
 		s.sseError(w, r, err)
 		return
 	}
+	item := fromProto(resp.Msg.Item)
 
-	s.refreshDetailAndToast(w, r, id, "Comment added")
+	s.renderDetailAndToast(w, r, item, "Comment added")
 }
 
-// refreshDetailAndToast re-renders the detail drawer, updates the queue row, and shows a toast.
-func (s *server) refreshDetailAndToast(w http.ResponseWriter, r *http.Request, id string, msg string) {
-	ctx := r.Context()
-	actor := actorStr(ctx)
-
-	item, err := s.ib.Get(ctx, id)
-	if err != nil {
-		s.sseError(w, r, err)
-		return
-	}
-
-	data := s.buildDetailData(ctx, item, actor)
-
+// renderDetailAndToast re-renders the detail drawer, updates the queue row, and shows a toast.
+func (s *server) renderDetailAndToast(w http.ResponseWriter, r *http.Request, item inbox.Item, msg string) {
+	actor := actorStr(r.Context())
+	data := s.buildDetailData(r.Context(), item, actor)
 	sse := datastar.NewSSE(w, r)
-	ds.Send.Drawer(sse, detailDrawer(data))
-	sse.PatchElementTempl(queueRow(item, s.cfg.basePath))
-	ds.Send.Toast(sse, ds.ToastSuccess, msg)
+	_ = ds.Send.Drawer(sse, detailDrawer(data))
+	_ = sse.PatchElementTempl(queueRow(item, s.cfg.basePath))
+	_ = ds.Send.Toast(sse, ds.ToastSuccess, msg)
 }
 
 func (s *server) sseError(w http.ResponseWriter, r *http.Request, err error) {
 	sse := datastar.NewSSE(w, r)
-	ds.Send.Toast(sse, ds.ToastError, err.Error())
+	_ = ds.Send.Toast(sse, ds.ToastError, err.Error())
 }
