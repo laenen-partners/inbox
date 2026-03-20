@@ -15,9 +15,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/laenen-partners/dsx"
 	"github.com/laenen-partners/entitystore"
-	appstatic "github.com/laenen-partners/inbox/cmd/inboxui/static"
 	"github.com/laenen-partners/entitystore/store"
+	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
+	appstatic "github.com/laenen-partners/inbox/cmd/inboxui/static"
 	inboxui "github.com/laenen-partners/inbox/ui"
 )
 
@@ -85,15 +86,17 @@ func main() {
 		inboxui.WithLayout(showcaseLayout),
 		inboxui.WithSigner(tokens, "http://localhost:8080/inbox/respond", 24*time.Hour),
 		inboxui.WithVerifier(tokens),
-		inboxui.WithActor(func(r *http.Request) string {
-			// Check if actor was already set (e.g. by token middleware)
-			if actor := inbox.ActorFrom(r.Context()); actor != "" {
-				return actor
+		inboxui.WithIdentity(func(r *http.Request) identity.Context {
+			// Check if identity was already set (e.g. by auth middleware)
+			if id, ok := identity.FromContext(r.Context()); ok {
+				return id
 			}
-			if actor := r.URL.Query().Get("actor"); actor != "" {
-				return actor
+			actor := r.URL.Query().Get("actor")
+			if actor == "" {
+				actor = "operator"
 			}
-			return "user:operator"
+			id, _ := identity.New("demo", "demo", actor, identity.PrincipalUser, nil)
+			return id
 		}),
 		inboxui.WithFilter(inboxui.FilterConfig{
 			Label: "Priority", TagPrefix: "priority:",

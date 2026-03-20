@@ -42,6 +42,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/laenen-partners/dsx v0.2.0 // indirect
+	github.com/laenen-partners/identity v0.1.0 // indirect
 	github.com/laenen-partners/migrate v0.1.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect

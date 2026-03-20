@@ -13,13 +13,15 @@ import (
 
 // Claim marks an item as claimed by the given actor. Only items with
 // status "open" can be claimed. Returns the updated item.
-func (ib *Inbox) Claim(ctx context.Context, itemID string, actor string) (Item, error) {
+func (ib *Inbox) Claim(ctx context.Context, itemID string) (Item, error) {
+	actor := actorFromCtx(ctx)
 	return ib.transition(ctx, itemID, StatusOpen, StatusClaimed,
 		newProtoEvent(actor, &inboxv1.ItemClaimed{ClaimedBy: actor}))
 }
 
 // Release returns a claimed item to "open" status.
-func (ib *Inbox) Release(ctx context.Context, itemID string, actor string) (Item, error) {
+func (ib *Inbox) Release(ctx context.Context, itemID string) (Item, error) {
+	actor := actorFromCtx(ctx)
 	return ib.transition(ctx, itemID, StatusClaimed, StatusOpen,
 		newProtoEvent(actor, &inboxv1.ItemReleased{ReleasedBy: actor}))
 }
@@ -28,6 +30,7 @@ func (ib *Inbox) Release(ctx context.Context, itemID string, actor string) (Item
 // transition the item to "completed" — the workflow owns lifecycle
 // transitions via Complete(). Fires the dispatcher callback if configured.
 func (ib *Inbox) Respond(ctx context.Context, itemID string, resp Response) (Item, error) {
+	actor := actorFromCtx(ctx)
 	item, err := ib.Get(ctx, itemID)
 	if err != nil {
 		return Item{}, err
@@ -40,7 +43,7 @@ func (ib *Inbox) Respond(ctx context.Context, itemID string, resp Response) (Ite
 		Action:  resp.Action,
 		Comment: resp.Comment,
 	}
-	evt := newProtoEventWithDetail(resp.Actor, resp.Action, evtData)
+	evt := newProtoEventWithDetail(actor, resp.Action, evtData)
 
 	item.Proto.Events = append(item.Proto.Events, evt)
 
@@ -69,7 +72,8 @@ func (ib *Inbox) Respond(ctx context.Context, itemID string, resp Response) (Ite
 
 // Complete transitions an item to "completed" status. Typically called
 // by the workflow after it has processed the response.
-func (ib *Inbox) Complete(ctx context.Context, itemID string, actor string) (Item, error) {
+func (ib *Inbox) Complete(ctx context.Context, itemID string) (Item, error) {
+	actor := actorFromCtx(ctx)
 	item, err := ib.Get(ctx, itemID)
 	if err != nil {
 		return Item{}, err
@@ -82,7 +86,8 @@ func (ib *Inbox) Complete(ctx context.Context, itemID string, actor string) (Ite
 }
 
 // Cancel marks an item as cancelled.
-func (ib *Inbox) Cancel(ctx context.Context, itemID string, actor string, reason string) (Item, error) {
+func (ib *Inbox) Cancel(ctx context.Context, itemID string, reason string) (Item, error) {
+	actor := actorFromCtx(ctx)
 	item, err := ib.Get(ctx, itemID)
 	if err != nil {
 		return Item{}, err
@@ -97,6 +102,7 @@ func (ib *Inbox) Cancel(ctx context.Context, itemID string, actor string, reason
 // Expire marks an item as expired. Typically called by a background
 // job when the deadline has passed.
 func (ib *Inbox) Expire(ctx context.Context, itemID string) (Item, error) {
+	actor := actorFromCtx(ctx)
 	item, err := ib.Get(ctx, itemID)
 	if err != nil {
 		return Item{}, err
@@ -105,12 +111,13 @@ func (ib *Inbox) Expire(ctx context.Context, itemID string) (Item, error) {
 		return Item{}, fmt.Errorf("inbox: item %s is already in terminal status %s", itemID, item.Proto.Status)
 	}
 	return ib.doTransition(ctx, item, StatusExpired,
-		newProtoEvent("system", &inboxv1.ItemExpired{}))
+		newProtoEvent(actor, &inboxv1.ItemExpired{}))
 }
 
 // UpdatePayload replaces the payload on an item and records a
 // PayloadUpdated event.
-func (ib *Inbox) UpdatePayload(ctx context.Context, itemID string, payload proto.Message, actor string) (Item, error) {
+func (ib *Inbox) UpdatePayload(ctx context.Context, itemID string, payload proto.Message) (Item, error) {
+	actor := actorFromCtx(ctx)
 	item, err := ib.Get(ctx, itemID)
 	if err != nil {
 		return Item{}, err

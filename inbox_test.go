@@ -11,6 +11,7 @@ import (
 
 	"github.com/laenen-partners/entitystore"
 	"github.com/laenen-partners/entitystore/store"
+	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 )
@@ -67,6 +68,11 @@ func sharedInbox(t *testing.T) *inbox.Inbox {
 	return inbox.New(es)
 }
 
+func ctxWithActor(principalID string, pt identity.PrincipalType) context.Context {
+	id, _ := identity.New("test", "test", principalID, pt, nil)
+	return identity.WithContext(context.Background(), id)
+}
+
 // ─── E2E Tests: KYC & Onboarding Scenarios ───
 
 // TestCustomerMissingDocuments simulates a customer who starts onboarding
@@ -75,7 +81,6 @@ func sharedInbox(t *testing.T) *inbox.Inbox {
 // eventually provides the document and responds.
 func TestCustomerMissingDocuments(t *testing.T) {
 	ib := sharedInbox(t)
-	ctx := context.Background()
 
 	// 1. Workflow evaluates eligibility -> ID document is missing.
 	//    Creates an inbox item for the customer.
@@ -90,11 +95,11 @@ func TestCustomerMissingDocuments(t *testing.T) {
 		t.Fatalf("new struct: %v", err)
 	}
 
+	ctx := ctxWithActor("onboarding-456", identity.PrincipalService)
 	item, err := ib.Create(ctx, inbox.Meta{
 		Title:       "Upload your identity document",
 		Description: "To continue opening your Current Account, please upload a valid passport or Emirates ID.",
 		Payload:     payload,
-		Actor:       "workflow:onboarding-456",
 		Tags: []string{
 			"type:input_required",
 			"assignee:customer:CUST-1234",
@@ -118,7 +123,8 @@ func TestCustomerMissingDocuments(t *testing.T) {
 	}
 
 	// 2. Customer queries their inbox -- finds the open item.
-	items, err := ib.ListByTags(ctx, []string{"assignee:customer:CUST-1234", "status:open"}, inbox.ListOpts{})
+	custCtx := ctxWithActor("customer:CUST-1234", identity.PrincipalUser)
+	items, err := ib.ListByTags(custCtx, []string{"assignee:customer:CUST-1234", "status:open"}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list items: %v", err)
 	}
@@ -127,8 +133,7 @@ func TestCustomerMissingDocuments(t *testing.T) {
 	}
 
 	// 3. Customer uploads document and responds.
-	item, err = ib.Respond(ctx, item.ID, inbox.Response{
-		Actor:  "user:customer:CUST-1234",
+	item, err = ib.Respond(custCtx, item.ID, inbox.Response{
 		Action: "submit",
 	})
 	if err != nil {
@@ -156,7 +161,8 @@ func TestCustomerMissingDocuments(t *testing.T) {
 	}
 
 	// 5. Workflow re-evaluates and completes the item.
-	item, err = ib.Complete(ctx, item.ID, "workflow:onboarding-456")
+	wfCtx := ctxWithActor("onboarding-456", identity.PrincipalService)
+	item, err = ib.Complete(wfCtx, item.ID)
 	if err != nil {
 		t.Fatalf("complete: %v", err)
 	}
@@ -173,7 +179,6 @@ func TestCustomerMissingDocuments(t *testing.T) {
 // officer must review and make a decision.
 func TestComplianceReviewPEPScreening(t *testing.T) {
 	ib := sharedInbox(t)
-	ctx := context.Background()
 
 	// 1. Eligibility engine flags PEP screening -> creates compliance review item.
 	payload, err := structpb.NewStruct(map[string]any{
@@ -191,11 +196,11 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 		t.Fatalf("new struct: %v", err)
 	}
 
-	item, err := ib.Create(ctx, inbox.Meta{
+	wfCtx := ctxWithActor("onboarding-456", identity.PrincipalService)
+	item, err := ib.Create(wfCtx, inbox.Meta{
 		Title:       "PEP screening review -- Ahmed K.",
 		Description: "Customer flagged as Politically Exposed Person during onboarding for Current Account -- AED. Review screening report and decide.",
 		Payload:     payload,
-		Actor:       "workflow:onboarding-456",
 		Tags: []string{
 			"type:review",
 			"team:compliance",
@@ -211,7 +216,8 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	}
 
 	// 2. Compliance officer finds items needing review.
-	items, err := ib.ListByTags(ctx, []string{"team:compliance", "status:open"}, inbox.ListOpts{})
+	fatimaCtx := ctxWithActor("compliance:fatima", identity.PrincipalUser)
+	items, err := ib.ListByTags(fatimaCtx, []string{"team:compliance", "status:open"}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list items: %v", err)
 	}
@@ -226,7 +232,7 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	}
 
 	// 3. Compliance officer claims the item.
-	item, err = ib.Claim(ctx, item.ID, "user:compliance:fatima")
+	item, err = ib.Claim(fatimaCtx, item.ID)
 	if err != nil {
 		t.Fatalf("claim: %v", err)
 	}
@@ -235,7 +241,7 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	}
 
 	// 4. Compliance officer adds an internal note.
-	item, err = ib.Comment(ctx, item.ID, "user:compliance:fatima",
+	item, err = ib.Comment(fatimaCtx, item.ID,
 		"Checked screening report. PEP status is historical -- former deputy minister, left office 2019. Low risk.",
 		&inbox.CommentOpts{Visibility: []string{"team:compliance"}},
 	)
@@ -244,8 +250,7 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	}
 
 	// 5. Compliance officer approves.
-	item, err = ib.Respond(ctx, item.ID, inbox.Response{
-		Actor:  "user:compliance:fatima",
+	item, err = ib.Respond(fatimaCtx, item.ID, inbox.Response{
 		Action: "approve",
 	})
 	if err != nil {
@@ -253,7 +258,7 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 	}
 
 	// 6. Workflow completes.
-	item, err = ib.Complete(ctx, item.ID, "workflow:onboarding-456")
+	item, err = ib.Complete(wfCtx, item.ID)
 	if err != nil {
 		t.Fatalf("complete: %v", err)
 	}
@@ -278,7 +283,6 @@ func TestComplianceReviewPEPScreening(t *testing.T) {
 // captures the delegation.
 func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 	ib := sharedInbox(t)
-	ctx := context.Background()
 
 	// 1. Workflow creates item for customer to accept terms.
 	payload, err := structpb.NewStruct(map[string]any{
@@ -290,11 +294,11 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 		t.Fatalf("new struct: %v", err)
 	}
 
-	item, err := ib.Create(ctx, inbox.Meta{
+	wfCtx := ctxWithActor("onboarding-789", identity.PrincipalService)
+	item, err := ib.Create(wfCtx, inbox.Meta{
 		Title:       "Accept Terms & Conditions",
 		Description: "Please review and accept the General Terms & Conditions to continue your account opening.",
 		Payload:     payload,
-		Actor:       "workflow:onboarding-789",
 		Tags: []string{
 			"type:action",
 			"assignee:customer:CUST-5678",
@@ -308,7 +312,8 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 	}
 
 	// 2. Customer doesn't respond for a while. RM sees it in their view.
-	items, err := ib.ListByTags(ctx, []string{"rm:user:sarah", "status:open"}, inbox.ListOpts{})
+	sarahCtx := ctxWithActor("rm:sarah", identity.PrincipalUser)
+	items, err := ib.ListByTags(sarahCtx, []string{"rm:user:sarah", "status:open"}, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("list items: %v", err)
 	}
@@ -317,12 +322,12 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 	}
 
 	// 3. Customer calls the bank. RM claims and acts on their behalf.
-	item, err = ib.Claim(ctx, item.ID, "user:rm:sarah")
+	item, err = ib.Claim(sarahCtx, item.ID)
 	if err != nil {
 		t.Fatalf("claim: %v", err)
 	}
 
-	item, err = ib.Comment(ctx, item.ID, "user:rm:sarah",
+	item, err = ib.Comment(sarahCtx, item.ID,
 		"Client called branch. Read T&C over the phone, client verbally accepted.",
 		nil,
 	)
@@ -331,8 +336,7 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 	}
 
 	// 4. RM responds on behalf of the client.
-	item, err = ib.Respond(ctx, item.ID, inbox.Response{
-		Actor:  "user:rm:sarah",
+	item, err = ib.Respond(sarahCtx, item.ID, inbox.Response{
 		Action: "accept",
 	})
 	if err != nil {
@@ -340,7 +344,7 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 	}
 
 	// 5. Workflow completes.
-	item, err = ib.Complete(ctx, item.ID, "workflow:onboarding-789")
+	item, err = ib.Complete(wfCtx, item.ID)
 	if err != nil {
 		t.Fatalf("complete: %v", err)
 	}
@@ -356,7 +360,7 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 		t.Fatal("expected ItemResponded event")
 	}
 	if respondEvt.Actor != "user:rm:sarah" {
-		t.Errorf("expected RM as actor, got %s", respondEvt.Actor)
+		t.Errorf("expected RM as actor, got %q", respondEvt.Actor)
 	}
 
 	// Verify the response action via the typed event data.
@@ -374,7 +378,6 @@ func TestRMOverrideOnBehalfOfClient(t *testing.T) {
 // specialist review.
 func TestEscalationFromOpsToCompliance(t *testing.T) {
 	ib := sharedInbox(t)
-	ctx := context.Background()
 
 	// 1. Item created for ops team.
 	payload, err := structpb.NewStruct(map[string]any{
@@ -392,11 +395,11 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 		t.Fatalf("new struct: %v", err)
 	}
 
-	item, err := ib.Create(ctx, inbox.Meta{
+	wfCtx := ctxWithActor("monitoring-100", identity.PrincipalService)
+	item, err := ib.Create(wfCtx, inbox.Meta{
 		Title:       "Source of funds verification -- Large deposit",
 		Description: "Customer deposited $250,000. Source of funds documentation required per AML policy.",
 		Payload:     payload,
-		Actor:       "workflow:monitoring-100",
 		Tags: []string{
 			"type:review",
 			"team:ops",
@@ -409,12 +412,13 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 	}
 
 	// 2. Ops team member claims and reviews.
-	item, err = ib.Claim(ctx, item.ID, "user:ops:marco")
+	marcoCtx := ctxWithActor("ops:marco", identity.PrincipalUser)
+	item, err = ib.Claim(marcoCtx, item.ID)
 	if err != nil {
 		t.Fatalf("claim: %v", err)
 	}
 
-	item, err = ib.Comment(ctx, item.ID, "user:ops:marco",
+	item, err = ib.Comment(marcoCtx, item.ID,
 		"Amount exceeds $100k threshold. Customer is a PEP. Escalating to compliance for enhanced due diligence.",
 		nil,
 	)
@@ -423,14 +427,14 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 	}
 
 	// 3. Escalate to compliance.
-	item, err = ib.Escalate(ctx, item.ID, "user:ops:marco", "ops", "compliance",
+	item, err = ib.Escalate(marcoCtx, item.ID, "ops", "compliance",
 		"Amount exceeds threshold and customer is flagged PEP. Needs enhanced due diligence.")
 	if err != nil {
 		t.Fatalf("escalate: %v", err)
 	}
 
 	// 4. Verify team tag was updated.
-	item, err = ib.Get(ctx, item.ID)
+	item, err = ib.Get(marcoCtx, item.ID)
 	if err != nil {
 		t.Fatalf("get: %v", err)
 	}
@@ -463,18 +467,18 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 
 	// 6. Compliance picks up and resolves.
 	// Release first (ops had it claimed), then compliance claims.
-	item, err = ib.Release(ctx, item.ID, "user:ops:marco")
+	item, err = ib.Release(marcoCtx, item.ID)
 	if err != nil {
 		t.Fatalf("release: %v", err)
 	}
 
-	item, err = ib.Claim(ctx, item.ID, "user:compliance:fatima")
+	fatimaCtx := ctxWithActor("compliance:fatima", identity.PrincipalUser)
+	item, err = ib.Claim(fatimaCtx, item.ID)
 	if err != nil {
 		t.Fatalf("claim by compliance: %v", err)
 	}
 
-	item, err = ib.Respond(ctx, item.ID, inbox.Response{
-		Actor:   "user:compliance:fatima",
+	item, err = ib.Respond(fatimaCtx, item.ID, inbox.Response{
 		Action:  "approve",
 		Comment: "EDD completed. Source of funds verified via bank statements and employment letter.",
 	})
@@ -482,7 +486,7 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 		t.Fatalf("respond: %v", err)
 	}
 
-	item, err = ib.Complete(ctx, item.ID, "workflow:monitoring-100")
+	item, err = ib.Complete(wfCtx, item.ID)
 	if err != nil {
 		t.Fatalf("complete: %v", err)
 	}
@@ -507,14 +511,13 @@ func TestEscalationFromOpsToCompliance(t *testing.T) {
 // its deadline. A background job expires it.
 func TestItemExpiry(t *testing.T) {
 	ib := sharedInbox(t)
-	ctx := context.Background()
 
+	wfCtx := ctxWithActor("onboarding-999", identity.PrincipalService)
 	deadline := time.Now().UTC().Add(-1 * time.Hour) // Already past.
-	item, err := ib.Create(ctx, inbox.Meta{
+	item, err := ib.Create(wfCtx, inbox.Meta{
 		Title:       "Verify your email address",
 		Description: "Please verify your email to continue account opening.",
 		Deadline:    &deadline,
-		Actor:       "workflow:onboarding-999",
 		Tags: []string{
 			"type:action",
 			"assignee:customer:CUST-0001",
@@ -530,7 +533,8 @@ func TestItemExpiry(t *testing.T) {
 	}
 
 	// Background job finds stale items and expires them.
-	stale, err := ib.Stale(ctx, []string{"status:open"}, 0, inbox.ListOpts{})
+	sysCtx := ctxWithActor("expiry-job", identity.PrincipalService)
+	stale, err := ib.Stale(sysCtx, []string{"status:open"}, 0, inbox.ListOpts{})
 	if err != nil {
 		t.Fatalf("stale: %v", err)
 	}
@@ -546,7 +550,7 @@ func TestItemExpiry(t *testing.T) {
 	}
 
 	// Expire the item.
-	item, err = ib.Expire(ctx, item.ID)
+	item, err = ib.Expire(sysCtx, item.ID)
 	if err != nil {
 		t.Fatalf("expire: %v", err)
 	}
@@ -559,7 +563,8 @@ func TestItemExpiry(t *testing.T) {
 	}
 
 	// Cannot respond to expired item.
-	_, err = ib.Respond(ctx, item.ID, inbox.Response{Actor: "user:x", Action: "submit"})
+	userCtx := ctxWithActor("x", identity.PrincipalUser)
+	_, err = ib.Respond(userCtx, item.ID, inbox.Response{Action: "submit"})
 	if err == nil {
 		t.Error("expected error responding to expired item")
 	}
@@ -569,19 +574,19 @@ func TestItemExpiry(t *testing.T) {
 // created in error or is a duplicate.
 func TestCancelDuplicateItem(t *testing.T) {
 	ib := sharedInbox(t)
-	ctx := context.Background()
 
-	item, err := ib.Create(ctx, inbox.Meta{
+	wfCtx := ctxWithActor("onboarding-456", identity.PrincipalService)
+	item, err := ib.Create(wfCtx, inbox.Meta{
 		Title:       "Upload Emirates ID (duplicate)",
 		Description: "This was created in error.",
-		Actor:       "workflow:onboarding-456",
 		Tags:        []string{"type:input_required", "assignee:customer:CUST-1234"},
 	})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 
-	item, err = ib.Cancel(ctx, item.ID, "user:ops:marco", "Duplicate item -- original already completed")
+	marcoCtx := ctxWithActor("ops:marco", identity.PrincipalUser)
+	item, err = ib.Cancel(marcoCtx, item.ID, "Duplicate item -- original already completed")
 	if err != nil {
 		t.Fatalf("cancel: %v", err)
 	}
@@ -606,7 +611,8 @@ func TestCancelDuplicateItem(t *testing.T) {
 	}
 
 	// Cannot claim cancelled item.
-	_, err = ib.Claim(ctx, item.ID, "user:anyone")
+	anyCtx := ctxWithActor("anyone", identity.PrincipalUser)
+	_, err = ib.Claim(anyCtx, item.ID)
 	if err == nil {
 		t.Error("expected error claiming cancelled item")
 	}
@@ -618,7 +624,7 @@ func TestCancelDuplicateItem(t *testing.T) {
 // for compliance.
 func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 	ib := sharedInbox(t)
-	ctx := context.Background()
+	ctx := ctxWithActor("onboarding-multi", identity.PrincipalService)
 
 	// Simulate: evaluation returned 3 pending requirements.
 	requirements := []struct {
@@ -678,7 +684,6 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 			Title:       req.title,
 			Description: "Required for Current Account opening.",
 			Payload:     payload,
-			Actor:       "workflow:onboarding-multi",
 			Tags:        tags,
 		})
 		if err != nil {
@@ -728,7 +733,6 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 // complete the item -- all in a single write.
 func TestOpBuilderRespondAndComplete(t *testing.T) {
 	ib := sharedInbox(t)
-	ctx := context.Background()
 
 	// Create a compliance review item.
 	payload, err := structpb.NewStruct(map[string]any{
@@ -742,11 +746,11 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 		t.Fatalf("new struct: %v", err)
 	}
 
-	item, err := ib.Create(ctx, inbox.Meta{
+	wfCtx := ctxWithActor("onboarding-op", identity.PrincipalService)
+	item, err := ib.Create(wfCtx, inbox.Meta{
 		Title:       "Sanctions screening -- Customer Z",
 		Description: "Automated screening flagged a potential match.",
 		Payload:     payload,
-		Actor:       "workflow:onboarding-op",
 		Tags: []string{
 			"type:review",
 			"team:compliance",
@@ -780,7 +784,8 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 
-	item, err = ib.On(ctx, item.ID, "user:compliance:fatima").
+	fatimaCtx := ctxWithActor("compliance:fatima", identity.PrincipalUser)
+	item, err = ib.On(fatimaCtx, item.ID).
 		Respond("approve", "False positive -- name similarity only, different DOB and nationality.").
 		UpdatePayload("google.protobuf.Struct", resolvedJSON).
 		Comment("Checked DOB and nationality against OFAC list. No match.").
@@ -833,11 +838,10 @@ func TestOpBuilderRespondAndComplete(t *testing.T) {
 // automatically from the proto registry.
 func TestOpBuilderWithProtoEvents(t *testing.T) {
 	ib := sharedInbox(t)
-	ctx := context.Background()
 
-	item, err := ib.Create(ctx, inbox.Meta{
+	wfCtx := ctxWithActor("kyc-001", identity.PrincipalService)
+	item, err := ib.Create(wfCtx, inbox.Meta{
 		Title: "KYC verification -- Customer Y",
-		Actor: "workflow:kyc-001",
 		Tags:  []string{"type:review", "team:ops"},
 	})
 	if err != nil {
@@ -863,7 +867,8 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 	}
 
 	// Agent emits multiple check results as proto events.
-	item, err = ib.On(ctx, item.ID, "agent:kyc-bot").
+	botCtx := ctxWithActor("kyc-bot", identity.PrincipalService)
+	item, err = ib.On(botCtx, item.ID).
 		WithEvent(idvResult).
 		WithEvent(addressResult).
 		Comment("All automated checks passed. Ready for final review.").
@@ -886,7 +891,7 @@ func TestOpBuilderWithProtoEvents(t *testing.T) {
 	if events[2].DataType != expectedType {
 		t.Errorf("expected %s, got %s", expectedType, events[2].DataType)
 	}
-	if events[1].Actor != "agent:kyc-bot" {
-		t.Errorf("expected agent:kyc-bot, got %s", events[1].Actor)
+	if events[1].Actor != "service:kyc-bot" {
+		t.Errorf("expected service:kyc-bot, got %s", events[1].Actor)
 	}
 }

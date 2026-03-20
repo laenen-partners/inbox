@@ -46,9 +46,10 @@ type payloadUpdate struct {
 	payload     json.RawMessage
 }
 
-// On starts a batch operation on an item. The actor is used for all
-// events emitted by this operation unless overridden.
-func (ib *Inbox) On(ctx context.Context, itemID string, actor string) *Op {
+// On starts a batch operation on an item. The actor is derived from
+// the identity in context and used for all events emitted by this operation.
+func (ib *Inbox) On(ctx context.Context, itemID string) *Op {
+	actor := actorFromCtx(ctx)
 	item, err := ib.Get(ctx, itemID)
 	return &Op{
 		ib:    ib,
@@ -68,7 +69,6 @@ func (op *Op) Respond(action string, comment string) *Op {
 		return op
 	}
 	op.response = &Response{
-		Actor:   op.actor,
 		Action:  action,
 		Comment: comment,
 	}

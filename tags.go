@@ -9,7 +9,8 @@ import (
 )
 
 // Tag adds tags to an item and records a tag change event.
-func (ib *Inbox) Tag(ctx context.Context, itemID string, actor string, tags ...string) error {
+func (ib *Inbox) Tag(ctx context.Context, itemID string, tags ...string) error {
+	actor := actorFromCtx(ctx)
 	if err := ib.es.AddTags(ctx, itemID, tags); err != nil {
 		return fmt.Errorf("inbox: add tags: %w", err)
 	}
@@ -22,7 +23,8 @@ func (ib *Inbox) Tag(ctx context.Context, itemID string, actor string, tags ...s
 }
 
 // Untag removes a tag from an item and records a tag change event.
-func (ib *Inbox) Untag(ctx context.Context, itemID string, actor string, tag string) error {
+func (ib *Inbox) Untag(ctx context.Context, itemID string, tag string) error {
+	actor := actorFromCtx(ctx)
 	if err := ib.es.RemoveTag(ctx, itemID, tag); err != nil {
 		return fmt.Errorf("inbox: remove tag: %w", err)
 	}

@@ -101,6 +101,8 @@ github.com/laenen-partners/dsx v0.2.0 h1:o+o4Oys7k1gOXKx23h8TtZcQrFeYwXqsbEtrc9n
 github.com/laenen-partners/dsx v0.2.0/go.mod h1:btSCW6Fhd9nmG1eRqg8oigP1GjCh2BPGeMTjyzIO6tM=
 github.com/laenen-partners/entitystore v0.10.0 h1:9lBCIWTxdW0qwl120dMvZHZ5MVO3kUHAIwKKfXj3EXc=
 github.com/laenen-partners/entitystore v0.10.0/go.mod h1:YSCq2T4MrvNY6EzlGj0XrZ8w7ia67IKqD/sFhQ+U5Gs=
+github.com/laenen-partners/identity v0.1.0 h1:K7qav/S68+qRyqgiId29r9U95k4wEtMVLsArJgmDLWw=
+github.com/laenen-partners/identity v0.1.0/go.mod h1:wtYSUOvpEUKVlkzEkrHG6IKR9t7fgD44aA012NDvuek=
 github.com/laenen-partners/migrate v0.1.0 h1:8XgAPpoMsHZJA7eJiUJm+eWX0Eq5axqCpP/lvnYngSI=
 github.com/laenen-partners/migrate v0.1.0/go.mod h1:5pBjbs2uJ2jPqwkzjSH38LtHHJ1Pn3eS2egq0S9JwKI=
 github.com/lib/pq v1.11.2 h1:x6gxUeu39V0BHZiugWe8LXZYZ+Utk7hSJGThs8sdzfs=

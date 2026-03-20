@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
 )
 
@@ -28,7 +29,7 @@ type LayoutFunc func(currentPath string, content templ.Component) templ.Componen
 type Option func(*config)
 
 type config struct {
-	actorFn          func(r *http.Request) string
+	identityFn       func(r *http.Request) identity.Context
 	filters          []FilterConfig
 	payloadRenderers map[string]PayloadRendererFunc
 	basePath         string
@@ -40,15 +41,16 @@ type config struct {
 }
 
 func defaultConfig() *config {
+	defaultID, _ := identity.New("default", "default", "anonymous", identity.PrincipalService, nil)
 	return &config{
-		actorFn:          func(r *http.Request) string { return "anonymous" },
+		identityFn:       func(r *http.Request) identity.Context { return defaultID },
 		payloadRenderers: make(map[string]PayloadRendererFunc),
 	}
 }
 
-// WithActor sets the function that extracts the current actor from a request.
-func WithActor(fn func(r *http.Request) string) Option {
-	return func(c *config) { c.actorFn = fn }
+// WithIdentity sets the function that extracts the caller's identity from a request.
+func WithIdentity(fn func(r *http.Request) identity.Context) Option {
+	return func(c *config) { c.identityFn = fn }
 }
 
 // WithFilter adds a preset tag filter to the filter bar.

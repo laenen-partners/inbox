@@ -4,12 +4,15 @@ import (
 	"context"
 	"time"
 
+	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func seedData(ctx context.Context, ib *inbox.Inbox) error {
+func seedData(parentCtx context.Context, ib *inbox.Inbox) error {
+	seedID, _ := identity.New("seed", "seed", "seed", identity.PrincipalService, nil)
+	ctx := identity.WithContext(parentCtx, seedID)
 	// Skip if items already exist
 	existing, _ := ib.ListByTags(ctx, []string{"status:open"}, inbox.ListOpts{PageSize: 1})
 	if len(existing) > 0 {
@@ -23,7 +26,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		Title:       "Upload identity documents",
 		Description: "Please upload your identity document and a recent proof of address to continue opening your account.",
 		Tags:        []string{"type:input_required", "priority:high", "team:ops", "assignee:customer:CUST-1234"},
-		Actor:       "workflow:onboarding-001",
+
 		Deadline:    &deadline,
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
@@ -50,7 +53,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		Title:       "Review and sign service agreement",
 		Description: "Please review the service agreement and sign to activate your account.",
 		Tags:        []string{"type:approval", "priority:normal", "team:ops", "assignee:customer:CUST-1234"},
-		Actor:       "workflow:onboarding-001",
+
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
 				{Label: "Customer", Value: "CUST-1234"},
@@ -76,7 +79,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		Title:       "Verify your email address",
 		Description: "We sent a 6-digit code to your email. Enter it below to verify your address.",
 		Tags:        []string{"type:action", "priority:high", "team:ops", "assignee:customer:CUST-2000"},
-		Actor:       "workflow:onboarding-001",
+
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
 				{Label: "Email", Value: "j.doe@example.com"},
@@ -99,7 +102,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		Title:       "Document vehicle damage",
 		Description: "Please provide photos and details of the damage for your insurance claim.",
 		Tags:        []string{"type:input_required", "priority:normal", "team:ops", "assignee:customer:CUST-3000"},
-		Actor:       "workflow:claims-001",
+
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
 				{Label: "Claim", Value: "CLM-2026-0099", Mono: true},
@@ -125,7 +128,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		Title:       "Rate your onboarding experience",
 		Description: "We'd love to hear your feedback on the account opening process.",
 		Tags:        []string{"type:action", "priority:low", "team:ops", "assignee:customer:CUST-4000"},
-		Actor:       "system",
+
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
 				{Type: "alert", Variant: "success", Label: "Account activated", Value: "Your Current Account is now ready to use."},
@@ -149,7 +152,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		Title:       "Provide employment details",
 		Description: "We need your employment and income information for the account assessment.",
 		Tags:        []string{"type:input_required", "priority:normal", "team:ops", "assignee:customer:CUST-1234"},
-		Actor:       "workflow:onboarding-001",
+
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
 				{Label: "Customer", Value: "CUST-1234"},
@@ -176,7 +179,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		Title:       "Sanctions screening review",
 		Description: "Automated screening returned a potential match. Manual review required.",
 		Tags:        []string{"type:review", "priority:high", "team:compliance"},
-		Actor:       "agent:screening-bot",
+
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
 				{Label: "Customer", Value: "CUST-9012"},
@@ -204,7 +207,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		Title:       "PEP screening review",
 		Description: "Customer flagged as PEP during onboarding. Verify provided documents.",
 		Tags:        []string{"type:review", "priority:urgent", "team:compliance"},
-		Actor:       "workflow:onboarding-001",
+
 		Deadline:    &deadline,
 		Payload: &inboxv1.ItemSchema{
 			Display: []*inboxv1.DisplayField{
@@ -237,7 +240,7 @@ func seedData(ctx context.Context, ib *inbox.Inbox) error {
 		Title:       "Expense report approval",
 		Description: "Travel expenses submitted for Q1 conference.",
 		Tags:        []string{"type:approval", "priority:low", "team:finance"},
-		Actor:       "system",
+
 		Payload:     genericPayload,
 	}); err != nil {
 		return err

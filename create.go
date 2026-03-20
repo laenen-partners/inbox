@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/laenen-partners/entitystore/matching"
 	"github.com/laenen-partners/entitystore/store"
+	"github.com/laenen-partners/identity"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -23,10 +24,7 @@ import (
 func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 	now := time.Now().UTC()
 	id := uuid.NewString()
-	actor := meta.Actor
-	if actor == "" {
-		actor = "system"
-	}
+	actor := actorFromCtx(ctx)
 
 	createdEvt := newProtoEvent(actor, &inboxv1.ItemCreated{PayloadType: payloadTypeFromMsg(meta.Payload)})
 	createdEvt.At = timestamppb.New(now)
@@ -101,6 +99,11 @@ func newProtoEventWithDetail(actor, detail string, msg proto.Message) *inboxv1.E
 }
 
 // ─── Internal helpers ───
+
+func actorFromCtx(ctx context.Context) string {
+	id := identity.MustFromContext(ctx)
+	return string(id.PrincipalType()) + ":" + id.PrincipalID()
+}
 
 // appendStatusTag ensures a "status:<s>" tag is present.
 func appendStatusTag(tags []string, s string) []string {

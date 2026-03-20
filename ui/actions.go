@@ -13,14 +13,14 @@ import (
 func (s *server) handleClaim(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := inbox.ActorFrom(ctx)
+	actor := actorStr(ctx)
 
-	_, err := s.ib.Claim(ctx, id, actor)
+	_, err := s.ib.Claim(ctx, id)
 	if err != nil {
 		s.sseError(w, r, err)
 		return
 	}
-	if err := s.ib.Tag(ctx, id, actor, "assignee:"+actor); err != nil {
+	if err := s.ib.Tag(ctx, id, "assignee:"+actor); err != nil {
 		s.sseError(w, r, err)
 		return
 	}
@@ -31,15 +31,14 @@ func (s *server) handleClaim(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleRelease(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := inbox.ActorFrom(ctx)
 
-	item, err := s.ib.Release(ctx, id, actor)
+	item, err := s.ib.Release(ctx, id)
 	if err != nil {
 		s.sseError(w, r, err)
 		return
 	}
 	if assignee := inbox.TagValue(item, "assignee:"); assignee != "" {
-		_ = s.ib.Untag(ctx, id, actor, "assignee:"+assignee)
+		_ = s.ib.Untag(ctx, id, "assignee:"+assignee)
 	}
 
 	s.refreshDetailAndToast(w, r, id, "Item released")
@@ -48,7 +47,6 @@ func (s *server) handleRelease(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleRespond(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := inbox.ActorFrom(ctx)
 
 	var signals struct {
 		Action  string `json:"action"`
@@ -60,7 +58,6 @@ func (s *server) handleRespond(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err := s.ib.Respond(ctx, id, inbox.Response{
-		Actor:   actor,
 		Action:  signals.Action,
 		Comment: signals.Comment,
 	})
@@ -75,9 +72,8 @@ func (s *server) handleRespond(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleComplete(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := inbox.ActorFrom(ctx)
 
-	_, err := s.ib.Complete(ctx, id, actor)
+	_, err := s.ib.Complete(ctx, id)
 	if err != nil {
 		s.sseError(w, r, err)
 		return
@@ -89,7 +85,6 @@ func (s *server) handleComplete(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := inbox.ActorFrom(ctx)
 
 	var signals struct {
 		Reason string `json:"reason"`
@@ -99,7 +94,7 @@ func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := s.ib.Cancel(ctx, id, actor, signals.Reason)
+	_, err := s.ib.Cancel(ctx, id, signals.Reason)
 	if err != nil {
 		s.sseError(w, r, err)
 		return
@@ -111,7 +106,6 @@ func (s *server) handleCancel(w http.ResponseWriter, r *http.Request) {
 func (s *server) handleComment(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := chi.URLParam(r, "id")
-	actor := inbox.ActorFrom(ctx)
 
 	var signals struct {
 		Body string `json:"body"`
@@ -121,7 +115,7 @@ func (s *server) handleComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := s.ib.Comment(ctx, id, actor, signals.Body, nil)
+	_, err := s.ib.Comment(ctx, id, signals.Body, nil)
 	if err != nil {
 		s.sseError(w, r, err)
 		return
@@ -133,7 +127,7 @@ func (s *server) handleComment(w http.ResponseWriter, r *http.Request) {
 // refreshDetailAndToast re-renders the detail drawer, updates the queue row, and shows a toast.
 func (s *server) refreshDetailAndToast(w http.ResponseWriter, r *http.Request, id string, msg string) {
 	ctx := r.Context()
-	actor := inbox.ActorFrom(ctx)
+	actor := actorStr(ctx)
 
 	item, err := s.ib.Get(ctx, id)
 	if err != nil {

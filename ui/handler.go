@@ -1,10 +1,12 @@
 package ui
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/a-h/templ"
 	"github.com/go-chi/chi/v5"
+	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
 )
 
@@ -45,10 +47,15 @@ type server struct {
 
 func (s *server) actorMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		actor := s.cfg.actorFn(r)
-		ctx := inbox.WithActor(r.Context(), actor)
+		id := s.cfg.identityFn(r)
+		ctx := identity.WithContext(r.Context(), id)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func actorStr(ctx context.Context) string {
+	id := identity.MustFromContext(ctx)
+	return string(id.PrincipalType()) + ":" + id.PrincipalID()
 }
 
 // renderPage wraps content in the configured layout and renders to the response.

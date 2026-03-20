@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/laenen-partners/dsx/ds"
+	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/starfederation/datastar-go/datastar"
@@ -89,8 +91,21 @@ func (s *server) handleClientRespondSubmit(w http.ResponseWriter, r *http.Reques
 	// Build response comment from schema fields
 	comment := "Submitted via presigned link"
 
-	_, err = s.ib.Respond(r.Context(), claims.ItemID, inbox.Response{
-		Actor:   claims.Actor,
+	// Construct identity from token claims actor string (format "type:id")
+	ctx := r.Context()
+	pt := identity.PrincipalService
+	pid := claims.Actor
+	if i := strings.IndexByte(claims.Actor, ':'); i > 0 {
+		prefix := claims.Actor[:i]
+		pid = claims.Actor[i+1:]
+		if prefix == string(identity.PrincipalUser) {
+			pt = identity.PrincipalUser
+		}
+	}
+	claimsID, _ := identity.New("token", "token", pid, pt, nil)
+	ctx = identity.WithContext(ctx, claimsID)
+
+	_, err = s.ib.Respond(ctx, claims.ItemID, inbox.Response{
 		Action:  "submit",
 		Comment: comment,
 	})
@@ -100,7 +115,7 @@ func (s *server) handleClientRespondSubmit(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Complete the item
-	_, err = s.ib.Complete(r.Context(), claims.ItemID, claims.Actor)
+	_, err = s.ib.Complete(ctx, claims.ItemID)
 	if err != nil {
 		// Item may already be completed or not claimable — just log
 	}

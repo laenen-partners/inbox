@@ -45,7 +45,8 @@ func (ib *Inbox) AddEvent(ctx context.Context, itemID string, evt *inboxv1.Event
 
 // Comment adds a comment to an item. Comments are the primary way
 // humans and agents add context without changing item state.
-func (ib *Inbox) Comment(ctx context.Context, itemID string, actor string, body string, opts *CommentOpts) (Item, error) {
+func (ib *Inbox) Comment(ctx context.Context, itemID string, body string, opts *CommentOpts) (Item, error) {
+	actor := actorFromCtx(ctx)
 	evtData := &inboxv1.CommentAppended{Body: body}
 	if opts != nil {
 		evtData.Visibility = opts.Visibility
@@ -57,7 +58,8 @@ func (ib *Inbox) Comment(ctx context.Context, itemID string, actor string, body 
 
 // Escalate moves an item from one team to another with a reason.
 // Updates team tags and records an ItemEscalated event.
-func (ib *Inbox) Escalate(ctx context.Context, itemID string, actor string, fromTeam string, toTeam string, reason string) (Item, error) {
+func (ib *Inbox) Escalate(ctx context.Context, itemID string, fromTeam string, toTeam string, reason string) (Item, error) {
+	actor := actorFromCtx(ctx)
 	if fromTeam != "" {
 		_ = ib.es.RemoveTag(ctx, itemID, "team:"+fromTeam)
 	}
@@ -74,7 +76,8 @@ func (ib *Inbox) Escalate(ctx context.Context, itemID string, actor string, from
 
 // Reassign moves an item from one actor to another.
 // Updates assignee tags and records an ItemReassigned event.
-func (ib *Inbox) Reassign(ctx context.Context, itemID string, actor string, fromActor string, toActor string, reason string) (Item, error) {
+func (ib *Inbox) Reassign(ctx context.Context, itemID string, fromActor string, toActor string, reason string) (Item, error) {
+	actor := actorFromCtx(ctx)
 	if fromActor != "" {
 		_ = ib.es.RemoveTag(ctx, itemID, "assignee:"+fromActor)
 	}

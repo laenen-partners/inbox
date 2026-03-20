@@ -12,6 +12,7 @@ import (
 
 	"github.com/laenen-partners/entitystore"
 	"github.com/laenen-partners/entitystore/store"
+	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	inboxui "github.com/laenen-partners/inbox/ui"
@@ -67,12 +68,20 @@ func testInbox(t *testing.T) *inbox.Inbox {
 	return inbox.New(es)
 }
 
+func testCtx() context.Context {
+	id, _ := identity.New("test", "test", "test", identity.PrincipalUser, nil)
+	return identity.WithContext(context.Background(), id)
+}
+
 func TestFilterDropdowns(t *testing.T) {
 	ib := testInbox(t)
-	ctx := context.Background()
+	ctx := testCtx()
 
 	handler := inboxui.Handler(ib,
-		inboxui.WithActor(func(r *http.Request) string { return "test" }),
+		inboxui.WithIdentity(func(r *http.Request) identity.Context {
+			id, _ := identity.New("test", "test", "test", identity.PrincipalUser, nil)
+			return id
+		}),
 		inboxui.WithFilter(inboxui.FilterConfig{
 			Label: "Priority", TagPrefix: "priority:",
 			Options: []string{"urgent", "high", "normal", "low"},
@@ -87,7 +96,6 @@ func TestFilterDropdowns(t *testing.T) {
 	for _, p := range []string{"urgent", "normal"} {
 		_, err := ib.Create(ctx, inbox.Meta{
 			Title: "Item " + p,
-			Actor: "test",
 			Tags:  []string{"type:review", "priority:" + p, "team:compliance"},
 		})
 		if err != nil {
@@ -173,16 +181,19 @@ func TestFilterDropdowns(t *testing.T) {
 
 func TestSchemaRendererIntegration(t *testing.T) {
 	ib := testInbox(t)
-	ctx := context.Background()
+	ctx := testCtx()
 
 	handler := inboxui.Handler(ib,
-		inboxui.WithActor(func(r *http.Request) string { return "test" }),
+		inboxui.WithIdentity(func(r *http.Request) identity.Context {
+			id, _ := identity.New("test", "test", "test", identity.PrincipalUser, nil)
+			return id
+		}),
 	)
 
 	t.Run("display_fields", func(t *testing.T) {
 		item, err := ib.Create(ctx, inbox.Meta{
-			Title: "Schema display test", Actor: "test",
-			Tags: []string{"type:review"},
+			Title: "Schema display test",
+			Tags:  []string{"type:review"},
 			Payload: &inboxv1.ItemSchema{
 				Display: []*inboxv1.DisplayField{
 					{Label: "Customer", Value: "CUST-1234"},
@@ -209,8 +220,8 @@ func TestSchemaRendererIntegration(t *testing.T) {
 
 	t.Run("form_fields", func(t *testing.T) {
 		item, _ := ib.Create(ctx, inbox.Meta{
-			Title: "Schema form test", Actor: "test",
-			Tags: []string{"type:input_required"},
+			Title: "Schema form test",
+			Tags:  []string{"type:input_required"},
 			Payload: &inboxv1.ItemSchema{
 				Fields: []*inboxv1.FormField{
 					{Name: "name", Type: "text", Label: "Full Name", Placeholder: "John Doe", Required: true},
@@ -236,8 +247,8 @@ func TestSchemaRendererIntegration(t *testing.T) {
 
 	t.Run("actions", func(t *testing.T) {
 		item, _ := ib.Create(ctx, inbox.Meta{
-			Title: "Schema actions test", Actor: "test",
-			Tags: []string{"type:approval"},
+			Title: "Schema actions test",
+			Tags:  []string{"type:approval"},
 			Payload: &inboxv1.ItemSchema{
 				Actions: []*inboxv1.Action{
 					{Name: "approve", Label: "Approve", Variant: "success"},

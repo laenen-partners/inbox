@@ -46,13 +46,11 @@ type Meta struct {
 	Deadline       *time.Time
 	Payload        proto.Message
 	Tags           []string
-	Actor          string
 	IdempotencyKey string
 }
 
 // Response is the data sent when responding to an item.
 type Response struct {
-	Actor   string
 	Action  string
 	Comment string
 	Data    json.RawMessage
