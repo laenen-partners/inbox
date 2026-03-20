@@ -36,13 +36,13 @@ templ detailDrawer(data detailData) {
 		// Meta
 		<div class="py-4">
 			<div class="grid grid-cols-3 gap-x-4 gap-y-2.5">
-				if team := inbox.TagValue(data.Item, "team:"); team != "" {
+				if team := inbox.TagValue(data.Item, "team"); team != "" {
 					@metaField("Team", team)
 				}
-				if assignee := inbox.TagValue(data.Item, "assignee:"); assignee != "" {
+				if assignee := inbox.TagValue(data.Item, "assignee"); assignee != "" {
 					@metaField("Assignee", actorDisplayName(assignee))
 				}
-				if priority := inbox.TagValue(data.Item, "priority:"); priority != "" {
+				if priority := inbox.TagValue(data.Item, "priority"); priority != "" {
 					@metaField("Priority", priority)
 				}
 				if dl := data.Item.Deadline(); dl != nil {
@@ -52,8 +52,13 @@ templ detailDrawer(data detailData) {
 			</div>
 		</div>
 
-		// Payload / Schema
-		if data.Schema != nil || data.PayloadComponent != nil || data.Item.Proto.GetPayload() != nil {
+		// Content (from ContentProvider)
+		if data.Content != nil {
+			<div class="py-4">
+				@data.Content
+			</div>
+		} else if data.Schema != nil || data.PayloadComponent != nil || data.Item.Proto.GetPayload() != nil {
+			// Legacy payload / schema rendering
 			<div class="py-4">
 				if data.Schema != nil {
 					@schemaPayload(data.Schema, data.Item.ID, data.BasePath)

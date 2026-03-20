@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/a-h/templ"
@@ -22,35 +23,43 @@ func (s *server) handleDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	data := s.buildDetailData(ctx, item, actor)
+	sse := datastar.NewSSE(w, r)
+	ds.Send.Drawer(sse, detailDrawer(data))
+}
+
+// buildDetailData constructs the detailData for rendering the detail drawer.
+// When a ContentProvider is registered for the item's payload type, it delegates
+// rendering to the provider. Otherwise it falls back to legacy schema/payload rendering.
+func (s *server) buildDetailData(ctx context.Context, item inbox.Item, actor string) detailData {
 	data := detailData{
 		Item:     item,
 		Actor:    actor,
 		BasePath: s.cfg.basePath,
 	}
 
-	// Try to parse as ItemSchema first (renders interactive form)
-	if item.Proto.GetPayload() != nil {
-		data.Schema = tryParseSchema(item.PayloadType(), item.Proto.GetPayload().GetValue())
-	}
-
-	// Only show "Send as Link" if signer is configured AND schema is client-completable
-	data.CanLink = s.cfg.signer != nil && data.Schema != nil && data.Schema.ClientCompletable
-
-	// Fall back to custom payload renderer
-	if data.Schema == nil {
-		if fn, ok := s.cfg.payloadRenderers[item.PayloadType()]; ok {
-			if item.Proto.GetPayload() != nil {
-				data.PayloadComponent = fn(item.PayloadType(), item.Proto.GetPayload().GetValue())
+	// Try ContentProvider first
+	if provider, ok := s.cfg.contentProviders[item.PayloadType()]; ok {
+		rc := RenderContext{Item: item, Actor: actor, BasePath: s.cfg.basePath}
+		data.Content = provider.Render(ctx, rc)
+	} else {
+		// Legacy fallback: try to parse as ItemSchema (renders interactive form)
+		if item.Proto.GetPayload() != nil {
+			data.Schema = tryParseSchema(item.PayloadType(), item.Proto.GetPayload().GetValue())
+		}
+		data.CanLink = s.cfg.signer != nil && data.Schema != nil && data.Schema.ClientCompletable
+		if data.Schema == nil {
+			if fn, ok := s.cfg.payloadRenderers[item.PayloadType()]; ok {
+				if item.Proto.GetPayload() != nil {
+					data.PayloadComponent = fn(item.PayloadType(), item.Proto.GetPayload().GetValue())
+				}
 			}
 		}
 	}
 
-	// Determine if current actor is the claimant
-	assignee := inbox.TagValue(item, "assignee:")
+	assignee := inbox.TagValue(item, "assignee")
 	data.IsClaimant = assignee == actor
-
-	sse := datastar.NewSSE(w, r)
-	ds.Send.Drawer(sse, detailDrawer(data))
+	return data
 }
 
 type detailData struct {
@@ -58,6 +67,7 @@ type detailData struct {
 	Actor            string
 	IsClaimant       bool
 	BasePath         string
+	Content          templ.Component
 	PayloadComponent templ.Component
 	Schema           *inboxv1.ItemSchema
 	CanLink          bool

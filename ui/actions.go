@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/inbox"
+	"github.com/laenen-partners/tags"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
@@ -20,7 +21,7 @@ func (s *server) handleClaim(w http.ResponseWriter, r *http.Request) {
 		s.sseError(w, r, err)
 		return
 	}
-	if err := s.ib.Tag(ctx, id, "assignee:"+actor); err != nil {
+	if err := s.ib.Tag(ctx, id, tags.Build("assignee", actor)); err != nil {
 		s.sseError(w, r, err)
 		return
 	}
@@ -37,8 +38,8 @@ func (s *server) handleRelease(w http.ResponseWriter, r *http.Request) {
 		s.sseError(w, r, err)
 		return
 	}
-	if assignee := inbox.TagValue(item, "assignee:"); assignee != "" {
-		_ = s.ib.Untag(ctx, id, "assignee:"+assignee)
+	if assignee := inbox.TagValue(item, "assignee"); assignee != "" {
+		_ = s.ib.Untag(ctx, id, tags.Build("assignee", assignee))
 	}
 
 	s.refreshDetailAndToast(w, r, id, "Item released")
@@ -135,34 +136,11 @@ func (s *server) refreshDetailAndToast(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 
-	data := detailData{
-		Item:     item,
-		Actor:    actor,
-		BasePath: s.cfg.basePath,
-	}
-	if item.Proto.GetPayload() != nil {
-		data.Schema = tryParseSchema(item.PayloadType(), item.Proto.GetPayload().GetValue())
-	}
-	if data.Schema == nil {
-		if fn, ok := s.cfg.payloadRenderers[item.PayloadType()]; ok {
-			if item.Proto.GetPayload() != nil {
-				data.PayloadComponent = fn(item.PayloadType(), item.Proto.GetPayload().GetValue())
-			}
-		}
-	}
-	data.CanLink = s.cfg.signer != nil && data.Schema != nil && data.Schema.ClientCompletable
-	assignee := inbox.TagValue(item, "assignee:")
-	data.IsClaimant = assignee == actor
+	data := s.buildDetailData(ctx, item, actor)
 
 	sse := datastar.NewSSE(w, r)
-
-	// Update drawer content
 	ds.Send.Drawer(sse, detailDrawer(data))
-
-	// Update the corresponding queue table row
 	sse.PatchElementTempl(queueRow(item, s.cfg.basePath))
-
-	// Show toast
 	ds.Send.Toast(sse, ds.ToastSuccess, msg)
 }
 
@@ -182,7 +160,7 @@ func (s *server) handleGenerateLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Use assignee as the token actor, or fall back to a generic client actor
-	actor := inbox.TagValue(item, "assignee:")
+	actor := inbox.TagValue(item, "assignee")
 	if actor == "" {
 		actor = "client:" + id
 	}

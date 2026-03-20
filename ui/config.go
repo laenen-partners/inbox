@@ -32,6 +32,7 @@ type config struct {
 	identityFn       func(r *http.Request) identity.Context
 	filters          []FilterConfig
 	payloadRenderers map[string]PayloadRendererFunc
+	contentProviders map[string]ContentProvider
 	basePath         string
 	layoutFn         LayoutFunc
 	signer           inbox.Signer
@@ -45,6 +46,7 @@ func defaultConfig() *config {
 	return &config{
 		identityFn:       func(r *http.Request) identity.Context { return defaultID },
 		payloadRenderers: make(map[string]PayloadRendererFunc),
+		contentProviders: make(map[string]ContentProvider),
 	}
 }
 
@@ -61,6 +63,14 @@ func WithFilter(f FilterConfig) Option {
 // WithPayloadRenderer registers a custom renderer for a specific payload type.
 func WithPayloadRenderer(payloadType string, fn PayloadRendererFunc) Option {
 	return func(c *config) { c.payloadRenderers[payloadType] = fn }
+}
+
+// WithContentProvider registers a content provider for a specific payload type.
+// When an item's PayloadType matches, the provider controls the content area
+// of the detail drawer. Shell elements (header, meta, timeline, comment, shell
+// actions) remain owned by the inbox UI.
+func WithContentProvider(payloadType string, provider ContentProvider) Option {
+	return func(c *config) { c.contentProviders[payloadType] = provider }
 }
 
 // WithBasePath sets the URL prefix for link generation.

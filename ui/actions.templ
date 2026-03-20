@@ -19,14 +19,18 @@ templ actionButtons(data detailData) {
 			@cancelButton(data)
 		case "claimed":
 			if data.IsClaimant {
-				@respondButton(data)
-				@button.Button(button.Props{
-					Variant: button.VariantSuccess,
-					Size:    button.SizeSm,
-					OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/complete"),
-				}) {
-					Complete
+				if data.Content == nil {
+					// Legacy: show respond + complete in shell
+					@respondButton(data)
+					@button.Button(button.Props{
+						Variant: button.VariantSuccess,
+						Size:    button.SizeSm,
+						OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/complete"),
+					}) {
+						Complete
+					}
 				}
+				// Always in shell: Release + Cancel
 				@button.Button(button.Props{
 					Variant: button.VariantGhost,
 					Size:    button.SizeSm,
