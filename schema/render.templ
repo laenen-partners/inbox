@@ -8,7 +8,15 @@ import (
 	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
 )
 
-templ Payload(schema *schemav1.ItemSchema, itemID string, basePath string) {
+// PayloadContext carries the item context needed by the Payload template.
+// Defined here to avoid import cycles (schema does not import ui).
+type PayloadContext struct {
+	ItemID   string
+	BasePath string
+	Status   string // item status, for conditional action rendering
+}
+
+templ Payload(schema *schemav1.ItemSchema, pc PayloadContext) {
 	{{ signals := BuildSignals(schema) }}
 	<div class="space-y-4" data-signals={ signals }>
 		// Display fields
@@ -31,7 +39,19 @@ templ Payload(schema *schemav1.ItemSchema, itemID string, basePath string) {
 		if len(schema.Actions) > 0 {
 			<div class="flex flex-wrap gap-2">
 				for _, a := range schema.Actions {
-					@ActionButton(a, itemID, basePath)
+					@ActionButton(a, pc.ItemID, pc.BasePath)
+				}
+			</div>
+		}
+		// Complete button (provider-driven)
+		if pc.Status == "claimed" {
+			<div class="flex flex-wrap gap-2">
+				@button.Button(button.Props{
+					Variant: button.VariantSuccess,
+					Size:    button.SizeSm,
+					OnClick: ds.Post(pc.BasePath + "/items/" + pc.ItemID + "/complete"),
+				}) {
+					Complete
 				}
 			</div>
 		}

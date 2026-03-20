@@ -19,5 +19,9 @@ func (p schemaProvider) Render(ctx context.Context, rc inboxui.RenderContext) te
 	if s == nil {
 		return templ.NopComponent
 	}
-	return schema.Payload(s, rc.Item.ID, rc.BasePath)
+	return schema.Payload(s, schema.PayloadContext{
+		ItemID:   rc.Item.ID,
+		BasePath: rc.BasePath,
+		Status:   rc.Item.Status(),
+	})
 }
