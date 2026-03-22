@@ -2,12 +2,14 @@ package inbox
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/laenen-partners/entitystore/store"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -84,11 +86,67 @@ func (ib *Inbox) Respond(ctx context.Context, itemID string, resp Response) (Ite
 	// Fire callback if dispatcher is configured.
 	if ib.dispatcher != nil {
 		if cb := callbackValue(item.Tags); cb != "" {
-			_ = ib.dispatcher.Dispatch(ctx, cb, itemID, resp)
+			if err := ib.dispatcher.Dispatch(ctx, cb, itemID, resp); err != nil {
+				return item, fmt.Errorf("inbox: dispatch failed (response persisted): %w", err)
+			}
 		}
 	}
 
 	return item, nil
+}
+
+// Redispatch re-fires the dispatcher for an item that already has a
+// response event. This is useful when the original dispatch failed and
+// the caller wants to retry without creating a new response.
+//
+// Redispatch does NOT auto-complete the item.
+func (ib *Inbox) Redispatch(ctx context.Context, itemID string) error {
+	item, err := ib.Get(ctx, itemID)
+	if err != nil {
+		return err
+	}
+
+	// Find the last ItemResponded event.
+	var responded *inboxv1.ItemResponded
+	respondedTypeName := string(proto.MessageName(&inboxv1.ItemResponded{}))
+	for i := len(item.Proto.Events) - 1; i >= 0; i-- {
+		evt := item.Proto.Events[i]
+		if evt.GetDataType() == respondedTypeName {
+			responded = &inboxv1.ItemResponded{}
+			if err := evt.GetData().UnmarshalTo(responded); err != nil {
+				return fmt.Errorf("inbox: redispatch: unmarshal response event: %w", err)
+			}
+			break
+		}
+	}
+	if responded == nil {
+		return fmt.Errorf("inbox: redispatch: no response event found on item %s", itemID)
+	}
+
+	// Reconstruct the Response from the event data.
+	resp := Response{
+		Action:  responded.Action,
+		Comment: responded.Comment,
+	}
+	if responded.Payload != nil {
+		st := &structpb.Struct{}
+		if err := responded.Payload.UnmarshalTo(st); err == nil {
+			resp.Data, _ = json.Marshal(st.AsMap())
+		}
+	}
+
+	// Extract callback and dispatch.
+	cb := callbackValue(item.Tags)
+	if cb == "" {
+		return fmt.Errorf("inbox: redispatch: no callback tag on item %s", itemID)
+	}
+	if ib.dispatcher == nil {
+		return fmt.Errorf("inbox: redispatch: no dispatcher configured")
+	}
+	if err := ib.dispatcher.Dispatch(ctx, cb, itemID, resp); err != nil {
+		return fmt.Errorf("inbox: redispatch failed: %w", err)
+	}
+	return nil
 }
 
 // Complete transitions an item to "completed" status. Typically called
