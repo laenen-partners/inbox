@@ -234,4 +234,3 @@ func TestOp_SinglePhase_NoDispatcher(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, inbox.StatusCompleted, fetched.Proto.Status)
 }
-

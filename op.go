@@ -37,13 +37,13 @@ type Op struct {
 	err   error
 
 	// Collected mutations.
-	events         []*inboxv1.Event
-	newStatus      string
-	transitionEvt  *inboxv1.Event // event for the status transition, written with the status
-	newPayload     *payloadUpdate
-	tagsAdd        []string
-	tagsRemove     []string
-	response       *Response
+	events        []*inboxv1.Event
+	newStatus     string
+	transitionEvt *inboxv1.Event // event for the status transition, written with the status
+	newPayload    *payloadUpdate
+	tagsAdd       []string
+	tagsRemove    []string
+	response      *Response
 }
 
 type payloadUpdate struct {

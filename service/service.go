@@ -28,8 +28,8 @@ func WithRespondCompletes() Option {
 
 // Handler implements the InboxService Connect-RPC service.
 type Handler struct {
-	ib                *inbox.Inbox
-	respondCompletes  bool
+	ib               *inbox.Inbox
+	respondCompletes bool
 }
 
 var _ inboxv1connect.InboxServiceHandler = (*Handler)(nil)
