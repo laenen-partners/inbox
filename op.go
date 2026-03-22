@@ -11,6 +11,8 @@ import (
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/tags"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -78,6 +80,34 @@ func (op *Op) Respond(action string, comment string) *Op {
 		Action:  action,
 		Comment: comment,
 	}))
+	return op
+}
+
+// RespondWithData records a response with associated data (e.g. form field
+// values). The data is persisted in the ItemResponded event's payload field
+// as a structpb.Struct wrapped in an anypb.Any.
+func (op *Op) RespondWithData(action string, comment string, data json.RawMessage) *Op {
+	if op.err != nil {
+		return op
+	}
+	op.response = &Response{
+		Action:  action,
+		Comment: comment,
+		Data:    data,
+	}
+	evtData := &inboxv1.ItemResponded{
+		Action:  action,
+		Comment: comment,
+	}
+	if len(data) > 0 {
+		var m map[string]any
+		if err := json.Unmarshal(data, &m); err == nil {
+			if st, err := structpb.NewStruct(m); err == nil {
+				evtData.Payload, _ = anypb.New(st)
+			}
+		}
+	}
+	op.events = append(op.events, newProtoEventWithDetail(op.actor, action, evtData))
 	return op
 }
 
