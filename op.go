@@ -37,12 +37,13 @@ type Op struct {
 	err   error
 
 	// Collected mutations.
-	events     []*inboxv1.Event
-	newStatus  string
-	newPayload *payloadUpdate
-	tagsAdd    []string
-	tagsRemove []string
-	response   *Response
+	events         []*inboxv1.Event
+	newStatus      string
+	transitionEvt  *inboxv1.Event // event for the status transition, written with the status
+	newPayload     *payloadUpdate
+	tagsAdd        []string
+	tagsRemove     []string
+	response       *Response
 }
 
 type payloadUpdate struct {
@@ -200,7 +201,7 @@ func (op *Op) TransitionTo(status string) *Op {
 		msg = &inboxv1.ItemReleased{ReleasedBy: op.actor}
 	}
 	if msg != nil {
-		op.events = append(op.events, newProtoEvent(op.actor, msg))
+		op.transitionEvt = newProtoEvent(op.actor, msg)
 	}
 	return op
 }
@@ -221,16 +222,107 @@ func (op *Op) WithEvent(msg proto.Message) *Op {
 
 // ─── Apply ───
 
-// Apply flushes all collected mutations and events in a single
-// entity store write. Returns the updated item.
+// needsTwoPhase reports whether this operation requires the two-phase
+// apply path. Two-phase is needed when all of: there is a response,
+// there is a status transition, a dispatcher is configured, and the
+// item has a callback tag.
+func (op *Op) needsTwoPhase() bool {
+	return op.response != nil &&
+		op.newStatus != "" &&
+		op.ib.dispatcher != nil &&
+		callbackValue(op.item.Tags) != ""
+}
+
+// Apply flushes all collected mutations and events to the entity store.
+// When dispatch is required (response + status transition + dispatcher +
+// callback tag), Apply uses a two-phase write so that a dispatch failure
+// does not leave the item in a completed state. Otherwise, a single
+// write is used.
 func (op *Op) Apply() (Item, error) {
 	if op.err != nil {
 		return Item{}, op.err
 	}
+	if op.needsTwoPhase() {
+		return op.applyTwoPhase()
+	}
+	return op.applySinglePhase()
+}
 
+// applySinglePhase is the original single-write path: apply all
+// mutations, write once, fire dispatcher best-effort, fire hooks.
+func (op *Op) applySinglePhase() (Item, error) {
 	now := time.Now().UTC()
 	item := op.item
 
+	op.applyMutations(&item, now)
+
+	if _, err := op.writeEntity(item); err != nil {
+		return Item{}, fmt.Errorf("inbox: apply op: %w", err)
+	}
+
+	// Fire dispatcher best-effort (no two-phase guarantee).
+	if op.response != nil && op.ib.dispatcher != nil {
+		if cb := callbackValue(item.Tags); cb != "" {
+			_ = op.ib.dispatcher.Dispatch(op.ctx, cb, item.ID, *op.response)
+		}
+	}
+
+	return op.fireHooksIfNeeded(item)
+}
+
+// applyTwoPhase splits the entity store write into two phases so that
+// dispatch failure does not leave the item in a terminal state.
+//
+//  1. Phase 1 — persist response events, payload, and tags, but NOT
+//     the status transition. The item stays at its current status.
+//  2. Dispatch — fire dispatcher.Dispatch(). If it fails, return error.
+//     The response is already persisted but the item is not completed.
+//  3. Phase 2 — persist the status transition. Fire lifecycle hooks.
+func (op *Op) applyTwoPhase() (Item, error) {
+	now := time.Now().UTC()
+	item := op.item
+
+	// Phase 1: apply everything except the status transition.
+	// Temporarily clear newStatus so applyMutations skips the status
+	// update, then restore it for phase 2.
+	savedStatus := op.newStatus
+	op.newStatus = ""
+	op.applyMutations(&item, now)
+	op.newStatus = savedStatus
+
+	if _, err := op.writeEntity(item); err != nil {
+		return Item{}, fmt.Errorf("inbox: apply op phase 1: %w", err)
+	}
+
+	// Dispatch — between the two writes.
+	cb := callbackValue(item.Tags)
+	if err := op.ib.dispatcher.Dispatch(op.ctx, cb, item.ID, *op.response); err != nil {
+		return Item{}, fmt.Errorf("inbox: dispatch failed: %w", err)
+	}
+
+	// Phase 2: apply the status transition and its event.
+	item.Tags = item.Tags.With("status", op.newStatus)
+	item.Proto.Status = op.newStatus
+	if op.transitionEvt != nil {
+		if op.transitionEvt.GetAt() == nil {
+			op.transitionEvt.At = timestamppb.New(now)
+		}
+		item.Proto.Events = append(item.Proto.Events, op.transitionEvt)
+	}
+
+	if _, err := op.writeEntity(item); err != nil {
+		return Item{}, fmt.Errorf("inbox: apply op phase 2: %w", err)
+	}
+
+	return op.fireHooksIfNeeded(item)
+}
+
+// applyMutations applies payload, status, tags, and events to item in
+// memory. Shared by both single-phase and two-phase paths. When
+// op.newStatus is empty, the status mutation and its transition event
+// are skipped — this is used by the two-phase path to defer the status
+// change to phase 2.
+func (op *Op) applyMutations(item *Item, now time.Time) {
 	// Apply payload update.
 	if op.newPayload != nil {
 		item.Proto.PayloadType = op.newPayload.payloadType
@@ -240,7 +332,8 @@ func (op *Op) Apply() (Item, error) {
 		item.Proto.Payload = nil
 	}
 
-	// Apply status transition.
+	// Apply status transition (without event — event appended last to
+	// preserve builder call order).
 	if op.newStatus != "" {
 		item.Tags = item.Tags.With("status", op.newStatus)
 		item.Proto.Status = op.newStatus
@@ -256,7 +349,7 @@ func (op *Op) Apply() (Item, error) {
 		}
 	}
 
-	// Stamp and append all events.
+	// Stamp and append all collected events.
 	for i := range op.events {
 		if op.events[i].GetAt() == nil {
 			op.events[i].At = timestamppb.New(now)
@@ -264,7 +357,18 @@ func (op *Op) Apply() (Item, error) {
 	}
 	item.Proto.Events = append(item.Proto.Events, op.events...)
 
-	// Single write.
+	// Append the transition event last to match builder call order
+	// (TransitionTo is typically the last call before Apply).
+	if op.newStatus != "" && op.transitionEvt != nil {
+		if op.transitionEvt.GetAt() == nil {
+			op.transitionEvt.At = timestamppb.New(now)
+		}
+		item.Proto.Events = append(item.Proto.Events, op.transitionEvt)
+	}
+}
+
+// writeEntity persists the item to the entity store.
+func (op *Op) writeEntity(item Item) (Item, error) {
 	_, err := op.ib.es.BatchWrite(op.ctx, []store.BatchWriteOp{
 		{
 			WriteEntity: &store.WriteEntityOp{
@@ -275,37 +379,31 @@ func (op *Op) Apply() (Item, error) {
 			},
 		},
 	})
-	if err != nil {
-		return Item{}, fmt.Errorf("inbox: apply op: %w", err)
-	}
+	return item, err
+}
 
-	// Fire dispatcher if we have a response and dispatcher is configured.
-	if op.response != nil && op.ib.dispatcher != nil {
-		if cb := callbackValue(item.Tags); cb != "" {
-			_ = op.ib.dispatcher.Dispatch(op.ctx, cb, item.ID, *op.response)
-		}
+// fireHooksIfNeeded fires lifecycle hooks if a status transition
+// occurred. Hook errors are returned but do not roll back the
+// transition (it is already persisted).
+func (op *Op) fireHooksIfNeeded(item Item) (Item, error) {
+	if op.newStatus == "" {
+		return item, nil
 	}
-
-	// Fire lifecycle hooks if a status transition occurred.
-	// Hook error does not roll back the transition.
-	if op.newStatus != "" {
-		var hookErr error
-		switch op.newStatus {
-		case StatusCompleted:
-			hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnComplete(op.ctx, item.ID, op.actor) })
-		case StatusCancelled:
-			hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnCancel(op.ctx, item.ID, op.actor, "") })
-		case StatusExpired:
-			hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnExpire(op.ctx, item.ID) })
-		case StatusClaimed:
-			hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnClaim(op.ctx, item.ID, op.actor) })
-		case StatusOpen:
-			hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnRelease(op.ctx, item.ID, op.actor) })
-		}
-		if hookErr != nil {
-			return item, hookErr
-		}
+	var hookErr error
+	switch op.newStatus {
+	case StatusCompleted:
+		hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnComplete(op.ctx, item.ID, op.actor) })
+	case StatusCancelled:
+		hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnCancel(op.ctx, item.ID, op.actor, "") })
+	case StatusExpired:
+		hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnExpire(op.ctx, item.ID) })
+	case StatusClaimed:
+		hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnClaim(op.ctx, item.ID, op.actor) })
+	case StatusOpen:
+		hookErr = op.ib.fireHook(item, func(h LifecycleHooks) error { return h.OnRelease(op.ctx, item.ID, op.actor) })
 	}
-
+	if hookErr != nil {
+		return item, hookErr
+	}
 	return item, nil
 }

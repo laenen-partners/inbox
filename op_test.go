@@ -1,7 +1,9 @@
 package inbox_test
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,6 +14,33 @@ import (
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/tags"
 )
+
+// ─── Test helpers for dispatcher tests ───
+
+// mockDispatcher implements inbox.Dispatcher for testing.
+type mockDispatcher struct {
+	called bool
+	err    error
+}
+
+func (d *mockDispatcher) Dispatch(_ context.Context, _ string, _ string, _ inbox.Response) error {
+	d.called = true
+	return d.err
+}
+
+// seedOpenItemWithCallback creates an open inbox item with a callback tag.
+func seedOpenItemWithCallback(t *testing.T, ib *inbox.Inbox, callback string) inbox.Item {
+	t.Helper()
+	ctx := ctxWithActor("test-workflow", identity.PrincipalService)
+	item, err := ib.Create(ctx, inbox.Meta{
+		Title:       "Callback test item",
+		Description: "Created for two-phase apply tests",
+		Tags:        tags.MustNew("type:test", "callback:"+callback),
+	})
+	require.NoError(t, err)
+	require.Equal(t, inbox.StatusOpen, item.Proto.Status)
+	return item
+}
 
 // seedOpenItem creates a minimal open inbox item for testing.
 func seedOpenItem(t *testing.T, ib *inbox.Inbox) inbox.Item {
@@ -113,5 +142,96 @@ func TestRespond_StillWorks(t *testing.T) {
 	require.Equal(t, "approve", responded.Action)
 	require.Equal(t, "LGTM", responded.Comment)
 	require.Nil(t, responded.Payload, "Original Respond should not set Payload")
+}
+
+// ─── Two-phase Apply tests ───
+
+func TestOp_TwoPhaseApply_DispatchError(t *testing.T) {
+	es := sharedEntityStore(t)
+	disp := &mockDispatcher{err: fmt.Errorf("connection refused")}
+	ib := inbox.New(es, inbox.WithDispatcher(disp))
+
+	item := seedOpenItemWithCallback(t, ib, "dbos:wf-123")
+
+	// Respond + TransitionTo completed with a dispatcher that fails.
+	ctx := ctxWithActor("operator-1", identity.PrincipalUser)
+	_, err := ib.On(ctx, item.ID).
+		Respond("approve", "Looks good").
+		TransitionTo(inbox.StatusCompleted).
+		Apply()
+
+	// Apply must return an error because dispatch failed.
+	require.Error(t, err)
+	require.True(t, disp.called, "dispatcher should have been called")
+
+	// Re-fetch the item to verify persisted state.
+	fetched, err := ib.Get(ctx, item.ID)
+	require.NoError(t, err)
+
+	// Item must NOT be completed — still open.
+	require.Equal(t, inbox.StatusOpen, fetched.Proto.Status,
+		"item should remain open when dispatch fails")
+
+	// But the response event IS persisted (phase 1 succeeded).
+	// The transition event (ItemCompleted) must NOT be persisted.
+	var hasResponded, hasCompleted bool
+	for _, evt := range fetched.Proto.Events {
+		if evt.DataType == "inbox.v1.ItemResponded" {
+			hasResponded = true
+		}
+		if evt.DataType == "inbox.v1.ItemCompleted" {
+			hasCompleted = true
+		}
+	}
+	require.True(t, hasResponded,
+		"response event should be persisted even when dispatch fails")
+	require.False(t, hasCompleted,
+		"completion event should NOT be persisted when dispatch fails")
+}
+
+func TestOp_TwoPhaseApply_DispatchSuccess(t *testing.T) {
+	es := sharedEntityStore(t)
+	disp := &mockDispatcher{err: nil}
+	ib := inbox.New(es, inbox.WithDispatcher(disp))
+
+	item := seedOpenItemWithCallback(t, ib, "dbos:wf-456")
+
+	// Respond + TransitionTo completed with a dispatcher that succeeds.
+	ctx := ctxWithActor("operator-2", identity.PrincipalUser)
+	updated, err := ib.On(ctx, item.ID).
+		Respond("approve", "All checks passed").
+		TransitionTo(inbox.StatusCompleted).
+		Apply()
+
+	require.NoError(t, err)
+	require.True(t, disp.called, "dispatcher should have been called")
+
+	// Item should be completed.
+	require.Equal(t, inbox.StatusCompleted, updated.Proto.Status)
+
+	// Re-fetch to confirm persistence.
+	fetched, err := ib.Get(ctx, item.ID)
+	require.NoError(t, err)
+	require.Equal(t, inbox.StatusCompleted, fetched.Proto.Status)
+}
+
+func TestOp_SinglePhase_NoDispatcher(t *testing.T) {
+	// No dispatcher — single-write path should work as before.
+	ib := sharedInbox(t) // sharedInbox creates inbox without dispatcher
+	item := seedOpenItemWithCallback(t, ib, "dbos:wf-789")
+
+	ctx := ctxWithActor("operator-3", identity.PrincipalUser)
+	updated, err := ib.On(ctx, item.ID).
+		Respond("approve", "LGTM").
+		TransitionTo(inbox.StatusCompleted).
+		Apply()
+
+	require.NoError(t, err)
+	require.Equal(t, inbox.StatusCompleted, updated.Proto.Status)
+
+	// Re-fetch to confirm persistence.
+	fetched, err := ib.Get(ctx, item.ID)
+	require.NoError(t, err)
+	require.Equal(t, inbox.StatusCompleted, fetched.Proto.Status)
 }
 
