@@ -61,6 +61,9 @@ const (
 	InboxServiceTagItemProcedure = "/inbox.v1.InboxService/TagItem"
 	// InboxServiceUntagItemProcedure is the fully-qualified name of the InboxService's UntagItem RPC.
 	InboxServiceUntagItemProcedure = "/inbox.v1.InboxService/UntagItem"
+	// InboxServiceRedispatchItemProcedure is the fully-qualified name of the InboxService's
+	// RedispatchItem RPC.
+	InboxServiceRedispatchItemProcedure = "/inbox.v1.InboxService/RedispatchItem"
 )
 
 // InboxServiceClient is a client for the inbox.v1.InboxService service.
@@ -76,6 +79,7 @@ type InboxServiceClient interface {
 	CommentOnItem(context.Context, *connect.Request[v1.CommentOnItemRequest]) (*connect.Response[v1.CommentOnItemResponse], error)
 	TagItem(context.Context, *connect.Request[v1.TagItemRequest]) (*connect.Response[emptypb.Empty], error)
 	UntagItem(context.Context, *connect.Request[v1.UntagItemRequest]) (*connect.Response[emptypb.Empty], error)
+	RedispatchItem(context.Context, *connect.Request[v1.RedispatchItemRequest]) (*connect.Response[v1.RedispatchItemResponse], error)
 }
 
 // NewInboxServiceClient constructs a client for the inbox.v1.InboxService service. By default, it
@@ -155,22 +159,29 @@ func NewInboxServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(inboxServiceMethods.ByName("UntagItem")),
 			connect.WithClientOptions(opts...),
 		),
+		redispatchItem: connect.NewClient[v1.RedispatchItemRequest, v1.RedispatchItemResponse](
+			httpClient,
+			baseURL+InboxServiceRedispatchItemProcedure,
+			connect.WithSchema(inboxServiceMethods.ByName("RedispatchItem")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // inboxServiceClient implements InboxServiceClient.
 type inboxServiceClient struct {
-	getItem       *connect.Client[v1.GetItemRequest, v1.GetItemResponse]
-	listItems     *connect.Client[v1.ListItemsRequest, v1.ListItemsResponse]
-	searchItems   *connect.Client[v1.SearchItemsRequest, v1.SearchItemsResponse]
-	claimItem     *connect.Client[v1.ClaimItemRequest, v1.ClaimItemResponse]
-	releaseItem   *connect.Client[v1.ReleaseItemRequest, v1.ReleaseItemResponse]
-	respondToItem *connect.Client[v1.RespondToItemRequest, v1.RespondToItemResponse]
-	completeItem  *connect.Client[v1.CompleteItemRequest, v1.CompleteItemResponse]
-	cancelItem    *connect.Client[v1.CancelItemRequest, v1.CancelItemResponse]
-	commentOnItem *connect.Client[v1.CommentOnItemRequest, v1.CommentOnItemResponse]
-	tagItem       *connect.Client[v1.TagItemRequest, emptypb.Empty]
-	untagItem     *connect.Client[v1.UntagItemRequest, emptypb.Empty]
+	getItem        *connect.Client[v1.GetItemRequest, v1.GetItemResponse]
+	listItems      *connect.Client[v1.ListItemsRequest, v1.ListItemsResponse]
+	searchItems    *connect.Client[v1.SearchItemsRequest, v1.SearchItemsResponse]
+	claimItem      *connect.Client[v1.ClaimItemRequest, v1.ClaimItemResponse]
+	releaseItem    *connect.Client[v1.ReleaseItemRequest, v1.ReleaseItemResponse]
+	respondToItem  *connect.Client[v1.RespondToItemRequest, v1.RespondToItemResponse]
+	completeItem   *connect.Client[v1.CompleteItemRequest, v1.CompleteItemResponse]
+	cancelItem     *connect.Client[v1.CancelItemRequest, v1.CancelItemResponse]
+	commentOnItem  *connect.Client[v1.CommentOnItemRequest, v1.CommentOnItemResponse]
+	tagItem        *connect.Client[v1.TagItemRequest, emptypb.Empty]
+	untagItem      *connect.Client[v1.UntagItemRequest, emptypb.Empty]
+	redispatchItem *connect.Client[v1.RedispatchItemRequest, v1.RedispatchItemResponse]
 }
 
 // GetItem calls inbox.v1.InboxService.GetItem.
@@ -228,6 +239,11 @@ func (c *inboxServiceClient) UntagItem(ctx context.Context, req *connect.Request
 	return c.untagItem.CallUnary(ctx, req)
 }
 
+// RedispatchItem calls inbox.v1.InboxService.RedispatchItem.
+func (c *inboxServiceClient) RedispatchItem(ctx context.Context, req *connect.Request[v1.RedispatchItemRequest]) (*connect.Response[v1.RedispatchItemResponse], error) {
+	return c.redispatchItem.CallUnary(ctx, req)
+}
+
 // InboxServiceHandler is an implementation of the inbox.v1.InboxService service.
 type InboxServiceHandler interface {
 	GetItem(context.Context, *connect.Request[v1.GetItemRequest]) (*connect.Response[v1.GetItemResponse], error)
@@ -241,6 +257,7 @@ type InboxServiceHandler interface {
 	CommentOnItem(context.Context, *connect.Request[v1.CommentOnItemRequest]) (*connect.Response[v1.CommentOnItemResponse], error)
 	TagItem(context.Context, *connect.Request[v1.TagItemRequest]) (*connect.Response[emptypb.Empty], error)
 	UntagItem(context.Context, *connect.Request[v1.UntagItemRequest]) (*connect.Response[emptypb.Empty], error)
+	RedispatchItem(context.Context, *connect.Request[v1.RedispatchItemRequest]) (*connect.Response[v1.RedispatchItemResponse], error)
 }
 
 // NewInboxServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -316,6 +333,12 @@ func NewInboxServiceHandler(svc InboxServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(inboxServiceMethods.ByName("UntagItem")),
 		connect.WithHandlerOptions(opts...),
 	)
+	inboxServiceRedispatchItemHandler := connect.NewUnaryHandler(
+		InboxServiceRedispatchItemProcedure,
+		svc.RedispatchItem,
+		connect.WithSchema(inboxServiceMethods.ByName("RedispatchItem")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/inbox.v1.InboxService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case InboxServiceGetItemProcedure:
@@ -340,6 +363,8 @@ func NewInboxServiceHandler(svc InboxServiceHandler, opts ...connect.HandlerOpti
 			inboxServiceTagItemHandler.ServeHTTP(w, r)
 		case InboxServiceUntagItemProcedure:
 			inboxServiceUntagItemHandler.ServeHTTP(w, r)
+		case InboxServiceRedispatchItemProcedure:
+			inboxServiceRedispatchItemHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -391,4 +416,8 @@ func (UnimplementedInboxServiceHandler) TagItem(context.Context, *connect.Reques
 
 func (UnimplementedInboxServiceHandler) UntagItem(context.Context, *connect.Request[v1.UntagItemRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("inbox.v1.InboxService.UntagItem is not implemented"))
+}
+
+func (UnimplementedInboxServiceHandler) RedispatchItem(context.Context, *connect.Request[v1.RedispatchItemRequest]) (*connect.Response[v1.RedispatchItemResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("inbox.v1.InboxService.RedispatchItem is not implemented"))
 }

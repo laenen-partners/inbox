@@ -123,6 +123,12 @@ message UntagItemRequest {
   string tag = 3;
 }
 
+message RedispatchItemRequest {
+  Identity identity = 1;
+  string id = 2;
+}
+message RedispatchItemResponse {}
+
 // ─── Service ───
 
 service InboxService {
@@ -137,4 +143,5 @@ service InboxService {
   rpc CommentOnItem(CommentOnItemRequest) returns (CommentOnItemResponse);
   rpc TagItem(TagItemRequest) returns (google.protobuf.Empty);
   rpc UntagItem(UntagItemRequest) returns (google.protobuf.Empty);
+  rpc RedispatchItem(RedispatchItemRequest) returns (RedispatchItemResponse);
 }

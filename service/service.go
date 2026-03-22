@@ -192,6 +192,17 @@ func (h *Handler) UntagItem(ctx context.Context, req *connect.Request[inboxv1.Un
 	return connect.NewResponse(&emptypb.Empty{}), nil
 }
 
+func (h *Handler) RedispatchItem(ctx context.Context, req *connect.Request[inboxv1.RedispatchItemRequest]) (*connect.Response[inboxv1.RedispatchItemResponse], error) {
+	ctx, err := ctxWithIdentity(ctx, req.Msg.Identity)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.ib.Redispatch(ctx, req.Msg.Id); err != nil {
+		return nil, mapError(err)
+	}
+	return connect.NewResponse(&inboxv1.RedispatchItemResponse{}), nil
+}
+
 // ─── Helpers ───
 
 func actorStr(ctx context.Context) string {

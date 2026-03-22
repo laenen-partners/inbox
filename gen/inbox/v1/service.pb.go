@@ -1257,6 +1257,94 @@ func (x *UntagItemRequest) GetTag() string {
 	return ""
 }
 
+type RedispatchItemRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Identity      *Identity              `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RedispatchItemRequest) Reset() {
+	*x = RedispatchItemRequest{}
+	mi := &file_inbox_v1_service_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RedispatchItemRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RedispatchItemRequest) ProtoMessage() {}
+
+func (x *RedispatchItemRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RedispatchItemRequest.ProtoReflect.Descriptor instead.
+func (*RedispatchItemRequest) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *RedispatchItemRequest) GetIdentity() *Identity {
+	if x != nil {
+		return x.Identity
+	}
+	return nil
+}
+
+func (x *RedispatchItemRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type RedispatchItemResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RedispatchItemResponse) Reset() {
+	*x = RedispatchItemResponse{}
+	mi := &file_inbox_v1_service_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RedispatchItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RedispatchItemResponse) ProtoMessage() {}
+
+func (x *RedispatchItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RedispatchItemResponse.ProtoReflect.Descriptor instead.
+func (*RedispatchItemResponse) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{23}
+}
+
 var File_inbox_v1_service_proto protoreflect.FileDescriptor
 
 const file_inbox_v1_service_proto_rawDesc = "" +
@@ -1344,7 +1432,11 @@ const file_inbox_v1_service_proto_rawDesc = "" +
 	"\x10UntagItemRequest\x12.\n" +
 	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x10\n" +
-	"\x03tag\x18\x03 \x01(\tR\x03tag2\xac\x06\n" +
+	"\x03tag\x18\x03 \x01(\tR\x03tag\"W\n" +
+	"\x15RedispatchItemRequest\x12.\n" +
+	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\"\x18\n" +
+	"\x16RedispatchItemResponse2\x81\a\n" +
 	"\fInboxService\x12>\n" +
 	"\aGetItem\x12\x18.inbox.v1.GetItemRequest\x1a\x19.inbox.v1.GetItemResponse\x12D\n" +
 	"\tListItems\x12\x1a.inbox.v1.ListItemsRequest\x1a\x1b.inbox.v1.ListItemsResponse\x12J\n" +
@@ -1357,7 +1449,8 @@ const file_inbox_v1_service_proto_rawDesc = "" +
 	"CancelItem\x12\x1b.inbox.v1.CancelItemRequest\x1a\x1c.inbox.v1.CancelItemResponse\x12P\n" +
 	"\rCommentOnItem\x12\x1e.inbox.v1.CommentOnItemRequest\x1a\x1f.inbox.v1.CommentOnItemResponse\x12;\n" +
 	"\aTagItem\x12\x18.inbox.v1.TagItemRequest\x1a\x16.google.protobuf.Empty\x12?\n" +
-	"\tUntagItem\x12\x1a.inbox.v1.UntagItemRequest\x1a\x16.google.protobuf.EmptyB7Z5github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1b\x06proto3"
+	"\tUntagItem\x12\x1a.inbox.v1.UntagItemRequest\x1a\x16.google.protobuf.Empty\x12S\n" +
+	"\x0eRedispatchItem\x12\x1f.inbox.v1.RedispatchItemRequest\x1a .inbox.v1.RedispatchItemResponseB7Z5github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1b\x06proto3"
 
 var (
 	file_inbox_v1_service_proto_rawDescOnce sync.Once
@@ -1371,44 +1464,46 @@ func file_inbox_v1_service_proto_rawDescGZIP() []byte {
 	return file_inbox_v1_service_proto_rawDescData
 }
 
-var file_inbox_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_inbox_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_inbox_v1_service_proto_goTypes = []any{
-	(*Identity)(nil),              // 0: inbox.v1.Identity
-	(*InboxItem)(nil),             // 1: inbox.v1.InboxItem
-	(*GetItemRequest)(nil),        // 2: inbox.v1.GetItemRequest
-	(*GetItemResponse)(nil),       // 3: inbox.v1.GetItemResponse
-	(*ListItemsRequest)(nil),      // 4: inbox.v1.ListItemsRequest
-	(*ListItemsResponse)(nil),     // 5: inbox.v1.ListItemsResponse
-	(*SearchItemsRequest)(nil),    // 6: inbox.v1.SearchItemsRequest
-	(*SearchItemsResponse)(nil),   // 7: inbox.v1.SearchItemsResponse
-	(*ClaimItemRequest)(nil),      // 8: inbox.v1.ClaimItemRequest
-	(*ClaimItemResponse)(nil),     // 9: inbox.v1.ClaimItemResponse
-	(*ReleaseItemRequest)(nil),    // 10: inbox.v1.ReleaseItemRequest
-	(*ReleaseItemResponse)(nil),   // 11: inbox.v1.ReleaseItemResponse
-	(*RespondToItemRequest)(nil),  // 12: inbox.v1.RespondToItemRequest
-	(*RespondToItemResponse)(nil), // 13: inbox.v1.RespondToItemResponse
-	(*CompleteItemRequest)(nil),   // 14: inbox.v1.CompleteItemRequest
-	(*CompleteItemResponse)(nil),  // 15: inbox.v1.CompleteItemResponse
-	(*CancelItemRequest)(nil),     // 16: inbox.v1.CancelItemRequest
-	(*CancelItemResponse)(nil),    // 17: inbox.v1.CancelItemResponse
-	(*CommentOnItemRequest)(nil),  // 18: inbox.v1.CommentOnItemRequest
-	(*CommentOnItemResponse)(nil), // 19: inbox.v1.CommentOnItemResponse
-	(*TagItemRequest)(nil),        // 20: inbox.v1.TagItemRequest
-	(*UntagItemRequest)(nil),      // 21: inbox.v1.UntagItemRequest
-	(*Item)(nil),                  // 22: inbox.v1.Item
-	(*timestamppb.Timestamp)(nil), // 23: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 24: google.protobuf.Empty
+	(*Identity)(nil),               // 0: inbox.v1.Identity
+	(*InboxItem)(nil),              // 1: inbox.v1.InboxItem
+	(*GetItemRequest)(nil),         // 2: inbox.v1.GetItemRequest
+	(*GetItemResponse)(nil),        // 3: inbox.v1.GetItemResponse
+	(*ListItemsRequest)(nil),       // 4: inbox.v1.ListItemsRequest
+	(*ListItemsResponse)(nil),      // 5: inbox.v1.ListItemsResponse
+	(*SearchItemsRequest)(nil),     // 6: inbox.v1.SearchItemsRequest
+	(*SearchItemsResponse)(nil),    // 7: inbox.v1.SearchItemsResponse
+	(*ClaimItemRequest)(nil),       // 8: inbox.v1.ClaimItemRequest
+	(*ClaimItemResponse)(nil),      // 9: inbox.v1.ClaimItemResponse
+	(*ReleaseItemRequest)(nil),     // 10: inbox.v1.ReleaseItemRequest
+	(*ReleaseItemResponse)(nil),    // 11: inbox.v1.ReleaseItemResponse
+	(*RespondToItemRequest)(nil),   // 12: inbox.v1.RespondToItemRequest
+	(*RespondToItemResponse)(nil),  // 13: inbox.v1.RespondToItemResponse
+	(*CompleteItemRequest)(nil),    // 14: inbox.v1.CompleteItemRequest
+	(*CompleteItemResponse)(nil),   // 15: inbox.v1.CompleteItemResponse
+	(*CancelItemRequest)(nil),      // 16: inbox.v1.CancelItemRequest
+	(*CancelItemResponse)(nil),     // 17: inbox.v1.CancelItemResponse
+	(*CommentOnItemRequest)(nil),   // 18: inbox.v1.CommentOnItemRequest
+	(*CommentOnItemResponse)(nil),  // 19: inbox.v1.CommentOnItemResponse
+	(*TagItemRequest)(nil),         // 20: inbox.v1.TagItemRequest
+	(*UntagItemRequest)(nil),       // 21: inbox.v1.UntagItemRequest
+	(*RedispatchItemRequest)(nil),  // 22: inbox.v1.RedispatchItemRequest
+	(*RedispatchItemResponse)(nil), // 23: inbox.v1.RedispatchItemResponse
+	(*Item)(nil),                   // 24: inbox.v1.Item
+	(*timestamppb.Timestamp)(nil),  // 25: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),          // 26: google.protobuf.Empty
 }
 var file_inbox_v1_service_proto_depIdxs = []int32{
-	22, // 0: inbox.v1.InboxItem.data:type_name -> inbox.v1.Item
-	23, // 1: inbox.v1.InboxItem.created_at:type_name -> google.protobuf.Timestamp
-	23, // 2: inbox.v1.InboxItem.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 0: inbox.v1.InboxItem.data:type_name -> inbox.v1.Item
+	25, // 1: inbox.v1.InboxItem.created_at:type_name -> google.protobuf.Timestamp
+	25, // 2: inbox.v1.InboxItem.updated_at:type_name -> google.protobuf.Timestamp
 	0,  // 3: inbox.v1.GetItemRequest.identity:type_name -> inbox.v1.Identity
 	1,  // 4: inbox.v1.GetItemResponse.item:type_name -> inbox.v1.InboxItem
 	0,  // 5: inbox.v1.ListItemsRequest.identity:type_name -> inbox.v1.Identity
-	23, // 6: inbox.v1.ListItemsRequest.cursor:type_name -> google.protobuf.Timestamp
+	25, // 6: inbox.v1.ListItemsRequest.cursor:type_name -> google.protobuf.Timestamp
 	1,  // 7: inbox.v1.ListItemsResponse.items:type_name -> inbox.v1.InboxItem
-	23, // 8: inbox.v1.ListItemsResponse.next_cursor:type_name -> google.protobuf.Timestamp
+	25, // 8: inbox.v1.ListItemsResponse.next_cursor:type_name -> google.protobuf.Timestamp
 	0,  // 9: inbox.v1.SearchItemsRequest.identity:type_name -> inbox.v1.Identity
 	1,  // 10: inbox.v1.SearchItemsResponse.items:type_name -> inbox.v1.InboxItem
 	0,  // 11: inbox.v1.ClaimItemRequest.identity:type_name -> inbox.v1.Identity
@@ -1425,33 +1520,36 @@ var file_inbox_v1_service_proto_depIdxs = []int32{
 	1,  // 22: inbox.v1.CommentOnItemResponse.item:type_name -> inbox.v1.InboxItem
 	0,  // 23: inbox.v1.TagItemRequest.identity:type_name -> inbox.v1.Identity
 	0,  // 24: inbox.v1.UntagItemRequest.identity:type_name -> inbox.v1.Identity
-	2,  // 25: inbox.v1.InboxService.GetItem:input_type -> inbox.v1.GetItemRequest
-	4,  // 26: inbox.v1.InboxService.ListItems:input_type -> inbox.v1.ListItemsRequest
-	6,  // 27: inbox.v1.InboxService.SearchItems:input_type -> inbox.v1.SearchItemsRequest
-	8,  // 28: inbox.v1.InboxService.ClaimItem:input_type -> inbox.v1.ClaimItemRequest
-	10, // 29: inbox.v1.InboxService.ReleaseItem:input_type -> inbox.v1.ReleaseItemRequest
-	12, // 30: inbox.v1.InboxService.RespondToItem:input_type -> inbox.v1.RespondToItemRequest
-	14, // 31: inbox.v1.InboxService.CompleteItem:input_type -> inbox.v1.CompleteItemRequest
-	16, // 32: inbox.v1.InboxService.CancelItem:input_type -> inbox.v1.CancelItemRequest
-	18, // 33: inbox.v1.InboxService.CommentOnItem:input_type -> inbox.v1.CommentOnItemRequest
-	20, // 34: inbox.v1.InboxService.TagItem:input_type -> inbox.v1.TagItemRequest
-	21, // 35: inbox.v1.InboxService.UntagItem:input_type -> inbox.v1.UntagItemRequest
-	3,  // 36: inbox.v1.InboxService.GetItem:output_type -> inbox.v1.GetItemResponse
-	5,  // 37: inbox.v1.InboxService.ListItems:output_type -> inbox.v1.ListItemsResponse
-	7,  // 38: inbox.v1.InboxService.SearchItems:output_type -> inbox.v1.SearchItemsResponse
-	9,  // 39: inbox.v1.InboxService.ClaimItem:output_type -> inbox.v1.ClaimItemResponse
-	11, // 40: inbox.v1.InboxService.ReleaseItem:output_type -> inbox.v1.ReleaseItemResponse
-	13, // 41: inbox.v1.InboxService.RespondToItem:output_type -> inbox.v1.RespondToItemResponse
-	15, // 42: inbox.v1.InboxService.CompleteItem:output_type -> inbox.v1.CompleteItemResponse
-	17, // 43: inbox.v1.InboxService.CancelItem:output_type -> inbox.v1.CancelItemResponse
-	19, // 44: inbox.v1.InboxService.CommentOnItem:output_type -> inbox.v1.CommentOnItemResponse
-	24, // 45: inbox.v1.InboxService.TagItem:output_type -> google.protobuf.Empty
-	24, // 46: inbox.v1.InboxService.UntagItem:output_type -> google.protobuf.Empty
-	36, // [36:47] is the sub-list for method output_type
-	25, // [25:36] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	0,  // 25: inbox.v1.RedispatchItemRequest.identity:type_name -> inbox.v1.Identity
+	2,  // 26: inbox.v1.InboxService.GetItem:input_type -> inbox.v1.GetItemRequest
+	4,  // 27: inbox.v1.InboxService.ListItems:input_type -> inbox.v1.ListItemsRequest
+	6,  // 28: inbox.v1.InboxService.SearchItems:input_type -> inbox.v1.SearchItemsRequest
+	8,  // 29: inbox.v1.InboxService.ClaimItem:input_type -> inbox.v1.ClaimItemRequest
+	10, // 30: inbox.v1.InboxService.ReleaseItem:input_type -> inbox.v1.ReleaseItemRequest
+	12, // 31: inbox.v1.InboxService.RespondToItem:input_type -> inbox.v1.RespondToItemRequest
+	14, // 32: inbox.v1.InboxService.CompleteItem:input_type -> inbox.v1.CompleteItemRequest
+	16, // 33: inbox.v1.InboxService.CancelItem:input_type -> inbox.v1.CancelItemRequest
+	18, // 34: inbox.v1.InboxService.CommentOnItem:input_type -> inbox.v1.CommentOnItemRequest
+	20, // 35: inbox.v1.InboxService.TagItem:input_type -> inbox.v1.TagItemRequest
+	21, // 36: inbox.v1.InboxService.UntagItem:input_type -> inbox.v1.UntagItemRequest
+	22, // 37: inbox.v1.InboxService.RedispatchItem:input_type -> inbox.v1.RedispatchItemRequest
+	3,  // 38: inbox.v1.InboxService.GetItem:output_type -> inbox.v1.GetItemResponse
+	5,  // 39: inbox.v1.InboxService.ListItems:output_type -> inbox.v1.ListItemsResponse
+	7,  // 40: inbox.v1.InboxService.SearchItems:output_type -> inbox.v1.SearchItemsResponse
+	9,  // 41: inbox.v1.InboxService.ClaimItem:output_type -> inbox.v1.ClaimItemResponse
+	11, // 42: inbox.v1.InboxService.ReleaseItem:output_type -> inbox.v1.ReleaseItemResponse
+	13, // 43: inbox.v1.InboxService.RespondToItem:output_type -> inbox.v1.RespondToItemResponse
+	15, // 44: inbox.v1.InboxService.CompleteItem:output_type -> inbox.v1.CompleteItemResponse
+	17, // 45: inbox.v1.InboxService.CancelItem:output_type -> inbox.v1.CancelItemResponse
+	19, // 46: inbox.v1.InboxService.CommentOnItem:output_type -> inbox.v1.CommentOnItemResponse
+	26, // 47: inbox.v1.InboxService.TagItem:output_type -> google.protobuf.Empty
+	26, // 48: inbox.v1.InboxService.UntagItem:output_type -> google.protobuf.Empty
+	23, // 49: inbox.v1.InboxService.RedispatchItem:output_type -> inbox.v1.RedispatchItemResponse
+	38, // [38:50] is the sub-list for method output_type
+	26, // [26:38] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_inbox_v1_service_proto_init() }
@@ -1466,7 +1564,7 @@ func file_inbox_v1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_inbox_v1_service_proto_rawDesc), len(file_inbox_v1_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
