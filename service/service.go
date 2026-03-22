@@ -15,16 +15,32 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// Option configures a Handler.
+type Option func(*Handler)
+
+// WithRespondCompletes makes RespondToItem also transition the item to
+// completed using the Op builder path, which benefits from two-phase dispatch.
+func WithRespondCompletes() Option {
+	return func(h *Handler) {
+		h.respondCompletes = true
+	}
+}
+
 // Handler implements the InboxService Connect-RPC service.
 type Handler struct {
-	ib *inbox.Inbox
+	ib                *inbox.Inbox
+	respondCompletes  bool
 }
 
 var _ inboxv1connect.InboxServiceHandler = (*Handler)(nil)
 
 // NewHandler creates an InboxService handler backed by the given inbox.
-func NewHandler(ib *inbox.Inbox) *Handler {
-	return &Handler{ib: ib}
+func NewHandler(ib *inbox.Inbox, opts ...Option) *Handler {
+	h := &Handler{ib: ib}
+	for _, o := range opts {
+		o(h)
+	}
+	return h
 }
 
 func (h *Handler) GetItem(ctx context.Context, req *connect.Request[inboxv1.GetItemRequest]) (*connect.Response[inboxv1.GetItemResponse], error) {
@@ -120,10 +136,19 @@ func (h *Handler) RespondToItem(ctx context.Context, req *connect.Request[inboxv
 	if err != nil {
 		return nil, err
 	}
-	item, err := h.ib.Respond(ctx, req.Msg.Id, inbox.Response{
-		Action:  req.Msg.Action,
-		Comment: req.Msg.Comment,
-	})
+
+	var item inbox.Item
+	if h.respondCompletes {
+		item, err = h.ib.On(ctx, req.Msg.Id).
+			Respond(req.Msg.Action, req.Msg.Comment).
+			TransitionTo(inbox.StatusCompleted).
+			Apply()
+	} else {
+		item, err = h.ib.Respond(ctx, req.Msg.Id, inbox.Response{
+			Action:  req.Msg.Action,
+			Comment: req.Msg.Comment,
+		})
+	}
 	if err != nil {
 		return nil, mapError(err)
 	}

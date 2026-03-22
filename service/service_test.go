@@ -22,6 +22,10 @@ import (
 var _sharedConnStr string
 
 func testClient(t *testing.T) (inboxv1connect.InboxServiceClient, *inbox.Inbox) {
+	return testClientWithOpts(t)
+}
+
+func testClientWithOpts(t *testing.T, opts ...service.Option) (inboxv1connect.InboxServiceClient, *inbox.Inbox) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -51,7 +55,7 @@ func testClient(t *testing.T) (inboxv1connect.InboxServiceClient, *inbox.Inbox) 
 	require.NoError(t, err)
 
 	ib := inbox.New(es)
-	client := service.NewLocalClient(service.NewHandler(ib))
+	client := service.NewLocalClient(service.NewHandler(ib, opts...))
 	return client, ib
 }
 
@@ -133,6 +137,28 @@ func TestGetItem_NotFound(t *testing.T) {
 	}))
 	require.Error(t, err)
 	require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+}
+
+func TestRespondCompletesOption(t *testing.T) {
+	client, ib := testClientWithOpts(t, service.WithRespondCompletes())
+	item := seedItem(t, ib, "Test respond completes")
+
+	// Claim
+	_, err := client.ClaimItem(context.Background(), connect.NewRequest(&inboxv1.ClaimItemRequest{
+		Identity: testIdentity(),
+		Id:       item.ID,
+	}))
+	require.NoError(t, err)
+
+	// Respond — with WithRespondCompletes, this should also complete the item.
+	resp, err := client.RespondToItem(context.Background(), connect.NewRequest(&inboxv1.RespondToItemRequest{
+		Identity: testIdentity(),
+		Id:       item.ID,
+		Action:   "approve",
+		Comment:  "Looks good",
+	}))
+	require.NoError(t, err)
+	require.Equal(t, "completed", resp.Msg.Item.Data.Status)
 }
 
 func TestIdentityRequired(t *testing.T) {
