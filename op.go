@@ -101,10 +101,19 @@ func (op *Op) RespondWithData(action string, comment string, data json.RawMessag
 	}
 	if len(data) > 0 {
 		var m map[string]any
-		if err := json.Unmarshal(data, &m); err == nil {
-			if st, err := structpb.NewStruct(m); err == nil {
-				evtData.Payload, _ = anypb.New(st)
-			}
+		if err := json.Unmarshal(data, &m); err != nil {
+			op.err = fmt.Errorf("inbox: RespondWithData: invalid JSON data: %w", err)
+			return op
+		}
+		st, err := structpb.NewStruct(m)
+		if err != nil {
+			op.err = fmt.Errorf("inbox: RespondWithData: cannot convert data to struct: %w", err)
+			return op
+		}
+		evtData.Payload, err = anypb.New(st)
+		if err != nil {
+			op.err = fmt.Errorf("inbox: RespondWithData: cannot pack data as Any: %w", err)
+			return op
 		}
 	}
 	op.events = append(op.events, newProtoEventWithDetail(op.actor, action, evtData))
