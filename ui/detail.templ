@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"fmt"
+
+	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/dsx/ui/badge"
 	"github.com/laenen-partners/inbox"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
@@ -48,10 +51,53 @@ templ detailDrawer(data detailData) {
 			</div>
 		</div>
 
+		// Context links
+		if len(data.Links) > 0 {
+			<div class="py-4">
+				@sectionLabel("Related")
+				<div class="flex flex-col gap-1 mt-2.5">
+					for _, link := range data.Links {
+						<a href={ templ.SafeURL(link.URL) } target="_blank" class="link link-hover text-sm">
+							{ link.Label }
+						</a>
+					}
+				</div>
+			</div>
+		}
+
 		// Content (from ContentProvider)
 		if data.Content != nil {
 			<div class="py-4">
 				@data.Content
+			</div>
+		}
+
+		// Workflow status
+		if data.WorkflowState != nil {
+			<div class="py-4">
+				@sectionLabel("Workflow")
+				<div class="flex items-center gap-2 mt-2.5">
+					if data.WorkflowState.Status == "completed" {
+						<span class="badge badge-success badge-sm">Completed</span>
+					} else if data.WorkflowState.Status == "running" {
+						<span class="badge badge-info badge-sm">Running</span>
+					} else if data.WorkflowState.Status == "failed" {
+						<span class="badge badge-error badge-sm">Failed</span>
+					} else {
+						<span class="badge badge-warning badge-sm">Waiting</span>
+					}
+					<span class="text-sm">{ data.WorkflowState.Label }</span>
+				</div>
+				if data.WorkflowState.Status == "waiting" || data.WorkflowState.Status == "failed" {
+					<div class="mt-2 flex items-center gap-2">
+						<span class="text-xs text-warning">Workflow did not resume</span>
+						<button class="btn btn-xs btn-outline"
+							{ ds.OnClick(ds.Post(fmt.Sprintf("%s/items/%s/retry-dispatch", data.BasePath, data.Item.ID)))... }
+						>
+							Resend Response
+						</button>
+					</div>
+				}
 			</div>
 		}
 
