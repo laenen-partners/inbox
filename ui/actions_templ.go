@@ -241,7 +241,7 @@ func respondButton(data detailData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, " class=\"mt-2.5 space-y-2 p-3 bg-base-200/40 rounded-lg border border-base-300\"><input type=\"text\" class=\"input input-bordered input-sm w-full\" placeholder=\"Action (e.g. approve, reject)\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, " class=\"mt-2.5 p-3 bg-base-200/40 rounded-lg border border-base-300\"><div class=\"flex flex-col gap-4\"><div class=\"w-full\"><label class=\"label\"><span class=\"label-text text-xs font-medium\">Action</span></label> <input type=\"text\" class=\"input input-bordered input-sm w-full\" placeholder=\"e.g. approve, reject\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -249,7 +249,7 @@ func respondButton(data detailData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "> <textarea class=\"textarea textarea-bordered textarea-sm w-full\" placeholder=\"Comment\" rows=\"2\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "><p class=\"text-[11px] text-base-content/40 mt-1\">The action to record against this item</p></div><div class=\"w-full\"><label class=\"label\"><span class=\"label-text text-xs font-medium\">Comment</span></label> <textarea class=\"textarea textarea-bordered textarea-sm w-full\" placeholder=\"Optional comment...\" rows=\"2\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -257,7 +257,7 @@ func respondButton(data detailData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "></textarea>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "></textarea><p class=\"text-[11px] text-base-content/40 mt-1\">Additional context for this response</p></div></div><div class=\"sticky bottom-0 bg-base-100 pt-4 border-t border-base-200 mt-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -287,7 +287,7 @@ func respondButton(data detailData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -327,7 +327,7 @@ func cancelButton(data detailData) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(signals.DataSignals)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/actions.templ`, Line: 90, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/actions.templ`, Line: 102, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -372,7 +372,7 @@ func cancelButton(data detailData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, " class=\"mt-2.5 space-y-2 p-3 bg-error/5 rounded-lg border border-error/15\"><textarea class=\"textarea textarea-bordered textarea-sm w-full\" placeholder=\"Reason for cancellation\" rows=\"2\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, " class=\"mt-2.5 p-3 bg-error/5 rounded-lg border border-error/15\"><div class=\"flex flex-col gap-4\"><div class=\"w-full\"><label class=\"label\"><span class=\"label-text text-xs font-medium\">Reason</span></label> <textarea class=\"textarea textarea-bordered textarea-sm w-full\" placeholder=\"Reason for cancellation\" rows=\"2\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -380,7 +380,7 @@ func cancelButton(data detailData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "></textarea>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "></textarea><p class=\"text-[11px] text-base-content/40 mt-1\">Explain why this item is being cancelled</p></div></div><div class=\"sticky bottom-0 bg-base-100 pt-4 border-t border-base-200 mt-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -410,7 +410,7 @@ func cancelButton(data detailData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -449,7 +449,7 @@ func commentForm(data detailData) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(signals.DataSignals)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/actions.templ`, Line: 121, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/actions.templ`, Line: 141, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {

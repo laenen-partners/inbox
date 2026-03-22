@@ -38,6 +38,7 @@ func Handler(client inboxv1connect.InboxServiceClient, opts ...Option) chi.Route
 	r.Post("/items/{id}/complete", s.handleComplete)
 	r.Post("/items/{id}/cancel", s.handleCancel)
 	r.Post("/items/{id}/comment", s.handleComment)
+	r.Post("/items/{id}/retry-dispatch", s.handleRetryDispatch)
 
 	return r
 }

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"net/http"
 
 	"connectrpc.com/connect"
@@ -140,6 +141,33 @@ func (s *server) handleComment(w http.ResponseWriter, r *http.Request) {
 	item := fromProto(resp.Msg.Item)
 
 	s.renderDetailAndToast(w, r, item, "Comment added")
+}
+
+func (s *server) handleRetryDispatch(w http.ResponseWriter, r *http.Request) {
+	itemID := chi.URLParam(r, "id")
+	ctx := r.Context()
+
+	_, err := s.client.RedispatchItem(ctx, connect.NewRequest(&inboxv1.RedispatchItemRequest{
+		Identity: identityToProto(ctx),
+		Id:       itemID,
+	}))
+	if err != nil {
+		s.sseError(w, r, fmt.Errorf("retry failed: %w", err))
+		return
+	}
+
+	// Re-fetch the item to get updated state for re-rendering.
+	resp, err := s.client.GetItem(ctx, connect.NewRequest(&inboxv1.GetItemRequest{
+		Identity: identityToProto(ctx),
+		Id:       itemID,
+	}))
+	if err != nil {
+		s.sseError(w, r, fmt.Errorf("retry succeeded but failed to reload: %w", err))
+		return
+	}
+
+	item := fromProto(resp.Msg.Item)
+	s.renderDetailAndToast(w, r, item, "Response resent successfully")
 }
 
 // renderDetailAndToast re-renders the detail drawer, updates the queue row, and shows a toast.
