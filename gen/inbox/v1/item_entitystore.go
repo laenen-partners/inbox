@@ -42,7 +42,7 @@ func ItemExtractionSchema() extraction.ExtractionSchema {
 			},
 			{
 				Name:        "status",
-				Description: "Lifecycle status: open, claimed, completed, expired, cancelled. Also mirrored as a \"status:<value>\" tag for filtering",
+				Description: "Lifecycle status: open, claimed, closed. Also mirrored as a \"status:<value>\" tag for filtering",
 				Type:        extraction.ExtractionFieldTypeString,
 			},
 			{

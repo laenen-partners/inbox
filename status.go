@@ -1,19 +1,13 @@
 package inbox
 
-// Item statuses.
 const (
-	StatusOpen      = "open"
-	StatusClaimed   = "claimed"
-	StatusCompleted = "completed"
-	StatusExpired   = "expired"
-	StatusCancelled = "cancelled"
+	StatusOpen    = "open"
+	StatusClaimed = "claimed"
+	StatusClosed  = "closed"
 )
 
-// IsTerminal reports whether the status is a terminal state.
+// IsTerminal returns true if the status is terminal.
+// Uses != open && != claimed to handle legacy statuses (completed, cancelled, expired).
 func IsTerminal(status string) bool {
-	switch status {
-	case StatusCompleted, StatusExpired, StatusCancelled:
-		return true
-	}
-	return false
+	return status != StatusOpen && status != StatusClaimed
 }

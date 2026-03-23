@@ -5,6 +5,7 @@ import (
 
 	"github.com/a-h/templ"
 	"github.com/laenen-partners/identity"
+	"github.com/laenen-partners/pubsub"
 )
 
 // FilterConfig defines a preset tag filter shown in the filter bar.
@@ -28,6 +29,7 @@ type config struct {
 	contentProviders map[string]ContentProvider
 	basePath         string
 	layoutFn         LayoutFunc
+	bus              *pubsub.Bus
 }
 
 func defaultConfig() *config {
@@ -65,4 +67,11 @@ func WithBasePath(path string) Option {
 // When set, replaces the default layout (Base + navbar tabs).
 func WithLayout(fn LayoutFunc) Option {
 	return func(c *config) { c.layoutFn = fn }
+}
+
+// WithBus sets the pub/sub bus for publishing change notifications.
+// When set, action handlers publish notifications so the stream relay
+// can push stale signals to connected clients.
+func WithBus(bus *pubsub.Bus) Option {
+	return func(c *config) { c.bus = bus }
 }

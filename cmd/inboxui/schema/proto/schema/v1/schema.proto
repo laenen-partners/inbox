@@ -26,7 +26,7 @@ syntax = "proto3";
 
 package schema.v1;
 
-option go_package = "github.com/laenen-partners/inbox/schema/gen/schema/v1;schemav1";
+option go_package = "github.com/laenen-partners/inbox/cmd/inboxui/schema/gen/schema/v1;schemav1";
 
 // ItemSchema defines the UI rendering schema for an inbox item.
 // It is used as the item's payload (proto.Message) and the inbox UI

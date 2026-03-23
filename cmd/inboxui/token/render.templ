@@ -6,8 +6,8 @@ import (
 	"github.com/laenen-partners/dsx/layouts"
 	"github.com/laenen-partners/dsx/ui/button"
 	"github.com/laenen-partners/inbox"
-	"github.com/laenen-partners/inbox/schema"
-	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
+	"github.com/laenen-partners/inbox/cmd/inboxui/schema"
+	schemav1 "github.com/laenen-partners/inbox/cmd/inboxui/schema/gen/schema/v1"
 )
 
 type clientData struct {
@@ -103,19 +103,7 @@ templ clientSchemaForm(data clientData) {
 				}
 			</div>
 		}
-		if data.Scope == "respond" && len(data.Schema.Actions) > 0 {
-			<div class="flex gap-3 pt-2">
-				for _, a := range data.Schema.Actions {
-					@button.Button(button.Props{
-						Variant: schema.ButtonVariant(a.Variant),
-						Class:   "flex-1",
-						OnClick: ds.Post("/respond"),
-					}) {
-						{ a.Label }
-					}
-				}
-			</div>
-		} else if data.Scope == "respond" {
+		if data.Scope == "respond" {
 			@button.Button(button.Props{
 				Variant: button.VariantNeutral,
 				Class:   "w-full",

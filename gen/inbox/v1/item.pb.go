@@ -78,7 +78,7 @@ type Item struct {
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	// Detailed context, instructions, or background for the resolver.
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	// Lifecycle status: open, claimed, completed, expired, cancelled.
+	// Lifecycle status: open, claimed, closed.
 	// Also mirrored as a "status:<value>" tag for filtering.
 	Status string `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	// Optional expiry. After this time, a background process may
@@ -289,7 +289,7 @@ var File_inbox_v1_item_proto protoreflect.FileDescriptor
 
 const file_inbox_v1_item_proto_rawDesc = "" +
 	"\n" +
-	"\x13inbox/v1/item.proto\x12\binbox.v1\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1centitystore/v1/options.proto\"\xe5\x02\n" +
+	"\x13inbox/v1/item.proto\x12\binbox.v1\x1a\x1centitystore/v1/options.proto\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe5\x02\n" +
 	"\x04Item\x123\n" +
 	"\x0fidempotency_key\x18\x01 \x01(\tB\n" +
 	"\x82\xb5\x18\x06\b\x01\x10\x01`\x00R\x0eidempotencyKey\x12\x1e\n" +

@@ -6,7 +6,7 @@ import (
 
 	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
-	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
+	schemav1 "github.com/laenen-partners/inbox/cmd/inboxui/schema/gen/schema/v1"
 	"github.com/laenen-partners/tags"
 	"google.golang.org/protobuf/types/known/structpb"
 )

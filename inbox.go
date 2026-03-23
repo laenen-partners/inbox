@@ -12,10 +12,6 @@
 //
 //	es, _ := entitystore.New(entitystore.WithPgStore(pool))
 //	ib := inbox.New(es)
-//
-// With a callback dispatcher:
-//
-//	ib := inbox.New(es, inbox.WithDispatcher(myDispatcher))
 package inbox
 
 import (
@@ -29,16 +25,10 @@ var EntityType = inboxv1.ItemMatchConfig().EntityType
 
 // Inbox provides operations on inbox items backed by an entity store.
 type Inbox struct {
-	es         *entitystore.EntityStore
-	dispatcher Dispatcher
-	hooks      map[string]LifecycleHooks
+	es *entitystore.EntityStore
 }
 
 // New creates an Inbox backed by the given entity store.
-func New(es *entitystore.EntityStore, opts ...Option) *Inbox {
-	ib := &Inbox{es: es}
-	for _, opt := range opts {
-		opt(ib)
-	}
-	return ib
+func New(es *entitystore.EntityStore) *Inbox {
+	return &Inbox{es: es}
 }

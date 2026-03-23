@@ -16,6 +16,12 @@ tasks:
     desc: Run generations
     cmds:
       - task: generate:proto
+      - task: generate:templ
+
+  generate:templ:
+    desc: Run templ generate
+    cmds:
+      - go tool templ generate
 
   generate:proto:
     desc: Run proto generate
@@ -23,14 +29,42 @@ tasks:
       - buf generate
 
   format:
+    desc: Format all
+    cmds:
+      - task: format:go
+      - task: format:templ
+      - task: format:proto
+
+  format:go:
     desc: Format Go code with gofmt
     cmds:
       - gofumpt -l -w .
 
+  format:proto:
+    desc: Format proto files
+    cmds:
+      - buf format -w .
+
+  format:templ:
+    desc: Format templ
+    cmds:
+      - go tool templ fmt .
+
   lint:
+    desc: Run linters
+    cmds:
+      - task: lint:go
+      - task: lint:proto
+
+  lint:go:
     desc: Run golangci-lint
     cmds:
       - golangci-lint run ./...
+
+  lint:proto:
+    desc: Run proto linter
+    cmds:
+      - buf lint .
 
   test:ci:
     desc: Run tests and output JUnit XML to reports/junit.xml

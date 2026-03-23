@@ -13,8 +13,8 @@ import (
 
 // AddEvent appends an event to an item's event log.
 // This is the general-purpose way to add context to an item without
-// changing its status. Use the convenience methods (Comment, Escalate,
-// Reassign) for common event types with typed data.
+// changing its status. Use the convenience methods (Comment, Reassign)
+// for common event types with typed data.
 func (ib *Inbox) AddEvent(ctx context.Context, itemID string, evt *inboxv1.Event) (Item, error) {
 	item, err := ib.Get(ctx, itemID)
 	if err != nil {
@@ -55,24 +55,6 @@ func (ib *Inbox) Comment(ctx context.Context, itemID string, body string, opts *
 	}
 
 	return ib.AddEvent(ctx, itemID, newProtoEventWithDetail(actor, body, evtData))
-}
-
-// Escalate moves an item from one team to another with a reason.
-// Updates team tags and records an ItemEscalated event.
-func (ib *Inbox) Escalate(ctx context.Context, itemID string, fromTeam string, toTeam string, reason string) (Item, error) {
-	actor := actorFromCtx(ctx)
-	if fromTeam != "" {
-		_ = ib.es.RemoveTag(ctx, itemID, tags.Team(fromTeam))
-	}
-	if toTeam != "" {
-		_ = ib.es.AddTags(ctx, itemID, []string{tags.Team(toTeam)})
-	}
-
-	return ib.AddEvent(ctx, itemID, newProtoEventWithDetail(actor, reason, &inboxv1.ItemEscalated{
-		FromTeam: fromTeam,
-		ToTeam:   toTeam,
-		Reason:   reason,
-	}))
 }
 
 // Reassign moves an item from one actor to another.

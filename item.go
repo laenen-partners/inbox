@@ -1,7 +1,6 @@
 package inbox
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -47,13 +46,12 @@ type Meta struct {
 	Payload        proto.Message
 	Tags           tags.Set
 	IdempotencyKey string
-}
 
-// Response is the data sent when responding to an item.
-type Response struct {
-	Action  string
-	Comment string
-	Data    json.RawMessage
+	// PayloadAny allows passing a pre-serialized proto Any directly
+	// (e.g. from an RPC request). When set, it takes precedence over Payload.
+	PayloadAny *anypb.Any
+	// PayloadTypeName is the fully qualified proto message name for PayloadAny.
+	PayloadTypeName string
 }
 
 // ListOpts configures list/search queries.

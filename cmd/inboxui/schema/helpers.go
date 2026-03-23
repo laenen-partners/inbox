@@ -3,7 +3,7 @@ package schema
 import (
 	"encoding/json"
 
-	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
+	schemav1 "github.com/laenen-partners/inbox/cmd/inboxui/schema/gen/schema/v1"
 	"google.golang.org/protobuf/proto"
 )
 

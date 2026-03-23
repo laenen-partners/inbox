@@ -31,15 +31,10 @@ func TestEventLabel(t *testing.T) {
 		{"inbox.v1.ItemCreated", "Created"},
 		{"inbox.v1.ItemClaimed", "Claimed"},
 		{"inbox.v1.ItemReleased", "Released"},
-		{"inbox.v1.ItemResponded", "Responded"},
-		{"inbox.v1.ItemCompleted", "Completed"},
-		{"inbox.v1.ItemCancelled", "Cancelled"},
-		{"inbox.v1.ItemExpired", "Expired"},
+		{"inbox.v1.ItemClosed", "Closed"},
 		{"inbox.v1.CommentAppended", "Comment"},
-		{"inbox.v1.ItemEscalated", "Escalated"},
 		{"inbox.v1.ItemReassigned", "Reassigned"},
 		{"inbox.v1.TagsChanged", "Tags changed"},
-		{"inbox.v1.PayloadUpdated", "Payload updated"},
 		{"custom.v1.SomethingElse", "custom.v1.SomethingElse"},
 	}
 	for _, tt := range tests {
@@ -57,10 +52,9 @@ func TestStatusVariant(t *testing.T) {
 	}{
 		{"open", "badge-info"},
 		{"claimed", "badge-warning"},
-		{"completed", "badge-success"},
-		{"cancelled", "badge-neutral"},
-		{"expired", "badge-error"},
-		{"unknown", ""},
+		{"closed", "badge-success"},
+		{"completed", "badge-neutral"},
+		{"unknown", "badge-neutral"},
 	}
 	for _, tt := range tests {
 		got := statusBadgeVariant(tt.status)

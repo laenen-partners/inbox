@@ -10,7 +10,6 @@ import (
 	"github.com/laenen-partners/entitystore/store"
 	"github.com/laenen-partners/identity"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
-	"github.com/laenen-partners/tags"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -27,7 +26,18 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 	id := uuid.NewString()
 	actor := actorFromCtx(ctx)
 
-	createdEvt := newProtoEvent(actor, &inboxv1.ItemCreated{PayloadType: payloadTypeFromMsg(meta.Payload)})
+	// Resolve payload: PayloadAny takes precedence over Payload.
+	var payloadAny *anypb.Any
+	var payloadType string
+	if meta.PayloadAny != nil {
+		payloadAny = meta.PayloadAny
+		payloadType = meta.PayloadTypeName
+	} else {
+		payloadAny = packPayloadAny(meta.Payload)
+		payloadType = payloadTypeFromMsg(meta.Payload)
+	}
+
+	createdEvt := newProtoEvent(actor, &inboxv1.ItemCreated{PayloadType: payloadType})
 	createdEvt.At = timestamppb.New(now)
 
 	t := meta.Tags.With("status", StatusOpen)
@@ -41,8 +51,8 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 		Description:    meta.Description,
 		Status:         StatusOpen,
 		Deadline:       deadlineToProto(meta.Deadline),
-		PayloadType:    payloadTypeFromMsg(meta.Payload),
-		Payload:        packPayloadAny(meta.Payload),
+		PayloadType:    payloadType,
+		Payload:        payloadAny,
 		Events:         []*inboxv1.Event{createdEvt},
 	}
 
@@ -157,9 +167,4 @@ func lower(c byte) byte {
 		return c + 32
 	}
 	return c
-}
-
-// callbackValue extracts the callback address from item tags.
-func callbackValue(t tags.Set) string {
-	return t.Value("callback")
 }

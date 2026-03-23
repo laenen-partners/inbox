@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	inboxtoken "github.com/laenen-partners/inbox/token"
+	inboxtoken "github.com/laenen-partners/inbox/cmd/inboxui/token"
 )
 
 func TestHMACTokens(t *testing.T) {

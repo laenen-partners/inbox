@@ -59,11 +59,12 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := queueData{
-		Items:          items,
-		Filters:        s.cfg.filters,
-		ActiveFilters:  activeFilters,
-		BasePath:       s.cfg.basePath,
-		PriorityCounts: counts,
+		Items:           items,
+		Filters:         s.cfg.filters,
+		ActiveFilters:   activeFilters,
+		BasePath:        s.cfg.basePath,
+		StreamReloadURL: s.cfg.basePath + "/",
+		PriorityCounts:  counts,
 	}
 
 	if resp.Msg.NextCursor != nil {
@@ -82,10 +83,11 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 }
 
 type queueData struct {
-	Items          []inbox.Item
-	Filters        []FilterConfig
-	ActiveFilters  map[string]string
-	BasePath       string
-	NextCursor     *time.Time
-	PriorityCounts map[string]int
+	Items           []inbox.Item
+	Filters         []FilterConfig
+	ActiveFilters   map[string]string
+	BasePath        string
+	StreamReloadURL string // URL to reload the table content on stream events
+	NextCursor      *time.Time
+	PriorityCounts  map[string]int
 }

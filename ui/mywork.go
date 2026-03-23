@@ -43,9 +43,10 @@ func (s *server) handleMyWork(w http.ResponseWriter, r *http.Request) {
 	items := fromProtoSlice(resp.Msg.Items)
 
 	data := queueData{
-		Items:    items,
-		Filters:  s.cfg.filters,
-		BasePath: s.cfg.basePath,
+		Items:           items,
+		Filters:         s.cfg.filters,
+		BasePath:        s.cfg.basePath,
+		StreamReloadURL: s.cfg.basePath + "/mywork",
 	}
 	if resp.Msg.NextCursor != nil {
 		t := resp.Msg.NextCursor.AsTime()

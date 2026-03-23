@@ -9,7 +9,7 @@ package inboxv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	anypb "google.golang.org/protobuf/types/known/anypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
@@ -177,6 +177,150 @@ func (x *InboxItem) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type CreateItemRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Identity       *Identity              `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Title          string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Description    string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Deadline       *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=deadline,proto3" json:"deadline,omitempty"`
+	PayloadType    string                 `protobuf:"bytes,5,opt,name=payload_type,json=payloadType,proto3" json:"payload_type,omitempty"`
+	Payload        *anypb.Any             `protobuf:"bytes,6,opt,name=payload,proto3" json:"payload,omitempty"`
+	Tags           []string               `protobuf:"bytes,7,rep,name=tags,proto3" json:"tags,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,8,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CreateItemRequest) Reset() {
+	*x = CreateItemRequest{}
+	mi := &file_inbox_v1_service_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateItemRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateItemRequest) ProtoMessage() {}
+
+func (x *CreateItemRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateItemRequest.ProtoReflect.Descriptor instead.
+func (*CreateItemRequest) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CreateItemRequest) GetIdentity() *Identity {
+	if x != nil {
+		return x.Identity
+	}
+	return nil
+}
+
+func (x *CreateItemRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *CreateItemRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateItemRequest) GetDeadline() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Deadline
+	}
+	return nil
+}
+
+func (x *CreateItemRequest) GetPayloadType() string {
+	if x != nil {
+		return x.PayloadType
+	}
+	return ""
+}
+
+func (x *CreateItemRequest) GetPayload() *anypb.Any {
+	if x != nil {
+		return x.Payload
+	}
+	return nil
+}
+
+func (x *CreateItemRequest) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *CreateItemRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type CreateItemResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Item          *InboxItem             `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateItemResponse) Reset() {
+	*x = CreateItemResponse{}
+	mi := &file_inbox_v1_service_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateItemResponse) ProtoMessage() {}
+
+func (x *CreateItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateItemResponse.ProtoReflect.Descriptor instead.
+func (*CreateItemResponse) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CreateItemResponse) GetItem() *InboxItem {
+	if x != nil {
+		return x.Item
+	}
+	return nil
+}
+
 type GetItemRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Identity      *Identity              `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
@@ -187,7 +331,7 @@ type GetItemRequest struct {
 
 func (x *GetItemRequest) Reset() {
 	*x = GetItemRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[2]
+	mi := &file_inbox_v1_service_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -199,7 +343,7 @@ func (x *GetItemRequest) String() string {
 func (*GetItemRequest) ProtoMessage() {}
 
 func (x *GetItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[2]
+	mi := &file_inbox_v1_service_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -212,7 +356,7 @@ func (x *GetItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemRequest.ProtoReflect.Descriptor instead.
 func (*GetItemRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{2}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *GetItemRequest) GetIdentity() *Identity {
@@ -238,7 +382,7 @@ type GetItemResponse struct {
 
 func (x *GetItemResponse) Reset() {
 	*x = GetItemResponse{}
-	mi := &file_inbox_v1_service_proto_msgTypes[3]
+	mi := &file_inbox_v1_service_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -250,7 +394,7 @@ func (x *GetItemResponse) String() string {
 func (*GetItemResponse) ProtoMessage() {}
 
 func (x *GetItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[3]
+	mi := &file_inbox_v1_service_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -263,7 +407,7 @@ func (x *GetItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetItemResponse.ProtoReflect.Descriptor instead.
 func (*GetItemResponse) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{3}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetItemResponse) GetItem() *InboxItem {
@@ -285,7 +429,7 @@ type ListItemsRequest struct {
 
 func (x *ListItemsRequest) Reset() {
 	*x = ListItemsRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[4]
+	mi := &file_inbox_v1_service_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -297,7 +441,7 @@ func (x *ListItemsRequest) String() string {
 func (*ListItemsRequest) ProtoMessage() {}
 
 func (x *ListItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[4]
+	mi := &file_inbox_v1_service_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -310,7 +454,7 @@ func (x *ListItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListItemsRequest.ProtoReflect.Descriptor instead.
 func (*ListItemsRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{4}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListItemsRequest) GetIdentity() *Identity {
@@ -351,7 +495,7 @@ type ListItemsResponse struct {
 
 func (x *ListItemsResponse) Reset() {
 	*x = ListItemsResponse{}
-	mi := &file_inbox_v1_service_proto_msgTypes[5]
+	mi := &file_inbox_v1_service_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -363,7 +507,7 @@ func (x *ListItemsResponse) String() string {
 func (*ListItemsResponse) ProtoMessage() {}
 
 func (x *ListItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[5]
+	mi := &file_inbox_v1_service_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -376,7 +520,7 @@ func (x *ListItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListItemsResponse.ProtoReflect.Descriptor instead.
 func (*ListItemsResponse) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{5}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListItemsResponse) GetItems() []*InboxItem {
@@ -404,7 +548,7 @@ type SearchItemsRequest struct {
 
 func (x *SearchItemsRequest) Reset() {
 	*x = SearchItemsRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[6]
+	mi := &file_inbox_v1_service_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -416,7 +560,7 @@ func (x *SearchItemsRequest) String() string {
 func (*SearchItemsRequest) ProtoMessage() {}
 
 func (x *SearchItemsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[6]
+	mi := &file_inbox_v1_service_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -429,7 +573,7 @@ func (x *SearchItemsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchItemsRequest.ProtoReflect.Descriptor instead.
 func (*SearchItemsRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{6}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SearchItemsRequest) GetIdentity() *Identity {
@@ -462,7 +606,7 @@ type SearchItemsResponse struct {
 
 func (x *SearchItemsResponse) Reset() {
 	*x = SearchItemsResponse{}
-	mi := &file_inbox_v1_service_proto_msgTypes[7]
+	mi := &file_inbox_v1_service_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -474,7 +618,7 @@ func (x *SearchItemsResponse) String() string {
 func (*SearchItemsResponse) ProtoMessage() {}
 
 func (x *SearchItemsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[7]
+	mi := &file_inbox_v1_service_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -487,7 +631,7 @@ func (x *SearchItemsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchItemsResponse.ProtoReflect.Descriptor instead.
 func (*SearchItemsResponse) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{7}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SearchItemsResponse) GetItems() []*InboxItem {
@@ -507,7 +651,7 @@ type ClaimItemRequest struct {
 
 func (x *ClaimItemRequest) Reset() {
 	*x = ClaimItemRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[8]
+	mi := &file_inbox_v1_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -519,7 +663,7 @@ func (x *ClaimItemRequest) String() string {
 func (*ClaimItemRequest) ProtoMessage() {}
 
 func (x *ClaimItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[8]
+	mi := &file_inbox_v1_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -532,7 +676,7 @@ func (x *ClaimItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimItemRequest.ProtoReflect.Descriptor instead.
 func (*ClaimItemRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{8}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ClaimItemRequest) GetIdentity() *Identity {
@@ -558,7 +702,7 @@ type ClaimItemResponse struct {
 
 func (x *ClaimItemResponse) Reset() {
 	*x = ClaimItemResponse{}
-	mi := &file_inbox_v1_service_proto_msgTypes[9]
+	mi := &file_inbox_v1_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -570,7 +714,7 @@ func (x *ClaimItemResponse) String() string {
 func (*ClaimItemResponse) ProtoMessage() {}
 
 func (x *ClaimItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[9]
+	mi := &file_inbox_v1_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -583,7 +727,7 @@ func (x *ClaimItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimItemResponse.ProtoReflect.Descriptor instead.
 func (*ClaimItemResponse) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{9}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ClaimItemResponse) GetItem() *InboxItem {
@@ -603,7 +747,7 @@ type ReleaseItemRequest struct {
 
 func (x *ReleaseItemRequest) Reset() {
 	*x = ReleaseItemRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[10]
+	mi := &file_inbox_v1_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -615,7 +759,7 @@ func (x *ReleaseItemRequest) String() string {
 func (*ReleaseItemRequest) ProtoMessage() {}
 
 func (x *ReleaseItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[10]
+	mi := &file_inbox_v1_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -628,7 +772,7 @@ func (x *ReleaseItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseItemRequest.ProtoReflect.Descriptor instead.
 func (*ReleaseItemRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{10}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ReleaseItemRequest) GetIdentity() *Identity {
@@ -654,7 +798,7 @@ type ReleaseItemResponse struct {
 
 func (x *ReleaseItemResponse) Reset() {
 	*x = ReleaseItemResponse{}
-	mi := &file_inbox_v1_service_proto_msgTypes[11]
+	mi := &file_inbox_v1_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -666,7 +810,7 @@ func (x *ReleaseItemResponse) String() string {
 func (*ReleaseItemResponse) ProtoMessage() {}
 
 func (x *ReleaseItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[11]
+	mi := &file_inbox_v1_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -679,7 +823,7 @@ func (x *ReleaseItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReleaseItemResponse.ProtoReflect.Descriptor instead.
 func (*ReleaseItemResponse) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{11}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ReleaseItemResponse) GetItem() *InboxItem {
@@ -689,156 +833,31 @@ func (x *ReleaseItemResponse) GetItem() *InboxItem {
 	return nil
 }
 
-type RespondToItemRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Identity       *Identity              `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	Id             string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	Action         string                 `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
-	Comment        string                 `protobuf:"bytes,4,opt,name=comment,proto3" json:"comment,omitempty"`
-	OnBehalfOf     string                 `protobuf:"bytes,5,opt,name=on_behalf_of,json=onBehalfOf,proto3" json:"on_behalf_of,omitempty"`
-	OverrideReason string                 `protobuf:"bytes,6,opt,name=override_reason,json=overrideReason,proto3" json:"override_reason,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *RespondToItemRequest) Reset() {
-	*x = RespondToItemRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RespondToItemRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RespondToItemRequest) ProtoMessage() {}
-
-func (x *RespondToItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RespondToItemRequest.ProtoReflect.Descriptor instead.
-func (*RespondToItemRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *RespondToItemRequest) GetIdentity() *Identity {
-	if x != nil {
-		return x.Identity
-	}
-	return nil
-}
-
-func (x *RespondToItemRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *RespondToItemRequest) GetAction() string {
-	if x != nil {
-		return x.Action
-	}
-	return ""
-}
-
-func (x *RespondToItemRequest) GetComment() string {
-	if x != nil {
-		return x.Comment
-	}
-	return ""
-}
-
-func (x *RespondToItemRequest) GetOnBehalfOf() string {
-	if x != nil {
-		return x.OnBehalfOf
-	}
-	return ""
-}
-
-func (x *RespondToItemRequest) GetOverrideReason() string {
-	if x != nil {
-		return x.OverrideReason
-	}
-	return ""
-}
-
-type RespondToItemResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Item          *InboxItem             `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RespondToItemResponse) Reset() {
-	*x = RespondToItemResponse{}
-	mi := &file_inbox_v1_service_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RespondToItemResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RespondToItemResponse) ProtoMessage() {}
-
-func (x *RespondToItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RespondToItemResponse.ProtoReflect.Descriptor instead.
-func (*RespondToItemResponse) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{13}
-}
-
-func (x *RespondToItemResponse) GetItem() *InboxItem {
-	if x != nil {
-		return x.Item
-	}
-	return nil
-}
-
-type CompleteItemRequest struct {
+type ReassignItemRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Identity      *Identity              `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
 	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	FromActor     string                 `protobuf:"bytes,3,opt,name=from_actor,json=fromActor,proto3" json:"from_actor,omitempty"`
+	ToActor       string                 `protobuf:"bytes,4,opt,name=to_actor,json=toActor,proto3" json:"to_actor,omitempty"`
+	Reason        string                 `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CompleteItemRequest) Reset() {
-	*x = CompleteItemRequest{}
+func (x *ReassignItemRequest) Reset() {
+	*x = ReassignItemRequest{}
 	mi := &file_inbox_v1_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CompleteItemRequest) String() string {
+func (x *ReassignItemRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CompleteItemRequest) ProtoMessage() {}
+func (*ReassignItemRequest) ProtoMessage() {}
 
-func (x *CompleteItemRequest) ProtoReflect() protoreflect.Message {
+func (x *ReassignItemRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_inbox_v1_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -850,151 +869,68 @@ func (x *CompleteItemRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CompleteItemRequest.ProtoReflect.Descriptor instead.
-func (*CompleteItemRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ReassignItemRequest.ProtoReflect.Descriptor instead.
+func (*ReassignItemRequest) Descriptor() ([]byte, []int) {
 	return file_inbox_v1_service_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *CompleteItemRequest) GetIdentity() *Identity {
+func (x *ReassignItemRequest) GetIdentity() *Identity {
 	if x != nil {
 		return x.Identity
 	}
 	return nil
 }
 
-func (x *CompleteItemRequest) GetId() string {
+func (x *ReassignItemRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-type CompleteItemResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Item          *InboxItem             `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CompleteItemResponse) Reset() {
-	*x = CompleteItemResponse{}
-	mi := &file_inbox_v1_service_proto_msgTypes[15]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CompleteItemResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CompleteItemResponse) ProtoMessage() {}
-
-func (x *CompleteItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[15]
+func (x *ReassignItemRequest) GetFromActor() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CompleteItemResponse.ProtoReflect.Descriptor instead.
-func (*CompleteItemResponse) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{15}
-}
-
-func (x *CompleteItemResponse) GetItem() *InboxItem {
-	if x != nil {
-		return x.Item
-	}
-	return nil
-}
-
-type CancelItemRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Identity      *Identity              `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
-	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CancelItemRequest) Reset() {
-	*x = CancelItemRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CancelItemRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CancelItemRequest) ProtoMessage() {}
-
-func (x *CancelItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CancelItemRequest.ProtoReflect.Descriptor instead.
-func (*CancelItemRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{16}
-}
-
-func (x *CancelItemRequest) GetIdentity() *Identity {
-	if x != nil {
-		return x.Identity
-	}
-	return nil
-}
-
-func (x *CancelItemRequest) GetId() string {
-	if x != nil {
-		return x.Id
+		return x.FromActor
 	}
 	return ""
 }
 
-func (x *CancelItemRequest) GetReason() string {
+func (x *ReassignItemRequest) GetToActor() string {
+	if x != nil {
+		return x.ToActor
+	}
+	return ""
+}
+
+func (x *ReassignItemRequest) GetReason() string {
 	if x != nil {
 		return x.Reason
 	}
 	return ""
 }
 
-type CancelItemResponse struct {
+type ReassignItemResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Item          *InboxItem             `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CancelItemResponse) Reset() {
-	*x = CancelItemResponse{}
-	mi := &file_inbox_v1_service_proto_msgTypes[17]
+func (x *ReassignItemResponse) Reset() {
+	*x = ReassignItemResponse{}
+	mi := &file_inbox_v1_service_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CancelItemResponse) String() string {
+func (x *ReassignItemResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CancelItemResponse) ProtoMessage() {}
+func (*ReassignItemResponse) ProtoMessage() {}
 
-func (x *CancelItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[17]
+func (x *ReassignItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1005,12 +941,12 @@ func (x *CancelItemResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CancelItemResponse.ProtoReflect.Descriptor instead.
-func (*CancelItemResponse) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{17}
+// Deprecated: Use ReassignItemResponse.ProtoReflect.Descriptor instead.
+func (*ReassignItemResponse) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *CancelItemResponse) GetItem() *InboxItem {
+func (x *ReassignItemResponse) GetItem() *InboxItem {
 	if x != nil {
 		return x.Item
 	}
@@ -1030,7 +966,7 @@ type CommentOnItemRequest struct {
 
 func (x *CommentOnItemRequest) Reset() {
 	*x = CommentOnItemRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[18]
+	mi := &file_inbox_v1_service_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1042,7 +978,7 @@ func (x *CommentOnItemRequest) String() string {
 func (*CommentOnItemRequest) ProtoMessage() {}
 
 func (x *CommentOnItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[18]
+	mi := &file_inbox_v1_service_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1055,7 +991,7 @@ func (x *CommentOnItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommentOnItemRequest.ProtoReflect.Descriptor instead.
 func (*CommentOnItemRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{18}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CommentOnItemRequest) GetIdentity() *Identity {
@@ -1102,7 +1038,7 @@ type CommentOnItemResponse struct {
 
 func (x *CommentOnItemResponse) Reset() {
 	*x = CommentOnItemResponse{}
-	mi := &file_inbox_v1_service_proto_msgTypes[19]
+	mi := &file_inbox_v1_service_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1114,7 +1050,7 @@ func (x *CommentOnItemResponse) String() string {
 func (*CommentOnItemResponse) ProtoMessage() {}
 
 func (x *CommentOnItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[19]
+	mi := &file_inbox_v1_service_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1127,10 +1063,234 @@ func (x *CommentOnItemResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommentOnItemResponse.ProtoReflect.Descriptor instead.
 func (*CommentOnItemResponse) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{19}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CommentOnItemResponse) GetItem() *InboxItem {
+	if x != nil {
+		return x.Item
+	}
+	return nil
+}
+
+type AddEventRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Identity      *Identity              `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Detail        string                 `protobuf:"bytes,3,opt,name=detail,proto3" json:"detail,omitempty"`
+	DataType      string                 `protobuf:"bytes,4,opt,name=data_type,json=dataType,proto3" json:"data_type,omitempty"`
+	Data          *anypb.Any             `protobuf:"bytes,5,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddEventRequest) Reset() {
+	*x = AddEventRequest{}
+	mi := &file_inbox_v1_service_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddEventRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddEventRequest) ProtoMessage() {}
+
+func (x *AddEventRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddEventRequest.ProtoReflect.Descriptor instead.
+func (*AddEventRequest) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *AddEventRequest) GetIdentity() *Identity {
+	if x != nil {
+		return x.Identity
+	}
+	return nil
+}
+
+func (x *AddEventRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AddEventRequest) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
+func (x *AddEventRequest) GetDataType() string {
+	if x != nil {
+		return x.DataType
+	}
+	return ""
+}
+
+func (x *AddEventRequest) GetData() *anypb.Any {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type AddEventResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Item          *InboxItem             `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddEventResponse) Reset() {
+	*x = AddEventResponse{}
+	mi := &file_inbox_v1_service_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddEventResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddEventResponse) ProtoMessage() {}
+
+func (x *AddEventResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddEventResponse.ProtoReflect.Descriptor instead.
+func (*AddEventResponse) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *AddEventResponse) GetItem() *InboxItem {
+	if x != nil {
+		return x.Item
+	}
+	return nil
+}
+
+type CloseItemRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Identity      *Identity              `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CloseItemRequest) Reset() {
+	*x = CloseItemRequest{}
+	mi := &file_inbox_v1_service_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseItemRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseItemRequest) ProtoMessage() {}
+
+func (x *CloseItemRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseItemRequest.ProtoReflect.Descriptor instead.
+func (*CloseItemRequest) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *CloseItemRequest) GetIdentity() *Identity {
+	if x != nil {
+		return x.Identity
+	}
+	return nil
+}
+
+func (x *CloseItemRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CloseItemRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type CloseItemResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Item          *InboxItem             `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CloseItemResponse) Reset() {
+	*x = CloseItemResponse{}
+	mi := &file_inbox_v1_service_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CloseItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CloseItemResponse) ProtoMessage() {}
+
+func (x *CloseItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CloseItemResponse.ProtoReflect.Descriptor instead.
+func (*CloseItemResponse) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *CloseItemResponse) GetItem() *InboxItem {
 	if x != nil {
 		return x.Item
 	}
@@ -1148,7 +1308,7 @@ type TagItemRequest struct {
 
 func (x *TagItemRequest) Reset() {
 	*x = TagItemRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[20]
+	mi := &file_inbox_v1_service_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1160,7 +1320,7 @@ func (x *TagItemRequest) String() string {
 func (*TagItemRequest) ProtoMessage() {}
 
 func (x *TagItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[20]
+	mi := &file_inbox_v1_service_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1173,7 +1333,7 @@ func (x *TagItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TagItemRequest.ProtoReflect.Descriptor instead.
 func (*TagItemRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{20}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *TagItemRequest) GetIdentity() *Identity {
@@ -1197,6 +1357,42 @@ func (x *TagItemRequest) GetTags() []string {
 	return nil
 }
 
+type TagItemResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TagItemResponse) Reset() {
+	*x = TagItemResponse{}
+	mi := &file_inbox_v1_service_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TagItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TagItemResponse) ProtoMessage() {}
+
+func (x *TagItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TagItemResponse.ProtoReflect.Descriptor instead.
+func (*TagItemResponse) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{23}
+}
+
 type UntagItemRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Identity      *Identity              `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
@@ -1208,7 +1404,7 @@ type UntagItemRequest struct {
 
 func (x *UntagItemRequest) Reset() {
 	*x = UntagItemRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[21]
+	mi := &file_inbox_v1_service_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1220,7 +1416,7 @@ func (x *UntagItemRequest) String() string {
 func (*UntagItemRequest) ProtoMessage() {}
 
 func (x *UntagItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[21]
+	mi := &file_inbox_v1_service_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1233,7 +1429,7 @@ func (x *UntagItemRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UntagItemRequest.ProtoReflect.Descriptor instead.
 func (*UntagItemRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{21}
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *UntagItemRequest) GetIdentity() *Identity {
@@ -1257,29 +1453,27 @@ func (x *UntagItemRequest) GetTag() string {
 	return ""
 }
 
-type RedispatchItemRequest struct {
+type UntagItemResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Identity      *Identity              `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RedispatchItemRequest) Reset() {
-	*x = RedispatchItemRequest{}
-	mi := &file_inbox_v1_service_proto_msgTypes[22]
+func (x *UntagItemResponse) Reset() {
+	*x = UntagItemResponse{}
+	mi := &file_inbox_v1_service_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RedispatchItemRequest) String() string {
+func (x *UntagItemResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RedispatchItemRequest) ProtoMessage() {}
+func (*UntagItemResponse) ProtoMessage() {}
 
-func (x *RedispatchItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[22]
+func (x *UntagItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_inbox_v1_service_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1290,66 +1484,16 @@ func (x *RedispatchItemRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RedispatchItemRequest.ProtoReflect.Descriptor instead.
-func (*RedispatchItemRequest) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{22}
-}
-
-func (x *RedispatchItemRequest) GetIdentity() *Identity {
-	if x != nil {
-		return x.Identity
-	}
-	return nil
-}
-
-func (x *RedispatchItemRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type RedispatchItemResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RedispatchItemResponse) Reset() {
-	*x = RedispatchItemResponse{}
-	mi := &file_inbox_v1_service_proto_msgTypes[23]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RedispatchItemResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RedispatchItemResponse) ProtoMessage() {}
-
-func (x *RedispatchItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_inbox_v1_service_proto_msgTypes[23]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RedispatchItemResponse.ProtoReflect.Descriptor instead.
-func (*RedispatchItemResponse) Descriptor() ([]byte, []int) {
-	return file_inbox_v1_service_proto_rawDescGZIP(), []int{23}
+// Deprecated: Use UntagItemResponse.ProtoReflect.Descriptor instead.
+func (*UntagItemResponse) Descriptor() ([]byte, []int) {
+	return file_inbox_v1_service_proto_rawDescGZIP(), []int{25}
 }
 
 var File_inbox_v1_service_proto protoreflect.FileDescriptor
 
 const file_inbox_v1_service_proto_rawDesc = "" +
 	"\n" +
-	"\x16inbox/v1/service.proto\x12\binbox.v1\x1a\x13inbox/v1/item.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaa\x01\n" +
+	"\x16inbox/v1/service.proto\x12\binbox.v1\x1a\x19google/protobuf/any.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x13inbox/v1/item.proto\"\xaa\x01\n" +
 	"\bIdentity\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12!\n" +
 	"\fworkspace_id\x18\x02 \x01(\tR\vworkspaceId\x12!\n" +
@@ -1363,7 +1507,18 @@ const file_inbox_v1_service_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"P\n" +
+	"updated_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xc3\x02\n" +
+	"\x11CreateItemRequest\x12.\n" +
+	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x126\n" +
+	"\bdeadline\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\bdeadline\x12!\n" +
+	"\fpayload_type\x18\x05 \x01(\tR\vpayloadType\x12.\n" +
+	"\apayload\x18\x06 \x01(\v2\x14.google.protobuf.AnyR\apayload\x12\x12\n" +
+	"\x04tags\x18\a \x03(\tR\x04tags\x12'\n" +
+	"\x0fidempotency_key\x18\b \x01(\tR\x0eidempotencyKey\"=\n" +
+	"\x12CreateItemResponse\x12'\n" +
+	"\x04item\x18\x01 \x01(\v2\x13.inbox.v1.InboxItemR\x04item\"P\n" +
 	"\x0eGetItemRequest\x12.\n" +
 	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\":\n" +
@@ -1393,27 +1548,15 @@ const file_inbox_v1_service_proto_rawDesc = "" +
 	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\">\n" +
 	"\x13ReleaseItemResponse\x12'\n" +
-	"\x04item\x18\x01 \x01(\v2\x13.inbox.v1.InboxItemR\x04item\"\xd3\x01\n" +
-	"\x14RespondToItemRequest\x12.\n" +
+	"\x04item\x18\x01 \x01(\v2\x13.inbox.v1.InboxItemR\x04item\"\xa7\x01\n" +
+	"\x13ReassignItemRequest\x12.\n" +
 	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\x12\x16\n" +
-	"\x06action\x18\x03 \x01(\tR\x06action\x12\x18\n" +
-	"\acomment\x18\x04 \x01(\tR\acomment\x12 \n" +
-	"\fon_behalf_of\x18\x05 \x01(\tR\n" +
-	"onBehalfOf\x12'\n" +
-	"\x0foverride_reason\x18\x06 \x01(\tR\x0eoverrideReason\"@\n" +
-	"\x15RespondToItemResponse\x12'\n" +
-	"\x04item\x18\x01 \x01(\v2\x13.inbox.v1.InboxItemR\x04item\"U\n" +
-	"\x13CompleteItemRequest\x12.\n" +
-	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\"?\n" +
-	"\x14CompleteItemResponse\x12'\n" +
-	"\x04item\x18\x01 \x01(\v2\x13.inbox.v1.InboxItemR\x04item\"k\n" +
-	"\x11CancelItemRequest\x12.\n" +
-	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\x12\x16\n" +
-	"\x06reason\x18\x03 \x01(\tR\x06reason\"=\n" +
-	"\x12CancelItemResponse\x12'\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"from_actor\x18\x03 \x01(\tR\tfromActor\x12\x19\n" +
+	"\bto_actor\x18\x04 \x01(\tR\atoActor\x12\x16\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\"?\n" +
+	"\x14ReassignItemResponse\x12'\n" +
 	"\x04item\x18\x01 \x01(\v2\x13.inbox.v1.InboxItemR\x04item\"\x9e\x01\n" +
 	"\x14CommentOnItemRequest\x12.\n" +
 	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
@@ -1424,33 +1567,45 @@ const file_inbox_v1_service_proto_rawDesc = "" +
 	"visibility\x12\x12\n" +
 	"\x04refs\x18\x05 \x03(\tR\x04refs\"@\n" +
 	"\x15CommentOnItemResponse\x12'\n" +
+	"\x04item\x18\x01 \x01(\v2\x13.inbox.v1.InboxItemR\x04item\"\xb0\x01\n" +
+	"\x0fAddEventRequest\x12.\n" +
+	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x16\n" +
+	"\x06detail\x18\x03 \x01(\tR\x06detail\x12\x1b\n" +
+	"\tdata_type\x18\x04 \x01(\tR\bdataType\x12(\n" +
+	"\x04data\x18\x05 \x01(\v2\x14.google.protobuf.AnyR\x04data\";\n" +
+	"\x10AddEventResponse\x12'\n" +
+	"\x04item\x18\x01 \x01(\v2\x13.inbox.v1.InboxItemR\x04item\"j\n" +
+	"\x10CloseItemRequest\x12.\n" +
+	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"<\n" +
+	"\x11CloseItemResponse\x12'\n" +
 	"\x04item\x18\x01 \x01(\v2\x13.inbox.v1.InboxItemR\x04item\"d\n" +
 	"\x0eTagItemRequest\x12.\n" +
 	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x12\n" +
-	"\x04tags\x18\x03 \x03(\tR\x04tags\"d\n" +
+	"\x04tags\x18\x03 \x03(\tR\x04tags\"\x11\n" +
+	"\x0fTagItemResponse\"d\n" +
 	"\x10UntagItemRequest\x12.\n" +
 	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x10\n" +
-	"\x03tag\x18\x03 \x01(\tR\x03tag\"W\n" +
-	"\x15RedispatchItemRequest\x12.\n" +
-	"\bidentity\x18\x01 \x01(\v2\x12.inbox.v1.IdentityR\bidentity\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\tR\x02id\"\x18\n" +
-	"\x16RedispatchItemResponse2\x81\a\n" +
-	"\fInboxService\x12>\n" +
+	"\x03tag\x18\x03 \x01(\tR\x03tag\"\x13\n" +
+	"\x11UntagItemResponse2\xeb\x06\n" +
+	"\fInboxService\x12G\n" +
+	"\n" +
+	"CreateItem\x12\x1b.inbox.v1.CreateItemRequest\x1a\x1c.inbox.v1.CreateItemResponse\x12>\n" +
 	"\aGetItem\x12\x18.inbox.v1.GetItemRequest\x1a\x19.inbox.v1.GetItemResponse\x12D\n" +
 	"\tListItems\x12\x1a.inbox.v1.ListItemsRequest\x1a\x1b.inbox.v1.ListItemsResponse\x12J\n" +
 	"\vSearchItems\x12\x1c.inbox.v1.SearchItemsRequest\x1a\x1d.inbox.v1.SearchItemsResponse\x12D\n" +
 	"\tClaimItem\x12\x1a.inbox.v1.ClaimItemRequest\x1a\x1b.inbox.v1.ClaimItemResponse\x12J\n" +
-	"\vReleaseItem\x12\x1c.inbox.v1.ReleaseItemRequest\x1a\x1d.inbox.v1.ReleaseItemResponse\x12P\n" +
-	"\rRespondToItem\x12\x1e.inbox.v1.RespondToItemRequest\x1a\x1f.inbox.v1.RespondToItemResponse\x12M\n" +
-	"\fCompleteItem\x12\x1d.inbox.v1.CompleteItemRequest\x1a\x1e.inbox.v1.CompleteItemResponse\x12G\n" +
-	"\n" +
-	"CancelItem\x12\x1b.inbox.v1.CancelItemRequest\x1a\x1c.inbox.v1.CancelItemResponse\x12P\n" +
-	"\rCommentOnItem\x12\x1e.inbox.v1.CommentOnItemRequest\x1a\x1f.inbox.v1.CommentOnItemResponse\x12;\n" +
-	"\aTagItem\x12\x18.inbox.v1.TagItemRequest\x1a\x16.google.protobuf.Empty\x12?\n" +
-	"\tUntagItem\x12\x1a.inbox.v1.UntagItemRequest\x1a\x16.google.protobuf.Empty\x12S\n" +
-	"\x0eRedispatchItem\x12\x1f.inbox.v1.RedispatchItemRequest\x1a .inbox.v1.RedispatchItemResponseB7Z5github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1b\x06proto3"
+	"\vReleaseItem\x12\x1c.inbox.v1.ReleaseItemRequest\x1a\x1d.inbox.v1.ReleaseItemResponse\x12M\n" +
+	"\fReassignItem\x12\x1d.inbox.v1.ReassignItemRequest\x1a\x1e.inbox.v1.ReassignItemResponse\x12P\n" +
+	"\rCommentOnItem\x12\x1e.inbox.v1.CommentOnItemRequest\x1a\x1f.inbox.v1.CommentOnItemResponse\x12A\n" +
+	"\bAddEvent\x12\x19.inbox.v1.AddEventRequest\x1a\x1a.inbox.v1.AddEventResponse\x12D\n" +
+	"\tCloseItem\x12\x1a.inbox.v1.CloseItemRequest\x1a\x1b.inbox.v1.CloseItemResponse\x12>\n" +
+	"\aTagItem\x12\x18.inbox.v1.TagItemRequest\x1a\x19.inbox.v1.TagItemResponse\x12D\n" +
+	"\tUntagItem\x12\x1a.inbox.v1.UntagItemRequest\x1a\x1b.inbox.v1.UntagItemResponseB7Z5github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1b\x06proto3"
 
 var (
 	file_inbox_v1_service_proto_rawDescOnce sync.Once
@@ -1464,92 +1619,98 @@ func file_inbox_v1_service_proto_rawDescGZIP() []byte {
 	return file_inbox_v1_service_proto_rawDescData
 }
 
-var file_inbox_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_inbox_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_inbox_v1_service_proto_goTypes = []any{
-	(*Identity)(nil),               // 0: inbox.v1.Identity
-	(*InboxItem)(nil),              // 1: inbox.v1.InboxItem
-	(*GetItemRequest)(nil),         // 2: inbox.v1.GetItemRequest
-	(*GetItemResponse)(nil),        // 3: inbox.v1.GetItemResponse
-	(*ListItemsRequest)(nil),       // 4: inbox.v1.ListItemsRequest
-	(*ListItemsResponse)(nil),      // 5: inbox.v1.ListItemsResponse
-	(*SearchItemsRequest)(nil),     // 6: inbox.v1.SearchItemsRequest
-	(*SearchItemsResponse)(nil),    // 7: inbox.v1.SearchItemsResponse
-	(*ClaimItemRequest)(nil),       // 8: inbox.v1.ClaimItemRequest
-	(*ClaimItemResponse)(nil),      // 9: inbox.v1.ClaimItemResponse
-	(*ReleaseItemRequest)(nil),     // 10: inbox.v1.ReleaseItemRequest
-	(*ReleaseItemResponse)(nil),    // 11: inbox.v1.ReleaseItemResponse
-	(*RespondToItemRequest)(nil),   // 12: inbox.v1.RespondToItemRequest
-	(*RespondToItemResponse)(nil),  // 13: inbox.v1.RespondToItemResponse
-	(*CompleteItemRequest)(nil),    // 14: inbox.v1.CompleteItemRequest
-	(*CompleteItemResponse)(nil),   // 15: inbox.v1.CompleteItemResponse
-	(*CancelItemRequest)(nil),      // 16: inbox.v1.CancelItemRequest
-	(*CancelItemResponse)(nil),     // 17: inbox.v1.CancelItemResponse
-	(*CommentOnItemRequest)(nil),   // 18: inbox.v1.CommentOnItemRequest
-	(*CommentOnItemResponse)(nil),  // 19: inbox.v1.CommentOnItemResponse
-	(*TagItemRequest)(nil),         // 20: inbox.v1.TagItemRequest
-	(*UntagItemRequest)(nil),       // 21: inbox.v1.UntagItemRequest
-	(*RedispatchItemRequest)(nil),  // 22: inbox.v1.RedispatchItemRequest
-	(*RedispatchItemResponse)(nil), // 23: inbox.v1.RedispatchItemResponse
-	(*Item)(nil),                   // 24: inbox.v1.Item
-	(*timestamppb.Timestamp)(nil),  // 25: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),          // 26: google.protobuf.Empty
+	(*Identity)(nil),              // 0: inbox.v1.Identity
+	(*InboxItem)(nil),             // 1: inbox.v1.InboxItem
+	(*CreateItemRequest)(nil),     // 2: inbox.v1.CreateItemRequest
+	(*CreateItemResponse)(nil),    // 3: inbox.v1.CreateItemResponse
+	(*GetItemRequest)(nil),        // 4: inbox.v1.GetItemRequest
+	(*GetItemResponse)(nil),       // 5: inbox.v1.GetItemResponse
+	(*ListItemsRequest)(nil),      // 6: inbox.v1.ListItemsRequest
+	(*ListItemsResponse)(nil),     // 7: inbox.v1.ListItemsResponse
+	(*SearchItemsRequest)(nil),    // 8: inbox.v1.SearchItemsRequest
+	(*SearchItemsResponse)(nil),   // 9: inbox.v1.SearchItemsResponse
+	(*ClaimItemRequest)(nil),      // 10: inbox.v1.ClaimItemRequest
+	(*ClaimItemResponse)(nil),     // 11: inbox.v1.ClaimItemResponse
+	(*ReleaseItemRequest)(nil),    // 12: inbox.v1.ReleaseItemRequest
+	(*ReleaseItemResponse)(nil),   // 13: inbox.v1.ReleaseItemResponse
+	(*ReassignItemRequest)(nil),   // 14: inbox.v1.ReassignItemRequest
+	(*ReassignItemResponse)(nil),  // 15: inbox.v1.ReassignItemResponse
+	(*CommentOnItemRequest)(nil),  // 16: inbox.v1.CommentOnItemRequest
+	(*CommentOnItemResponse)(nil), // 17: inbox.v1.CommentOnItemResponse
+	(*AddEventRequest)(nil),       // 18: inbox.v1.AddEventRequest
+	(*AddEventResponse)(nil),      // 19: inbox.v1.AddEventResponse
+	(*CloseItemRequest)(nil),      // 20: inbox.v1.CloseItemRequest
+	(*CloseItemResponse)(nil),     // 21: inbox.v1.CloseItemResponse
+	(*TagItemRequest)(nil),        // 22: inbox.v1.TagItemRequest
+	(*TagItemResponse)(nil),       // 23: inbox.v1.TagItemResponse
+	(*UntagItemRequest)(nil),      // 24: inbox.v1.UntagItemRequest
+	(*UntagItemResponse)(nil),     // 25: inbox.v1.UntagItemResponse
+	(*Item)(nil),                  // 26: inbox.v1.Item
+	(*timestamppb.Timestamp)(nil), // 27: google.protobuf.Timestamp
+	(*anypb.Any)(nil),             // 28: google.protobuf.Any
 }
 var file_inbox_v1_service_proto_depIdxs = []int32{
-	24, // 0: inbox.v1.InboxItem.data:type_name -> inbox.v1.Item
-	25, // 1: inbox.v1.InboxItem.created_at:type_name -> google.protobuf.Timestamp
-	25, // 2: inbox.v1.InboxItem.updated_at:type_name -> google.protobuf.Timestamp
-	0,  // 3: inbox.v1.GetItemRequest.identity:type_name -> inbox.v1.Identity
-	1,  // 4: inbox.v1.GetItemResponse.item:type_name -> inbox.v1.InboxItem
-	0,  // 5: inbox.v1.ListItemsRequest.identity:type_name -> inbox.v1.Identity
-	25, // 6: inbox.v1.ListItemsRequest.cursor:type_name -> google.protobuf.Timestamp
-	1,  // 7: inbox.v1.ListItemsResponse.items:type_name -> inbox.v1.InboxItem
-	25, // 8: inbox.v1.ListItemsResponse.next_cursor:type_name -> google.protobuf.Timestamp
-	0,  // 9: inbox.v1.SearchItemsRequest.identity:type_name -> inbox.v1.Identity
-	1,  // 10: inbox.v1.SearchItemsResponse.items:type_name -> inbox.v1.InboxItem
-	0,  // 11: inbox.v1.ClaimItemRequest.identity:type_name -> inbox.v1.Identity
-	1,  // 12: inbox.v1.ClaimItemResponse.item:type_name -> inbox.v1.InboxItem
-	0,  // 13: inbox.v1.ReleaseItemRequest.identity:type_name -> inbox.v1.Identity
-	1,  // 14: inbox.v1.ReleaseItemResponse.item:type_name -> inbox.v1.InboxItem
-	0,  // 15: inbox.v1.RespondToItemRequest.identity:type_name -> inbox.v1.Identity
-	1,  // 16: inbox.v1.RespondToItemResponse.item:type_name -> inbox.v1.InboxItem
-	0,  // 17: inbox.v1.CompleteItemRequest.identity:type_name -> inbox.v1.Identity
-	1,  // 18: inbox.v1.CompleteItemResponse.item:type_name -> inbox.v1.InboxItem
-	0,  // 19: inbox.v1.CancelItemRequest.identity:type_name -> inbox.v1.Identity
-	1,  // 20: inbox.v1.CancelItemResponse.item:type_name -> inbox.v1.InboxItem
+	26, // 0: inbox.v1.InboxItem.data:type_name -> inbox.v1.Item
+	27, // 1: inbox.v1.InboxItem.created_at:type_name -> google.protobuf.Timestamp
+	27, // 2: inbox.v1.InboxItem.updated_at:type_name -> google.protobuf.Timestamp
+	0,  // 3: inbox.v1.CreateItemRequest.identity:type_name -> inbox.v1.Identity
+	27, // 4: inbox.v1.CreateItemRequest.deadline:type_name -> google.protobuf.Timestamp
+	28, // 5: inbox.v1.CreateItemRequest.payload:type_name -> google.protobuf.Any
+	1,  // 6: inbox.v1.CreateItemResponse.item:type_name -> inbox.v1.InboxItem
+	0,  // 7: inbox.v1.GetItemRequest.identity:type_name -> inbox.v1.Identity
+	1,  // 8: inbox.v1.GetItemResponse.item:type_name -> inbox.v1.InboxItem
+	0,  // 9: inbox.v1.ListItemsRequest.identity:type_name -> inbox.v1.Identity
+	27, // 10: inbox.v1.ListItemsRequest.cursor:type_name -> google.protobuf.Timestamp
+	1,  // 11: inbox.v1.ListItemsResponse.items:type_name -> inbox.v1.InboxItem
+	27, // 12: inbox.v1.ListItemsResponse.next_cursor:type_name -> google.protobuf.Timestamp
+	0,  // 13: inbox.v1.SearchItemsRequest.identity:type_name -> inbox.v1.Identity
+	1,  // 14: inbox.v1.SearchItemsResponse.items:type_name -> inbox.v1.InboxItem
+	0,  // 15: inbox.v1.ClaimItemRequest.identity:type_name -> inbox.v1.Identity
+	1,  // 16: inbox.v1.ClaimItemResponse.item:type_name -> inbox.v1.InboxItem
+	0,  // 17: inbox.v1.ReleaseItemRequest.identity:type_name -> inbox.v1.Identity
+	1,  // 18: inbox.v1.ReleaseItemResponse.item:type_name -> inbox.v1.InboxItem
+	0,  // 19: inbox.v1.ReassignItemRequest.identity:type_name -> inbox.v1.Identity
+	1,  // 20: inbox.v1.ReassignItemResponse.item:type_name -> inbox.v1.InboxItem
 	0,  // 21: inbox.v1.CommentOnItemRequest.identity:type_name -> inbox.v1.Identity
 	1,  // 22: inbox.v1.CommentOnItemResponse.item:type_name -> inbox.v1.InboxItem
-	0,  // 23: inbox.v1.TagItemRequest.identity:type_name -> inbox.v1.Identity
-	0,  // 24: inbox.v1.UntagItemRequest.identity:type_name -> inbox.v1.Identity
-	0,  // 25: inbox.v1.RedispatchItemRequest.identity:type_name -> inbox.v1.Identity
-	2,  // 26: inbox.v1.InboxService.GetItem:input_type -> inbox.v1.GetItemRequest
-	4,  // 27: inbox.v1.InboxService.ListItems:input_type -> inbox.v1.ListItemsRequest
-	6,  // 28: inbox.v1.InboxService.SearchItems:input_type -> inbox.v1.SearchItemsRequest
-	8,  // 29: inbox.v1.InboxService.ClaimItem:input_type -> inbox.v1.ClaimItemRequest
-	10, // 30: inbox.v1.InboxService.ReleaseItem:input_type -> inbox.v1.ReleaseItemRequest
-	12, // 31: inbox.v1.InboxService.RespondToItem:input_type -> inbox.v1.RespondToItemRequest
-	14, // 32: inbox.v1.InboxService.CompleteItem:input_type -> inbox.v1.CompleteItemRequest
-	16, // 33: inbox.v1.InboxService.CancelItem:input_type -> inbox.v1.CancelItemRequest
-	18, // 34: inbox.v1.InboxService.CommentOnItem:input_type -> inbox.v1.CommentOnItemRequest
-	20, // 35: inbox.v1.InboxService.TagItem:input_type -> inbox.v1.TagItemRequest
-	21, // 36: inbox.v1.InboxService.UntagItem:input_type -> inbox.v1.UntagItemRequest
-	22, // 37: inbox.v1.InboxService.RedispatchItem:input_type -> inbox.v1.RedispatchItemRequest
-	3,  // 38: inbox.v1.InboxService.GetItem:output_type -> inbox.v1.GetItemResponse
-	5,  // 39: inbox.v1.InboxService.ListItems:output_type -> inbox.v1.ListItemsResponse
-	7,  // 40: inbox.v1.InboxService.SearchItems:output_type -> inbox.v1.SearchItemsResponse
-	9,  // 41: inbox.v1.InboxService.ClaimItem:output_type -> inbox.v1.ClaimItemResponse
-	11, // 42: inbox.v1.InboxService.ReleaseItem:output_type -> inbox.v1.ReleaseItemResponse
-	13, // 43: inbox.v1.InboxService.RespondToItem:output_type -> inbox.v1.RespondToItemResponse
-	15, // 44: inbox.v1.InboxService.CompleteItem:output_type -> inbox.v1.CompleteItemResponse
-	17, // 45: inbox.v1.InboxService.CancelItem:output_type -> inbox.v1.CancelItemResponse
-	19, // 46: inbox.v1.InboxService.CommentOnItem:output_type -> inbox.v1.CommentOnItemResponse
-	26, // 47: inbox.v1.InboxService.TagItem:output_type -> google.protobuf.Empty
-	26, // 48: inbox.v1.InboxService.UntagItem:output_type -> google.protobuf.Empty
-	23, // 49: inbox.v1.InboxService.RedispatchItem:output_type -> inbox.v1.RedispatchItemResponse
-	38, // [38:50] is the sub-list for method output_type
-	26, // [26:38] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	0,  // 23: inbox.v1.AddEventRequest.identity:type_name -> inbox.v1.Identity
+	28, // 24: inbox.v1.AddEventRequest.data:type_name -> google.protobuf.Any
+	1,  // 25: inbox.v1.AddEventResponse.item:type_name -> inbox.v1.InboxItem
+	0,  // 26: inbox.v1.CloseItemRequest.identity:type_name -> inbox.v1.Identity
+	1,  // 27: inbox.v1.CloseItemResponse.item:type_name -> inbox.v1.InboxItem
+	0,  // 28: inbox.v1.TagItemRequest.identity:type_name -> inbox.v1.Identity
+	0,  // 29: inbox.v1.UntagItemRequest.identity:type_name -> inbox.v1.Identity
+	2,  // 30: inbox.v1.InboxService.CreateItem:input_type -> inbox.v1.CreateItemRequest
+	4,  // 31: inbox.v1.InboxService.GetItem:input_type -> inbox.v1.GetItemRequest
+	6,  // 32: inbox.v1.InboxService.ListItems:input_type -> inbox.v1.ListItemsRequest
+	8,  // 33: inbox.v1.InboxService.SearchItems:input_type -> inbox.v1.SearchItemsRequest
+	10, // 34: inbox.v1.InboxService.ClaimItem:input_type -> inbox.v1.ClaimItemRequest
+	12, // 35: inbox.v1.InboxService.ReleaseItem:input_type -> inbox.v1.ReleaseItemRequest
+	14, // 36: inbox.v1.InboxService.ReassignItem:input_type -> inbox.v1.ReassignItemRequest
+	16, // 37: inbox.v1.InboxService.CommentOnItem:input_type -> inbox.v1.CommentOnItemRequest
+	18, // 38: inbox.v1.InboxService.AddEvent:input_type -> inbox.v1.AddEventRequest
+	20, // 39: inbox.v1.InboxService.CloseItem:input_type -> inbox.v1.CloseItemRequest
+	22, // 40: inbox.v1.InboxService.TagItem:input_type -> inbox.v1.TagItemRequest
+	24, // 41: inbox.v1.InboxService.UntagItem:input_type -> inbox.v1.UntagItemRequest
+	3,  // 42: inbox.v1.InboxService.CreateItem:output_type -> inbox.v1.CreateItemResponse
+	5,  // 43: inbox.v1.InboxService.GetItem:output_type -> inbox.v1.GetItemResponse
+	7,  // 44: inbox.v1.InboxService.ListItems:output_type -> inbox.v1.ListItemsResponse
+	9,  // 45: inbox.v1.InboxService.SearchItems:output_type -> inbox.v1.SearchItemsResponse
+	11, // 46: inbox.v1.InboxService.ClaimItem:output_type -> inbox.v1.ClaimItemResponse
+	13, // 47: inbox.v1.InboxService.ReleaseItem:output_type -> inbox.v1.ReleaseItemResponse
+	15, // 48: inbox.v1.InboxService.ReassignItem:output_type -> inbox.v1.ReassignItemResponse
+	17, // 49: inbox.v1.InboxService.CommentOnItem:output_type -> inbox.v1.CommentOnItemResponse
+	19, // 50: inbox.v1.InboxService.AddEvent:output_type -> inbox.v1.AddEventResponse
+	21, // 51: inbox.v1.InboxService.CloseItem:output_type -> inbox.v1.CloseItemResponse
+	23, // 52: inbox.v1.InboxService.TagItem:output_type -> inbox.v1.TagItemResponse
+	25, // 53: inbox.v1.InboxService.UntagItem:output_type -> inbox.v1.UntagItemResponse
+	42, // [42:54] is the sub-list for method output_type
+	30, // [30:42] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_inbox_v1_service_proto_init() }
@@ -1564,7 +1725,7 @@ func file_inbox_v1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_inbox_v1_service_proto_rawDesc), len(file_inbox_v1_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   24,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

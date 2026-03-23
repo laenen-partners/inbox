@@ -1,16 +1,17 @@
 package ui
 
 import (
-	"fmt"
-
-	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/dsx/ui/badge"
 	"github.com/laenen-partners/inbox"
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 )
 
 templ detailDrawer(data detailData) {
-	<div class="divide-y divide-base-200" data-signals='{"__link":""}' data-effect="if($__link){navigator.clipboard.writeText($__link);$__link='';}">
+	<div
+		class="divide-y divide-base-200"
+		data-signals='{"__link":""}'
+		data-effect="if($__link){navigator.clipboard.writeText($__link);$__link='';}"
+	>
 		// Header
 		<div class="pb-4">
 			<div class="flex items-start justify-between gap-3">
@@ -31,7 +32,6 @@ templ detailDrawer(data detailData) {
 				</p>
 			}
 		</div>
-
 		// Meta
 		<div class="py-4">
 			<div class="grid grid-cols-3 gap-x-4 gap-y-2.5">
@@ -50,7 +50,6 @@ templ detailDrawer(data detailData) {
 				@metaField("Age", formatAge(data.Item.CreatedAt))
 			</div>
 		</div>
-
 		// Context links
 		if len(data.Links) > 0 {
 			<div class="py-4">
@@ -64,50 +63,18 @@ templ detailDrawer(data detailData) {
 				</div>
 			</div>
 		}
-
 		// Content (from ContentProvider)
 		if data.Content != nil {
 			<div class="py-4">
 				@data.Content
 			</div>
 		}
-
-		// Workflow status
-		if data.WorkflowState != nil {
-			<div class="py-4">
-				@sectionLabel("Workflow")
-				<div class="flex items-center gap-2 mt-2.5">
-					if data.WorkflowState.Status == "completed" {
-						<span class="badge badge-success badge-sm">Completed</span>
-					} else if data.WorkflowState.Status == "running" {
-						<span class="badge badge-info badge-sm">Running</span>
-					} else if data.WorkflowState.Status == "failed" {
-						<span class="badge badge-error badge-sm">Failed</span>
-					} else {
-						<span class="badge badge-warning badge-sm">Waiting</span>
-					}
-					<span class="text-sm">{ data.WorkflowState.Label }</span>
-				</div>
-				if data.WorkflowState.Status == "waiting" || data.WorkflowState.Status == "failed" {
-					<div class="mt-2 flex items-center gap-2">
-						<span class="text-xs text-warning">Workflow did not resume</span>
-						<button class="btn btn-xs btn-outline"
-							{ ds.OnClick(ds.Post(fmt.Sprintf("%s/items/%s/retry-dispatch", data.BasePath, data.Item.ID)))... }
-						>
-							Resend Response
-						</button>
-					</div>
-				}
-			</div>
-		}
-
 		// Actions
 		if data.Item.Status() == "open" || (data.Item.Status() == "claimed" && data.IsClaimant) {
 			<div class="py-4">
 				@actionButtons(data)
 			</div>
 		}
-
 		// Activity
 		if len(data.Item.Events()) > 0 {
 			<div class="py-4">
@@ -119,7 +86,6 @@ templ detailDrawer(data detailData) {
 				</div>
 			</div>
 		}
-
 		// Comment
 		<div class="pt-4">
 			@commentForm(data)

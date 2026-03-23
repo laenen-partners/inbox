@@ -1,7 +1,7 @@
 package token
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,8 +9,8 @@ import (
 	"github.com/laenen-partners/dsx/ds"
 	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
-	"github.com/laenen-partners/inbox/schema"
-	schemav1 "github.com/laenen-partners/inbox/schema/gen/schema/v1"
+	"github.com/laenen-partners/inbox/cmd/inboxui/schema"
+	schemav1 "github.com/laenen-partners/inbox/cmd/inboxui/schema/gen/schema/v1"
 	"github.com/starfederation/datastar-go/datastar"
 )
 
@@ -93,13 +93,6 @@ func (h *Handler) handlePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read the schema field values
-	var rawSignals map[string]json.RawMessage
-	_ = ds.ReadRaw(r, &rawSignals)
-
-	// Build response comment from schema fields
-	comment := "Submitted via presigned link"
-
 	// Construct identity from token claims actor string (format "type:id")
 	ctx := r.Context()
 	pt := identity.PrincipalService
@@ -114,18 +107,11 @@ func (h *Handler) handlePost(w http.ResponseWriter, r *http.Request) {
 	claimsID, _ := identity.New("token", "token", pid, pt, nil)
 	ctx = identity.WithContext(ctx, claimsID)
 
-	_, err = h.inbox.Respond(ctx, claims.ItemID, inbox.Response{
-		Action:  "submit",
-		Comment: comment,
-	})
-	if err != nil {
+	_, err = h.inbox.Close(ctx, claims.ItemID, "submitted via presigned link")
+	if err != nil && !errors.Is(err, inbox.ErrTerminalStatus) {
 		sseError(w, r, err)
 		return
 	}
-
-	// Complete the item
-	// Item may already be completed or not claimable — ignore error.
-	_, _ = h.inbox.Complete(ctx, claims.ItemID)
 
 	sse := datastar.NewSSE(w, r)
 	_ = ds.Send.Toast(sse, ds.ToastSuccess, "Response submitted. You can close this page.")

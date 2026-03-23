@@ -8,136 +8,34 @@ import (
 templ actionButtons(data detailData) {
 	<div class="flex flex-wrap gap-1.5">
 		switch data.Item.Status() {
-		case "open":
-			@button.Button(button.Props{
-				Variant: button.VariantNeutral,
-				Size:    button.SizeSm,
-				OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/claim"),
-			}) {
-				Claim
-			}
-			@cancelButton(data)
-		case "claimed":
-			if data.IsClaimant {
-				if data.Content == nil {
-					// Legacy: show respond + complete in shell
-					@respondButton(data)
-					@button.Button(button.Props{
-						Variant: button.VariantSuccess,
-						Size:    button.SizeSm,
-						OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/complete"),
-					}) {
-						Complete
-					}
-				}
-				// Always in shell: Release + Cancel
-				@button.Button(button.Props{
-					Variant: button.VariantGhost,
-					Size:    button.SizeSm,
-					OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/release"),
-				}) {
-					Release
-				}
-				@cancelButton(data)
-			}
-		}
-	</div>
-}
-
-templ respondButton(data detailData) {
-	{{ signals := ds.NewSignals("respond-form", struct {
-		Action  string `json:"action"`
-		Comment string `json:"comment"`
-		Open    bool   `json:"open"`
-	}{}) }}
-	<div data-signals={ signals.DataSignals }>
-		@button.Button(button.Props{
-			Variant: button.VariantOutline,
-			Size:    button.SizeSm,
-			OnClick: signals.Toggle("open"),
-		}) {
-			Respond
-		}
-		<div { ds.Show(signals.Signal("open"))... } class="mt-2.5 p-3 bg-base-200/40 rounded-lg border border-base-300">
-			<div class="flex flex-col gap-4">
-				<div class="w-full">
-					<label class="label"><span class="label-text text-xs font-medium">Action</span></label>
-					<input
-						type="text"
-						class="input input-bordered input-sm w-full"
-						placeholder="e.g. approve, reject"
-						{ ds.Bind("respond-form", "action")... }
-					/>
-					<p class="text-[11px] text-base-content/40 mt-1">The action to record against this item</p>
-				</div>
-				<div class="w-full">
-					<label class="label"><span class="label-text text-xs font-medium">Comment</span></label>
-					<textarea
-						class="textarea textarea-bordered textarea-sm w-full"
-						placeholder="Optional comment..."
-						rows="2"
-						{ ds.Bind("respond-form", "comment")... }
-					></textarea>
-					<p class="text-[11px] text-base-content/40 mt-1">Additional context for this response</p>
-				</div>
-			</div>
-			<div class="sticky bottom-0 bg-base-100 pt-4 border-t border-base-200 mt-4">
+			case "open":
 				@button.Button(button.Props{
 					Variant: button.VariantNeutral,
 					Size:    button.SizeSm,
-					OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/respond", ds.WithFilterSignals("respond-form")),
+					OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/claim"),
 				}) {
-					Submit
+					Claim
 				}
-			</div>
-		</div>
-	</div>
-}
-
-templ cancelButton(data detailData) {
-	{{ signals := ds.NewSignals("cancel-form", struct {
-		Reason string `json:"reason"`
-		Open   bool   `json:"open"`
-	}{}) }}
-	<div data-signals={ signals.DataSignals }>
-		@button.Button(button.Props{
-			Variant: button.VariantGhost,
-			Size:    button.SizeSm,
-			OnClick: signals.Toggle("open"),
-			Class:   "text-error",
-		}) {
-			Cancel
+			case "claimed":
+				if data.IsClaimant {
+					@button.Button(button.Props{
+						Variant: button.VariantGhost,
+						Size:    button.SizeSm,
+						OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/release"),
+					}) {
+						Release
+					}
+				}
 		}
-		<div { ds.Show(signals.Signal("open"))... } class="mt-2.5 p-3 bg-error/5 rounded-lg border border-error/15">
-			<div class="flex flex-col gap-4">
-				<div class="w-full">
-					<label class="label"><span class="label-text text-xs font-medium">Reason</span></label>
-					<textarea
-						class="textarea textarea-bordered textarea-sm w-full"
-						placeholder="Reason for cancellation"
-						rows="2"
-						{ ds.Bind("cancel-form", "reason")... }
-					></textarea>
-					<p class="text-[11px] text-base-content/40 mt-1">Explain why this item is being cancelled</p>
-				</div>
-			</div>
-			<div class="sticky bottom-0 bg-base-100 pt-4 border-t border-base-200 mt-4">
-				@button.Button(button.Props{
-					Variant: button.VariantError,
-					Size:    button.SizeSm,
-					OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/cancel", ds.WithFilterSignals("cancel-form")),
-				}) {
-					Confirm Cancel
-				}
-			</div>
-		</div>
 	</div>
 }
 
 templ commentForm(data detailData) {
-	{{ signals := ds.NewSignals("comment-form", struct {
-		Body string `json:"body"`
-	}{}) }}
+	{{
+		signals := ds.NewSignals("comment-form", struct {
+			Body string `json:"body"`
+		}{})
+	}}
 	<div data-signals={ signals.DataSignals }>
 		@sectionLabel("Add Comment")
 		<textarea
@@ -150,7 +48,7 @@ templ commentForm(data detailData) {
 			@button.Button(button.Props{
 				Variant: button.VariantGhost,
 				Size:    button.SizeSm,
-				OnClick: ds.Post(data.BasePath + "/items/" + data.Item.ID + "/comment", ds.WithFilterSignals("comment-form")),
+				OnClick: ds.Post(data.BasePath+"/items/"+data.Item.ID+"/comment", ds.WithFilterSignals("comment-form")),
 			}) {
 				Comment
 			}

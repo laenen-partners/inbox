@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	inboxtoken "github.com/laenen-partners/inbox/token"
+	inboxtoken "github.com/laenen-partners/inbox/cmd/inboxui/token"
 )
 
 // HMACTokens implements token.Signer and token.Verifier using HMAC-SHA256 JWTs.

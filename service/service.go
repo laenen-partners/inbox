@@ -11,36 +11,49 @@ import (
 	inboxv1 "github.com/laenen-partners/inbox/gen/inbox/v1"
 	"github.com/laenen-partners/inbox/gen/inbox/v1/inboxv1connect"
 	"github.com/laenen-partners/tags"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// Option configures a Handler.
-type Option func(*Handler)
-
-// WithRespondCompletes makes RespondToItem also transition the item to
-// completed using the Op builder path, which benefits from two-phase dispatch.
-func WithRespondCompletes() Option {
-	return func(h *Handler) {
-		h.respondCompletes = true
-	}
-}
-
 // Handler implements the InboxService Connect-RPC service.
 type Handler struct {
-	ib               *inbox.Inbox
-	respondCompletes bool
+	ib *inbox.Inbox
 }
 
 var _ inboxv1connect.InboxServiceHandler = (*Handler)(nil)
 
 // NewHandler creates an InboxService handler backed by the given inbox.
-func NewHandler(ib *inbox.Inbox, opts ...Option) *Handler {
-	h := &Handler{ib: ib}
-	for _, o := range opts {
-		o(h)
+func NewHandler(ib *inbox.Inbox) *Handler {
+	return &Handler{ib: ib}
+}
+
+func (h *Handler) CreateItem(ctx context.Context, req *connect.Request[inboxv1.CreateItemRequest]) (*connect.Response[inboxv1.CreateItemResponse], error) {
+	ctx, err := ctxWithIdentity(ctx, req.Msg.Identity)
+	if err != nil {
+		return nil, err
 	}
-	return h
+
+	meta := inbox.Meta{
+		Title:          req.Msg.Title,
+		Description:    req.Msg.Description,
+		IdempotencyKey: req.Msg.IdempotencyKey,
+	}
+	if req.Msg.Deadline != nil {
+		t := req.Msg.Deadline.AsTime()
+		meta.Deadline = &t
+	}
+	if req.Msg.Payload != nil {
+		meta.PayloadAny = req.Msg.Payload
+		meta.PayloadTypeName = req.Msg.PayloadType
+	}
+	if len(req.Msg.Tags) > 0 {
+		meta.Tags = tags.FromStrings(req.Msg.Tags)
+	}
+
+	item, err := h.ib.Create(ctx, meta)
+	if err != nil {
+		return nil, mapError(err)
+	}
+	return connect.NewResponse(&inboxv1.CreateItemResponse{Item: toProto(item)}), nil
 }
 
 func (h *Handler) GetItem(ctx context.Context, req *connect.Request[inboxv1.GetItemRequest]) (*connect.Response[inboxv1.GetItemResponse], error) {
@@ -99,11 +112,7 @@ func (h *Handler) ClaimItem(ctx context.Context, req *connect.Request[inboxv1.Cl
 	if err != nil {
 		return nil, err
 	}
-	actor := actorStr(ctx)
-	item, err := h.ib.On(ctx, req.Msg.Id).
-		TransitionTo(inbox.StatusClaimed).
-		Tag(tags.Build("assignee", actor)).
-		Apply()
+	item, err := h.ib.Claim(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, mapError(err)
 	}
@@ -115,68 +124,23 @@ func (h *Handler) ReleaseItem(ctx context.Context, req *connect.Request[inboxv1.
 	if err != nil {
 		return nil, err
 	}
-	current, err := h.ib.Get(ctx, req.Msg.Id)
-	if err != nil {
-		return nil, mapError(err)
-	}
-	assignee := current.Tags.Value("assignee")
-	op := h.ib.On(ctx, req.Msg.Id).TransitionTo(inbox.StatusOpen)
-	if assignee != "" {
-		op = op.Untag(tags.Build("assignee", assignee))
-	}
-	item, err := op.Apply()
+	item, err := h.ib.Release(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, mapError(err)
 	}
 	return connect.NewResponse(&inboxv1.ReleaseItemResponse{Item: toProto(item)}), nil
 }
 
-func (h *Handler) RespondToItem(ctx context.Context, req *connect.Request[inboxv1.RespondToItemRequest]) (*connect.Response[inboxv1.RespondToItemResponse], error) {
+func (h *Handler) ReassignItem(ctx context.Context, req *connect.Request[inboxv1.ReassignItemRequest]) (*connect.Response[inboxv1.ReassignItemResponse], error) {
 	ctx, err := ctxWithIdentity(ctx, req.Msg.Identity)
 	if err != nil {
 		return nil, err
 	}
-
-	var item inbox.Item
-	if h.respondCompletes {
-		item, err = h.ib.On(ctx, req.Msg.Id).
-			Respond(req.Msg.Action, req.Msg.Comment).
-			TransitionTo(inbox.StatusCompleted).
-			Apply()
-	} else {
-		item, err = h.ib.Respond(ctx, req.Msg.Id, inbox.Response{
-			Action:  req.Msg.Action,
-			Comment: req.Msg.Comment,
-		})
-	}
+	item, err := h.ib.Reassign(ctx, req.Msg.Id, req.Msg.FromActor, req.Msg.ToActor, req.Msg.Reason)
 	if err != nil {
 		return nil, mapError(err)
 	}
-	return connect.NewResponse(&inboxv1.RespondToItemResponse{Item: toProto(item)}), nil
-}
-
-func (h *Handler) CompleteItem(ctx context.Context, req *connect.Request[inboxv1.CompleteItemRequest]) (*connect.Response[inboxv1.CompleteItemResponse], error) {
-	ctx, err := ctxWithIdentity(ctx, req.Msg.Identity)
-	if err != nil {
-		return nil, err
-	}
-	item, err := h.ib.Complete(ctx, req.Msg.Id)
-	if err != nil {
-		return nil, mapError(err)
-	}
-	return connect.NewResponse(&inboxv1.CompleteItemResponse{Item: toProto(item)}), nil
-}
-
-func (h *Handler) CancelItem(ctx context.Context, req *connect.Request[inboxv1.CancelItemRequest]) (*connect.Response[inboxv1.CancelItemResponse], error) {
-	ctx, err := ctxWithIdentity(ctx, req.Msg.Identity)
-	if err != nil {
-		return nil, err
-	}
-	item, err := h.ib.Cancel(ctx, req.Msg.Id, req.Msg.Reason)
-	if err != nil {
-		return nil, mapError(err)
-	}
-	return connect.NewResponse(&inboxv1.CancelItemResponse{Item: toProto(item)}), nil
+	return connect.NewResponse(&inboxv1.ReassignItemResponse{Item: toProto(item)}), nil
 }
 
 func (h *Handler) CommentOnItem(ctx context.Context, req *connect.Request[inboxv1.CommentOnItemRequest]) (*connect.Response[inboxv1.CommentOnItemResponse], error) {
@@ -195,7 +159,37 @@ func (h *Handler) CommentOnItem(ctx context.Context, req *connect.Request[inboxv
 	return connect.NewResponse(&inboxv1.CommentOnItemResponse{Item: toProto(item)}), nil
 }
 
-func (h *Handler) TagItem(ctx context.Context, req *connect.Request[inboxv1.TagItemRequest]) (*connect.Response[emptypb.Empty], error) {
+func (h *Handler) AddEvent(ctx context.Context, req *connect.Request[inboxv1.AddEventRequest]) (*connect.Response[inboxv1.AddEventResponse], error) {
+	ctx, err := ctxWithIdentity(ctx, req.Msg.Identity)
+	if err != nil {
+		return nil, err
+	}
+	evt := &inboxv1.Event{
+		Actor:    actorStr(ctx),
+		Detail:   req.Msg.Detail,
+		DataType: req.Msg.DataType,
+		Data:     req.Msg.Data,
+	}
+	item, err := h.ib.AddEvent(ctx, req.Msg.Id, evt)
+	if err != nil {
+		return nil, mapError(err)
+	}
+	return connect.NewResponse(&inboxv1.AddEventResponse{Item: toProto(item)}), nil
+}
+
+func (h *Handler) CloseItem(ctx context.Context, req *connect.Request[inboxv1.CloseItemRequest]) (*connect.Response[inboxv1.CloseItemResponse], error) {
+	ctx, err := ctxWithIdentity(ctx, req.Msg.Identity)
+	if err != nil {
+		return nil, err
+	}
+	item, err := h.ib.Close(ctx, req.Msg.Id, req.Msg.Reason)
+	if err != nil {
+		return nil, mapError(err)
+	}
+	return connect.NewResponse(&inboxv1.CloseItemResponse{Item: toProto(item)}), nil
+}
+
+func (h *Handler) TagItem(ctx context.Context, req *connect.Request[inboxv1.TagItemRequest]) (*connect.Response[inboxv1.TagItemResponse], error) {
 	ctx, err := ctxWithIdentity(ctx, req.Msg.Identity)
 	if err != nil {
 		return nil, err
@@ -203,10 +197,10 @@ func (h *Handler) TagItem(ctx context.Context, req *connect.Request[inboxv1.TagI
 	if err := h.ib.Tag(ctx, req.Msg.Id, req.Msg.Tags...); err != nil {
 		return nil, mapError(err)
 	}
-	return connect.NewResponse(&emptypb.Empty{}), nil
+	return connect.NewResponse(&inboxv1.TagItemResponse{}), nil
 }
 
-func (h *Handler) UntagItem(ctx context.Context, req *connect.Request[inboxv1.UntagItemRequest]) (*connect.Response[emptypb.Empty], error) {
+func (h *Handler) UntagItem(ctx context.Context, req *connect.Request[inboxv1.UntagItemRequest]) (*connect.Response[inboxv1.UntagItemResponse], error) {
 	ctx, err := ctxWithIdentity(ctx, req.Msg.Identity)
 	if err != nil {
 		return nil, err
@@ -214,18 +208,7 @@ func (h *Handler) UntagItem(ctx context.Context, req *connect.Request[inboxv1.Un
 	if err := h.ib.Untag(ctx, req.Msg.Id, req.Msg.Tag); err != nil {
 		return nil, mapError(err)
 	}
-	return connect.NewResponse(&emptypb.Empty{}), nil
-}
-
-func (h *Handler) RedispatchItem(ctx context.Context, req *connect.Request[inboxv1.RedispatchItemRequest]) (*connect.Response[inboxv1.RedispatchItemResponse], error) {
-	ctx, err := ctxWithIdentity(ctx, req.Msg.Identity)
-	if err != nil {
-		return nil, err
-	}
-	if err := h.ib.Redispatch(ctx, req.Msg.Id); err != nil {
-		return nil, mapError(err)
-	}
-	return connect.NewResponse(&inboxv1.RedispatchItemResponse{}), nil
+	return connect.NewResponse(&inboxv1.UntagItemResponse{}), nil
 }
 
 // ─── Helpers ───

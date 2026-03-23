@@ -17,9 +17,10 @@ import (
 	"github.com/laenen-partners/identity"
 	"github.com/laenen-partners/inbox"
 	appstatic "github.com/laenen-partners/inbox/cmd/inboxui/static"
+	inboxtoken "github.com/laenen-partners/inbox/cmd/inboxui/token"
 	"github.com/laenen-partners/inbox/service"
-	inboxtoken "github.com/laenen-partners/inbox/token"
 	inboxui "github.com/laenen-partners/inbox/ui"
+	"github.com/laenen-partners/pubsub"
 )
 
 func main() {
@@ -73,7 +74,7 @@ func run() error {
 			{Name: "Sarah (RM)", TenantID: "demo", WorkspaceID: "demo", PrincipalID: "rm:sarah"},
 			{Name: "Customer CUST-1234", TenantID: "demo", WorkspaceID: "demo", PrincipalID: "customer:cust-1234"},
 		},
-		Setup: func(ctx context.Context, r chi.Router, broker *stream.Broker) error {
+		Setup: func(ctx context.Context, r chi.Router, bus *pubsub.Bus, relay *stream.Relay) error {
 			// Serve custom theme CSS.
 			r.Handle("/theme/*", http.StripPrefix("/theme/", http.FileServerFS(appstatic.FS)))
 
@@ -95,6 +96,7 @@ func run() error {
 			// Mount inbox UI — identity is already set by showcase middleware.
 			r.Mount("/inbox", inboxui.Handler(client,
 				inboxui.WithBasePath("/inbox"),
+				inboxui.WithBus(bus),
 				inboxui.WithLayout(showcaseLayout),
 				inboxui.WithContentProvider("schema.v1.ItemSchema", schemaProvider{}),
 				inboxui.WithContentProvider("inbox.v1.ItemSchema", schemaProvider{}),

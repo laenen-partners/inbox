@@ -552,7 +552,7 @@ const file_schema_v1_schema_proto_rawDesc = "" +
 	"\x06Action\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x18\n" +
-	"\avariant\x18\x03 \x01(\tR\avariantB@Z>github.com/laenen-partners/inbox/schema/gen/schema/v1;schemav1b\x06proto3"
+	"\avariant\x18\x03 \x01(\tR\avariantBLZJgithub.com/laenen-partners/inbox/cmd/inboxui/schema/gen/schema/v1;schemav1b\x06proto3"
 
 var (
 	file_schema_v1_schema_proto_rawDescOnce sync.Once

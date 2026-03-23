@@ -1,11 +1,11 @@
 syntax = "proto3";
 package inbox.v1;
 
-option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
-
-import "inbox/v1/item.proto";
-import "google/protobuf/empty.proto";
+import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
+import "inbox/v1/item.proto";
+
+option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
 
 // Identity is carried on every request.
 message Identity {
@@ -26,6 +26,20 @@ message InboxItem {
 }
 
 // ─── Requests & Responses ───
+
+message CreateItemRequest {
+  Identity identity = 1;
+  string title = 2;
+  string description = 3;
+  google.protobuf.Timestamp deadline = 4;
+  string payload_type = 5;
+  google.protobuf.Any payload = 6;
+  repeated string tags = 7;
+  string idempotency_key = 8;
+}
+message CreateItemResponse {
+  InboxItem item = 1;
+}
 
 message GetItemRequest {
   Identity identity = 1;
@@ -71,32 +85,14 @@ message ReleaseItemResponse {
   InboxItem item = 1;
 }
 
-message RespondToItemRequest {
+message ReassignItemRequest {
   Identity identity = 1;
   string id = 2;
-  string action = 3;
-  string comment = 4;
-  string on_behalf_of = 5;
-  string override_reason = 6;
+  string from_actor = 3;
+  string to_actor = 4;
+  string reason = 5;
 }
-message RespondToItemResponse {
-  InboxItem item = 1;
-}
-
-message CompleteItemRequest {
-  Identity identity = 1;
-  string id = 2;
-}
-message CompleteItemResponse {
-  InboxItem item = 1;
-}
-
-message CancelItemRequest {
-  Identity identity = 1;
-  string id = 2;
-  string reason = 3;
-}
-message CancelItemResponse {
+message ReassignItemResponse {
   InboxItem item = 1;
 }
 
@@ -111,11 +107,33 @@ message CommentOnItemResponse {
   InboxItem item = 1;
 }
 
+message AddEventRequest {
+  Identity identity = 1;
+  string id = 2;
+  string detail = 3;
+  string data_type = 4;
+  google.protobuf.Any data = 5;
+}
+message AddEventResponse {
+  InboxItem item = 1;
+}
+
+message CloseItemRequest {
+  Identity identity = 1;
+  string id = 2;
+  string reason = 3;
+}
+message CloseItemResponse {
+  InboxItem item = 1;
+}
+
 message TagItemRequest {
   Identity identity = 1;
   string id = 2;
   repeated string tags = 3;
 }
+
+message TagItemResponse {}
 
 message UntagItemRequest {
   Identity identity = 1;
@@ -123,25 +141,21 @@ message UntagItemRequest {
   string tag = 3;
 }
 
-message RedispatchItemRequest {
-  Identity identity = 1;
-  string id = 2;
-}
-message RedispatchItemResponse {}
+message UntagItemResponse {}
 
 // ─── Service ───
 
 service InboxService {
+  rpc CreateItem(CreateItemRequest) returns (CreateItemResponse);
   rpc GetItem(GetItemRequest) returns (GetItemResponse);
   rpc ListItems(ListItemsRequest) returns (ListItemsResponse);
   rpc SearchItems(SearchItemsRequest) returns (SearchItemsResponse);
   rpc ClaimItem(ClaimItemRequest) returns (ClaimItemResponse);
   rpc ReleaseItem(ReleaseItemRequest) returns (ReleaseItemResponse);
-  rpc RespondToItem(RespondToItemRequest) returns (RespondToItemResponse);
-  rpc CompleteItem(CompleteItemRequest) returns (CompleteItemResponse);
-  rpc CancelItem(CancelItemRequest) returns (CancelItemResponse);
+  rpc ReassignItem(ReassignItemRequest) returns (ReassignItemResponse);
   rpc CommentOnItem(CommentOnItemRequest) returns (CommentOnItemResponse);
-  rpc TagItem(TagItemRequest) returns (google.protobuf.Empty);
-  rpc UntagItem(UntagItemRequest) returns (google.protobuf.Empty);
-  rpc RedispatchItem(RedispatchItemRequest) returns (RedispatchItemResponse);
+  rpc AddEvent(AddEventRequest) returns (AddEventResponse);
+  rpc CloseItem(CloseItemRequest) returns (CloseItemResponse);
+  rpc TagItem(TagItemRequest) returns (TagItemResponse);
+  rpc UntagItem(UntagItemRequest) returns (UntagItemResponse);
 }

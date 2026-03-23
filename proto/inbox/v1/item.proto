@@ -30,11 +30,11 @@
 syntax = "proto3";
 package inbox.v1;
 
-option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
-
+import "entitystore/v1/options.proto";
 import "google/protobuf/any.proto";
 import "google/protobuf/timestamp.proto";
-import "entitystore/v1/options.proto";
+
+option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
 
 // Item is the core inbox entity. It represents a unit of work to be
 // resolved by a human or AI agent.
@@ -45,9 +45,7 @@ import "entitystore/v1/options.proto";
 // in v1 and keeps the model simple. Relations can be introduced later
 // if graph traversal becomes a real requirement.
 message Item {
-  option (entitystore.v1.message) = {
-    extraction_display_name: "Inbox Item"
-  };
+  option (entitystore.v1.message) = {extraction_display_name: "Inbox Item"};
 
   // Optional idempotency key. When set, acts as an entity store anchor
   // to prevent duplicate item creation. Callers should set this to a
@@ -76,7 +74,7 @@ message Item {
     token_field: true
   }];
 
-  // Lifecycle status: open, claimed, completed, expired, cancelled.
+  // Lifecycle status: open, claimed, closed.
   // Also mirrored as a "status:<value>" tag for filtering.
   string status = 4;
 

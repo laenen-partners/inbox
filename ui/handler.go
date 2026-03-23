@@ -32,13 +32,13 @@ func Handler(client inboxv1connect.InboxServiceClient, opts ...Option) chi.Route
 	r.Get("/search", s.handleSearch)
 	r.Get("/items/{id}", s.handleDetail)
 
+	r.Get("/items/{id}/detail", s.handleDetailReload)
+	r.Get("/items/{id}/row", s.handleRowReload)
+
 	r.Post("/items/{id}/claim", s.handleClaim)
 	r.Post("/items/{id}/release", s.handleRelease)
-	r.Post("/items/{id}/respond", s.handleRespond)
-	r.Post("/items/{id}/complete", s.handleComplete)
-	r.Post("/items/{id}/cancel", s.handleCancel)
+	r.Post("/items/{id}/close", s.handleClose)
 	r.Post("/items/{id}/comment", s.handleComment)
-	r.Post("/items/{id}/retry-dispatch", s.handleRetryDispatch)
 
 	return r
 }

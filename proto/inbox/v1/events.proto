@@ -7,13 +7,11 @@
 // All event names are past tense — they record things that happened.
 //
 // Domains define their own event data protos for custom events and emit
-// them via WithEvent(action, proto.Message) on the Op builder.
+// them via the AddEvent RPC.
 syntax = "proto3";
 package inbox.v1;
 
 option go_package = "github.com/laenen-partners/inbox/gen/inbox/v1;inboxv1";
-
-import "google/protobuf/any.proto";
 
 // ─── Lifecycle events ───
 
@@ -32,37 +30,11 @@ message ItemReleased {
   string released_by = 1;
 }
 
-// ItemResponded is emitted when someone responds to an item.
-message ItemResponded {
-  // The action taken (e.g. "approve", "reject", "submit").
-  string action = 1;
-
-  // Free-text comment from the responder.
-  string comment = 2;
-
-  // Set when an RM or agent acts on behalf of another actor.
-  string on_behalf_of = 3;
-
-  // Justification when overriding normal flow.
-  string override_reason = 4;
-
-  // Response-specific typed data.
-  google.protobuf.Any payload = 5;
-}
-
-// ItemCompleted is emitted when a workflow marks an item as completed.
-message ItemCompleted {
-  string completed_by = 1;
-}
-
-// ItemCancelled is emitted when an item is cancelled.
-message ItemCancelled {
-  string cancelled_by = 1;
+// ItemClosed is emitted when an external module closes an item.
+message ItemClosed {
+  string closed_by = 1;
   string reason = 2;
 }
-
-// ItemExpired is emitted when a deadline-based expiry fires.
-message ItemExpired {}
 
 // ─── Activity events ───
 
@@ -78,13 +50,6 @@ message CommentAppended {
   repeated string refs = 3;
 }
 
-// ItemEscalated is emitted when an item is escalated between teams.
-message ItemEscalated {
-  string from_team = 1;
-  string to_team = 2;
-  string reason = 3;
-}
-
 // ItemReassigned is emitted when an item is reassigned between actors.
 message ItemReassigned {
   string from_actor = 1;
@@ -96,9 +61,4 @@ message ItemReassigned {
 message TagsChanged {
   repeated string added = 1;
   repeated string removed = 2;
-}
-
-// PayloadUpdated is emitted when the item payload is replaced.
-message PayloadUpdated {
-  string payload_type = 1;
 }

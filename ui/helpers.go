@@ -11,15 +11,10 @@ var eventLabels = map[string]string{
 	"inbox.v1.ItemCreated":     "Created",
 	"inbox.v1.ItemClaimed":     "Claimed",
 	"inbox.v1.ItemReleased":    "Released",
-	"inbox.v1.ItemResponded":   "Responded",
-	"inbox.v1.ItemCompleted":   "Completed",
-	"inbox.v1.ItemCancelled":   "Cancelled",
-	"inbox.v1.ItemExpired":     "Expired",
+	"inbox.v1.ItemClosed":      "Closed",
 	"inbox.v1.CommentAppended": "Comment",
-	"inbox.v1.ItemEscalated":   "Escalated",
 	"inbox.v1.ItemReassigned":  "Reassigned",
 	"inbox.v1.TagsChanged":     "Tags changed",
-	"inbox.v1.PayloadUpdated":  "Payload updated",
 }
 
 func eventLabel(dataType string) string {
@@ -49,14 +44,11 @@ func statusBadgeVariant(status string) string {
 		return "badge-info"
 	case "claimed":
 		return "badge-warning"
-	case "completed":
+	case "closed":
 		return "badge-success"
-	case "cancelled":
-		return "badge-neutral"
-	case "expired":
-		return "badge-error"
 	default:
-		return ""
+		// Legacy statuses (completed, cancelled, expired)
+		return "badge-neutral"
 	}
 }
 

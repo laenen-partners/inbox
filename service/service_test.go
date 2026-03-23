@@ -22,10 +22,6 @@ import (
 var _sharedConnStr string
 
 func testClient(t *testing.T) (inboxv1connect.InboxServiceClient, *inbox.Inbox) {
-	return testClientWithOpts(t)
-}
-
-func testClientWithOpts(t *testing.T, opts ...service.Option) (inboxv1connect.InboxServiceClient, *inbox.Inbox) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -55,7 +51,7 @@ func testClientWithOpts(t *testing.T, opts ...service.Option) (inboxv1connect.In
 	require.NoError(t, err)
 
 	ib := inbox.New(es)
-	client := service.NewLocalClient(service.NewHandler(ib, opts...))
+	client := service.NewLocalClient(service.NewHandler(ib))
 	return client, ib
 }
 
@@ -80,6 +76,24 @@ func seedItem(t *testing.T, ib *inbox.Inbox, title string) inbox.Item {
 	return item
 }
 
+func TestCreateItem(t *testing.T) {
+	client, _ := testClient(t)
+
+	resp, err := client.CreateItem(context.Background(), connect.NewRequest(&inboxv1.CreateItemRequest{
+		Identity:    testIdentity(),
+		Title:       "New item via RPC",
+		Description: "Created through the service layer",
+		Tags:        []string{"type:approval", "team:finance"},
+	}))
+	require.NoError(t, err)
+	require.NotEmpty(t, resp.Msg.Item.Id)
+	require.Equal(t, "New item via RPC", resp.Msg.Item.Data.Title)
+	require.Equal(t, "Created through the service layer", resp.Msg.Item.Data.Description)
+	require.Equal(t, "open", resp.Msg.Item.Data.Status)
+	require.Contains(t, resp.Msg.Item.Tags, "type:approval")
+	require.Contains(t, resp.Msg.Item.Tags, "team:finance")
+}
+
 func TestGetItem(t *testing.T) {
 	client, ib := testClient(t)
 	item := seedItem(t, ib, "Test get")
@@ -91,6 +105,17 @@ func TestGetItem(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, item.ID, resp.Msg.Item.Id)
 	require.Equal(t, "Test get", resp.Msg.Item.Data.Title)
+}
+
+func TestGetItem_NotFound(t *testing.T) {
+	client, _ := testClient(t)
+
+	_, err := client.GetItem(context.Background(), connect.NewRequest(&inboxv1.GetItemRequest{
+		Identity: testIdentity(),
+		Id:       "nonexistent-id",
+	}))
+	require.Error(t, err)
+	require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 }
 
 func TestClaimAndRelease(t *testing.T) {
@@ -105,7 +130,7 @@ func TestClaimAndRelease(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "claimed", claimed.Msg.Item.Data.Status)
 
-	// Verify assignee tag was set atomically
+	// Verify assignee tag was set
 	found := false
 	for _, tag := range claimed.Msg.Item.Tags {
 		if tag == "assignee:user:operator" {
@@ -128,37 +153,57 @@ func TestClaimAndRelease(t *testing.T) {
 	}
 }
 
-func TestGetItem_NotFound(t *testing.T) {
-	client, _ := testClient(t)
+func TestCloseItem(t *testing.T) {
+	client, ib := testClient(t)
+	item := seedItem(t, ib, "Test close")
 
-	_, err := client.GetItem(context.Background(), connect.NewRequest(&inboxv1.GetItemRequest{
+	resp, err := client.CloseItem(context.Background(), connect.NewRequest(&inboxv1.CloseItemRequest{
 		Identity: testIdentity(),
-		Id:       "nonexistent-id",
+		Id:       item.ID,
+		Reason:   "resolved externally",
 	}))
-	require.Error(t, err)
-	require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+	require.NoError(t, err)
+	require.Equal(t, "closed", resp.Msg.Item.Data.Status)
 }
 
-func TestRespondCompletesOption(t *testing.T) {
-	client, ib := testClientWithOpts(t, service.WithRespondCompletes())
-	item := seedItem(t, ib, "Test respond completes")
+func TestReassignItem(t *testing.T) {
+	client, ib := testClient(t)
+	item := seedItem(t, ib, "Test reassign")
 
-	// Claim
-	_, err := client.ClaimItem(context.Background(), connect.NewRequest(&inboxv1.ClaimItemRequest{
-		Identity: testIdentity(),
-		Id:       item.ID,
+	resp, err := client.ReassignItem(context.Background(), connect.NewRequest(&inboxv1.ReassignItemRequest{
+		Identity:  testIdentity(),
+		Id:        item.ID,
+		FromActor: "",
+		ToActor:   "user:alice",
+		Reason:    "better suited",
 	}))
 	require.NoError(t, err)
+	require.Equal(t, item.ID, resp.Msg.Item.Id)
 
-	// Respond — with WithRespondCompletes, this should also complete the item.
-	resp, err := client.RespondToItem(context.Background(), connect.NewRequest(&inboxv1.RespondToItemRequest{
+	// Verify the reassignment event was recorded
+	events := resp.Msg.Item.Data.Events
+	lastEvt := events[len(events)-1]
+	require.Equal(t, "inbox.v1.ItemReassigned", lastEvt.DataType)
+}
+
+func TestAddEvent(t *testing.T) {
+	client, ib := testClient(t)
+	item := seedItem(t, ib, "Test add event")
+
+	resp, err := client.AddEvent(context.Background(), connect.NewRequest(&inboxv1.AddEventRequest{
 		Identity: testIdentity(),
 		Id:       item.ID,
-		Action:   "approve",
-		Comment:  "Looks good",
+		Detail:   "external system notification",
 	}))
 	require.NoError(t, err)
-	require.Equal(t, "completed", resp.Msg.Item.Data.Status)
+	require.Equal(t, item.ID, resp.Msg.Item.Id)
+
+	// Verify the event was appended
+	events := resp.Msg.Item.Data.Events
+	require.GreaterOrEqual(t, len(events), 2) // created + the new event
+	lastEvt := events[len(events)-1]
+	require.Equal(t, "external system notification", lastEvt.Detail)
+	require.Equal(t, "user:operator", lastEvt.Actor)
 }
 
 func TestIdentityRequired(t *testing.T) {

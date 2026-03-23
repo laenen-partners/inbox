@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/laenen-partners/dsx/ds"
+	"github.com/laenen-partners/dsx/stream"
 	"github.com/laenen-partners/dsx/ui/badge"
 	"github.com/laenen-partners/inbox"
 )
@@ -27,7 +28,6 @@ templ queueContent(data queueData) {
 			</div>
 			@queueFilters(data)
 		</div>
-
 		// Table
 		@queueTable(data)
 	</div>
@@ -62,7 +62,14 @@ templ queueFilters(data queueData) {
 }
 
 templ queueTable(data queueData) {
-	<div class="bg-base-100 border border-base-300 rounded-lg overflow-hidden">
+	<div
+		id="queue-list"
+		if data.StreamReloadURL != "" {
+			{ stream.Watch(ctx, "inboxitem",
+				stream.Any.Debounce(300*time.Millisecond).Get(data.StreamReloadURL))... }
+		}
+		class="bg-base-100 border border-base-300 rounded-lg overflow-hidden"
+	>
 		<table id="queue-table" class="table table-sm">
 			<thead>
 				<tr class="border-b border-base-300 bg-base-200/30">
@@ -143,16 +150,16 @@ templ queueRow(item inbox.Item, basePath string) {
 
 templ priorityBadge(priority string) {
 	switch priority {
-	case "urgent":
-		@badge.Badge(badge.Props{Variant: badge.VariantError, Style: badge.StyleSoft, Size: badge.SizeXs}) {
-			{ priority }
-		}
-	case "high":
-		@badge.Badge(badge.Props{Variant: badge.VariantWarning, Style: badge.StyleSoft, Size: badge.SizeXs}) {
-			{ priority }
-		}
-	default:
-		<span class="text-xs text-base-content/40">{ priority }</span>
+		case "urgent":
+			@badge.Badge(badge.Props{Variant: badge.VariantError, Style: badge.StyleSoft, Size: badge.SizeXs}) {
+				{ priority }
+			}
+		case "high":
+			@badge.Badge(badge.Props{Variant: badge.VariantWarning, Style: badge.StyleSoft, Size: badge.SizeXs}) {
+				{ priority }
+			}
+		default:
+			<span class="text-xs text-base-content/40">{ priority }</span>
 	}
 }
 
