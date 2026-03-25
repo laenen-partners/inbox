@@ -5,6 +5,8 @@ package inboxv1
 import (
 	extraction "github.com/laenen-partners/entitystore/extraction"
 	matching "github.com/laenen-partners/entitystore/matching"
+	store "github.com/laenen-partners/entitystore/store"
+	strings "strings"
 )
 
 // ItemMatchConfig returns the proto-annotation-derived matching
@@ -68,4 +70,57 @@ func ItemExtractionSchema() extraction.ExtractionSchema {
 			},
 		},
 	}
+}
+
+// ItemTokens extracts search tokens from the proto message.
+// Generated from fields annotated with token_field: true.
+func ItemTokens(msg *Item) map[string][]string {
+	tokens := make(map[string][]string)
+	if v := msg.GetTitle(); v != "" {
+		tokens["title"] = matching.Tokenize(v)
+	}
+	if v := msg.GetDescription(); v != "" {
+		tokens["description"] = matching.Tokenize(v)
+	}
+	return tokens
+}
+
+// ItemEmbedText returns the concatenated text from fields
+// annotated with embed: true, suitable for embedding model input.
+// Field ordering follows proto field numbers for deterministic output.
+func ItemEmbedText(msg *Item) string {
+	var parts []string
+	if v := msg.GetTitle(); v != "" {
+		parts = append(parts, v)
+	}
+	if v := msg.GetDescription(); v != "" {
+		parts = append(parts, v)
+	}
+	return strings.Join(parts, " ")
+}
+
+// itemAnchors extracts anchor queries from the proto message.
+// Generated from fields annotated with anchor: true and composite_anchors.
+func itemAnchors(msg *Item) []matching.AnchorQuery {
+	var anchors []matching.AnchorQuery
+	if v := msg.GetIdempotencyKey(); v != "" {
+		anchors = append(anchors, matching.AnchorQuery{Field: "idempotency_key", Value: v})
+	}
+	return anchors
+}
+
+// ItemWriteOp builds a WriteEntityOp with all proto annotations applied.
+// Anchors, tokens, and data are wired automatically from the message.
+func ItemWriteOp(msg *Item, action store.WriteAction, opts ...store.WriteOpOption) *store.WriteEntityOp {
+	op := &store.WriteEntityOp{
+		Action:     action,
+		Data:       msg,
+		Confidence: 1.0,
+		Anchors:    itemAnchors(msg),
+		Tokens:     ItemTokens(msg),
+	}
+	for _, o := range opts {
+		o(op)
+	}
+	return op
 }

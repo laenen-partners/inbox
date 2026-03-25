@@ -27,7 +27,7 @@ func (ib *Inbox) ListByTags(ctx context.Context, tags []string, opts ListOpts) (
 	if pageSize <= 0 {
 		pageSize = 50
 	}
-	entities, err := ib.es.GetEntitiesByType(ctx, EntityType, int32(pageSize), opts.Cursor)
+	entities, err := ib.es.GetEntitiesByType(ctx, EntityType, int32(pageSize), opts.Cursor, nil)
 	if err != nil {
 		return nil, fmt.Errorf("inbox: list items: %w", err)
 	}
