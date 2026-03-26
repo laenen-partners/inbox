@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/laenen-partners/dsx v0.9.1
-	github.com/laenen-partners/entitystore v0.23.0
+	github.com/laenen-partners/entitystore v0.26.0
 	github.com/laenen-partners/identity v0.1.0
 	github.com/laenen-partners/pubsub v0.3.1
 	github.com/laenen-partners/tags v0.3.0
@@ -52,7 +52,7 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
-	github.com/laenen-partners/migrate v0.1.0 // indirect
+	github.com/laenen-partners/migrate v0.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect

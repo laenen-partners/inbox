@@ -44,12 +44,6 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 	if err != nil {
 		return Item{}, fmt.Errorf("inbox: invalid status tag: %w", err)
 	}
-	if meta.Deadline != nil {
-		t, err = t.With("deadline", meta.Deadline.Format(time.RFC3339))
-		if err != nil {
-			return Item{}, fmt.Errorf("inbox: invalid deadline tag: %w", err)
-		}
-	}
 
 	p := &inboxv1.Item{
 		IdempotencyKey: meta.IdempotencyKey,
