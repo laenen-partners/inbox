@@ -40,9 +40,15 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 	createdEvt := newProtoEvent(actor, &inboxv1.ItemCreated{PayloadType: payloadType})
 	createdEvt.At = timestamppb.New(now)
 
-	t := meta.Tags.With("status", StatusOpen)
+	t, err := meta.Tags.With("status", StatusOpen)
+	if err != nil {
+		return Item{}, fmt.Errorf("inbox: invalid status tag: %w", err)
+	}
 	if meta.Deadline != nil {
-		t = t.With("deadline", meta.Deadline.Format(time.RFC3339))
+		t, err = t.With("deadline", meta.Deadline.Format(time.RFC3339))
+		if err != nil {
+			return Item{}, fmt.Errorf("inbox: invalid deadline tag: %w", err)
+		}
 	}
 
 	p := &inboxv1.Item{
@@ -73,7 +79,7 @@ func (ib *Inbox) Create(ctx context.Context, meta Meta) (Item, error) {
 		}
 	}
 
-	_, err := ib.es.BatchWrite(ctx, []store.BatchWriteOp{
+	_, err = ib.es.BatchWrite(ctx, []store.BatchWriteOp{
 		{WriteEntity: &writeOp},
 	})
 	if err != nil {

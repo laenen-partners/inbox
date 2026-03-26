@@ -62,10 +62,18 @@ func (ib *Inbox) Comment(ctx context.Context, itemID string, body string, opts *
 func (ib *Inbox) Reassign(ctx context.Context, itemID string, fromActor string, toActor string, reason string) (Item, error) {
 	actor := actorFromCtx(ctx)
 	if fromActor != "" {
-		_ = ib.es.RemoveTag(ctx, itemID, tags.Build("assignee", fromActor))
+		fromTag, err := tags.Build("assignee", fromActor)
+		if err != nil {
+			return Item{}, fmt.Errorf("inbox: invalid fromActor for tag: %w", err)
+		}
+		_ = ib.es.RemoveTag(ctx, itemID, fromTag)
 	}
 	if toActor != "" {
-		_ = ib.es.AddTags(ctx, itemID, []string{tags.Build("assignee", toActor)})
+		toTag, err := tags.Build("assignee", toActor)
+		if err != nil {
+			return Item{}, fmt.Errorf("inbox: invalid toActor for tag: %w", err)
+		}
+		_ = ib.es.AddTags(ctx, itemID, []string{toTag})
 	}
 
 	return ib.AddEvent(ctx, itemID, newProtoEventWithDetail(actor, reason, &inboxv1.ItemReassigned{

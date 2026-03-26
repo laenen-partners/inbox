@@ -68,9 +68,10 @@ func seedItem(t *testing.T, ib *inbox.Inbox, title string) inbox.Item {
 	t.Helper()
 	id, _ := identity.New("test", "test", "seeder", identity.PrincipalService, nil)
 	ctx := identity.WithContext(context.Background(), id)
+	teamTag, _ := tags.Team("ops")
 	item, err := ib.Create(ctx, inbox.Meta{
 		Title: title,
-		Tags:  tags.MustNew("type:review", tags.Team("ops")),
+		Tags:  tags.MustNew("type:review", teamTag),
 	})
 	require.NoError(t, err)
 	return item

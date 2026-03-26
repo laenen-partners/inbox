@@ -100,10 +100,11 @@ func TestFilterDropdowns(t *testing.T) {
 	)
 
 	// Seed items with different priorities
+	teamCompliance, _ := tags.Team("compliance")
 	for _, p := range []string{"urgent", "normal"} {
 		_, err := ib.Create(ctx, inbox.Meta{
 			Title: "Item " + p,
-			Tags:  tags.MustNew("type:review", "priority:"+p, tags.Team("compliance")),
+			Tags:  tags.MustNew("type:review", "priority:"+p, teamCompliance),
 		})
 		if err != nil {
 			t.Fatalf("create: %v", err)

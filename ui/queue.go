@@ -15,7 +15,8 @@ func (s *server) handleQueue(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	filterValues := s.readFilterValues(r)
 
-	filterTags := []string{tags.Status(inbox.StatusOpen)}
+	statusTag, _ := tags.Status(inbox.StatusOpen)
+	filterTags := []string{statusTag}
 	for _, f := range s.cfg.filters {
 		if v := filterValues[filterKey(f.TagPrefix)]; v != "" {
 			filterTags = append(filterTags, f.TagPrefix+v)

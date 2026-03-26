@@ -16,7 +16,9 @@ func (s *server) handleMyWork(w http.ResponseWriter, r *http.Request) {
 	actor := actorStr(ctx)
 
 	filterValues := s.readFilterValues(r)
-	filterTags := []string{tags.Status(inbox.StatusClaimed), tags.Build("assignee", actor)}
+	statusTag, _ := tags.Status(inbox.StatusClaimed)
+	assigneeTag, _ := tags.Build("assignee", actor)
+	filterTags := []string{statusTag, assigneeTag}
 	for _, f := range s.cfg.filters {
 		if v := filterValues[filterKey(f.TagPrefix)]; v != "" {
 			filterTags = append(filterTags, f.TagPrefix+v)

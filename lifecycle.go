@@ -14,9 +14,12 @@ import (
 // Claim transitions an item from open to claimed and sets the assignee tag atomically.
 func (ib *Inbox) Claim(ctx context.Context, itemID string) (Item, error) {
 	actor := actorFromCtx(ctx)
+	assigneeTag, err := tags.Build("assignee", actor)
+	if err != nil {
+		return Item{}, fmt.Errorf("inbox: invalid actor for tag: %w", err)
+	}
 	evt := newProtoEvent(actor, &inboxv1.ItemClaimed{ClaimedBy: actor})
-	return ib.transition(ctx, itemID, StatusOpen, StatusClaimed, evt,
-		tags.Build("assignee", actor))
+	return ib.transition(ctx, itemID, StatusOpen, StatusClaimed, evt, assigneeTag)
 }
 
 // Release transitions an item from claimed to open and removes the assignee tag.
@@ -75,7 +78,11 @@ func (ib *Inbox) doTransition(ctx context.Context, item Item, toStatus string, e
 		evt.At = timestamppb.New(time.Now().UTC())
 	}
 	item.Proto.Events = append(item.Proto.Events, evt)
-	item.Tags = item.Tags.With("status", toStatus)
+	var tagErr error
+	item.Tags, tagErr = item.Tags.With("status", toStatus)
+	if tagErr != nil {
+		return Item{}, fmt.Errorf("inbox: invalid status tag: %w", tagErr)
+	}
 	if len(extraTags) > 0 {
 		item.Tags = item.Tags.Merge(tags.FromStrings(extraTags))
 	}

@@ -124,7 +124,8 @@ func TestCreateAndGet(t *testing.T) {
 	assert.Equal(t, inbox.StatusOpen, item.Status())
 	assert.Equal(t, "google.protobuf.Struct", item.PayloadType())
 	assert.True(t, inbox.HasTag(item, "type:input_required"))
-	assert.True(t, inbox.HasTag(item, tags.Status(inbox.StatusOpen)))
+	statusOpenTag, _ := tags.Status(inbox.StatusOpen)
+	assert.True(t, inbox.HasTag(item, statusOpenTag))
 
 	// Verify ItemCreated event.
 	require.Len(t, item.Events(), 1)
@@ -144,18 +145,20 @@ func TestClaimAndRelease(t *testing.T) {
 
 	userCtx := ctxWithActor("ops:marco", identity.PrincipalUser)
 
+	assigneeTag, _ := tags.Build("assignee", "user:ops:marco")
+
 	// Claim the item.
 	claimed, err := ib.Claim(userCtx, item.ID)
 	require.NoError(t, err)
 	assert.Equal(t, inbox.StatusClaimed, claimed.Status())
-	assert.True(t, inbox.HasTag(claimed, tags.Build("assignee", "user:ops:marco")))
+	assert.True(t, inbox.HasTag(claimed, assigneeTag))
 
 	// Release the item.
 	released, err := ib.Release(userCtx, claimed.ID)
 	require.NoError(t, err)
 	assert.Equal(t, inbox.StatusOpen, released.Status())
 	// The in-memory item returned by Release has the assignee tag removed.
-	assert.False(t, inbox.HasTag(released, tags.Build("assignee", "user:ops:marco")))
+	assert.False(t, inbox.HasTag(released, assigneeTag))
 
 	// Re-fetch to verify status is open and events are recorded.
 	fetched, err := ib.Get(userCtx, item.ID)
@@ -225,10 +228,11 @@ func TestComment(t *testing.T) {
 	ib := sharedInbox(t)
 	item := seedOpenItem(t, ib)
 
+	teamCompliance, _ := tags.Team("compliance")
 	ctx := ctxWithActor("compliance:fatima", identity.PrincipalUser)
 	commented, err := ib.Comment(ctx, item.ID,
 		"Checked screening report. PEP status is historical, low risk.",
-		&inbox.CommentOpts{Visibility: []string{tags.Team("compliance")}},
+		&inbox.CommentOpts{Visibility: []string{teamCompliance}},
 	)
 	require.NoError(t, err)
 
@@ -240,7 +244,7 @@ func TestComment(t *testing.T) {
 	var commentData inboxv1.CommentAppended
 	require.NoError(t, events[1].Data.UnmarshalTo(&commentData))
 	assert.Equal(t, "Checked screening report. PEP status is historical, low risk.", commentData.Body)
-	assert.Contains(t, commentData.Visibility, tags.Team("compliance"))
+	assert.Contains(t, commentData.Visibility, teamCompliance)
 }
 
 func TestReassign(t *testing.T) {
@@ -360,19 +364,21 @@ func TestListByTags(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	teamCompliance, _ := tags.Team("compliance")
+	statusOpen, _ := tags.Status(inbox.StatusOpen)
 	_, err = ib.Create(ctx, inbox.Meta{
 		Title: "Compliance item",
-		Tags:  tags.MustNew("type:review", tags.Team("compliance"), "workflow:list-test"),
+		Tags:  tags.MustNew("type:review", teamCompliance, "workflow:list-test"),
 	})
 	require.NoError(t, err)
 
 	// List customer items.
-	customerItems, err := ib.ListByTags(ctx, []string{"assignee:customer:cust-list-1", tags.Status(inbox.StatusOpen)}, inbox.ListOpts{})
+	customerItems, err := ib.ListByTags(ctx, []string{"assignee:customer:cust-list-1", statusOpen}, inbox.ListOpts{})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(customerItems), 2)
 
 	// List compliance items.
-	complianceItems, err := ib.ListByTags(ctx, []string{tags.Team("compliance"), "workflow:list-test"}, inbox.ListOpts{})
+	complianceItems, err := ib.ListByTags(ctx, []string{teamCompliance, "workflow:list-test"}, inbox.ListOpts{})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(complianceItems), 1)
 
@@ -410,6 +416,8 @@ func TestSearch(t *testing.T) {
 func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 	ib := sharedInbox(t)
 	ctx := ctxWithActor("onboarding-multi", identity.PrincipalService)
+	teamCompliance, _ := tags.Team("compliance")
+	statusOpen, _ := tags.Status(inbox.StatusOpen)
 
 	// Simulate: evaluation returned 3 pending requirements.
 	requirements := []struct {
@@ -434,7 +442,7 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 		{
 			title:       "Sanctions screening review",
 			failureMode: "manual_review",
-			team:        tags.Team("compliance"),
+			team:        teamCompliance,
 			assignee:    "assignee:team:compliance",
 			requirement: "sanctions_screening_clear",
 		},
@@ -472,12 +480,12 @@ func TestMultipleItemsFromEligibilityEvaluation(t *testing.T) {
 	}
 
 	// Customer sees their 2 items.
-	customerItems, err := ib.ListByTags(ctx, []string{"assignee:customer:cust-2000", tags.Status(inbox.StatusOpen)}, inbox.ListOpts{})
+	customerItems, err := ib.ListByTags(ctx, []string{"assignee:customer:cust-2000", statusOpen}, inbox.ListOpts{})
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(customerItems), 2)
 
 	// Compliance sees their 1 item.
-	complianceItems, err := ib.ListByTags(ctx, []string{tags.Team("compliance"), tags.Status(inbox.StatusOpen)}, inbox.ListOpts{})
+	complianceItems, err := ib.ListByTags(ctx, []string{teamCompliance, statusOpen}, inbox.ListOpts{})
 	require.NoError(t, err)
 	complianceCount := 0
 	for _, it := range complianceItems {

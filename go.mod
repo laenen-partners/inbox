@@ -13,7 +13,7 @@ require (
 	github.com/laenen-partners/entitystore v0.23.0
 	github.com/laenen-partners/identity v0.1.0
 	github.com/laenen-partners/pubsub v0.3.1
-	github.com/laenen-partners/tags v0.1.0
+	github.com/laenen-partners/tags v0.3.0
 	github.com/starfederation/datastar-go v1.1.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.41.0
